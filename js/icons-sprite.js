@@ -89,8 +89,22 @@
   function startObserver() {
     if (!('MutationObserver' in window)) return;
 
-    const obs = new MutationObserver((mutations) => {
-      for (const m of mutations) {
+    // Desconecta observer anterior se existir
+    if (window.__iconsObserver) {
+      window.__iconsObserver.disconnect();
+    }
+
+    let rafId = null;
+    let pendingMutations = [];
+
+    const processQueue = () => {
+      rafId = null;
+      if (pendingMutations.length === 0) return;
+
+      // Processa todas as mutações de uma vez
+      const nodesToProcess = new Set();
+      
+      for (const m of pendingMutations) {
         if (m.type === 'attributes' && m.target && m.target.tagName === 'use') {
           normalizeUseHref(m.target);
           continue;
@@ -99,10 +113,23 @@
         if (m.type === 'childList') {
           for (const node of m.addedNodes) {
             if (node && node.nodeType === Node.ELEMENT_NODE) {
-              normalizeAll(node);
+              nodesToProcess.add(node);
             }
           }
         }
+      }
+
+      // Processa todos os nós de uma vez
+      nodesToProcess.forEach(node => normalizeAll(node));
+      pendingMutations = [];
+    };
+
+    const obs = new MutationObserver((mutations) => {
+      // Acumula mutações e processa em lote no próximo frame
+      pendingMutations.push(...mutations);
+      
+      if (!rafId) {
+        rafId = requestAnimationFrame(processQueue);
       }
     });
 
@@ -112,6 +139,9 @@
       attributes: true,
       attributeFilter: ['href', 'xlink:href'],
     });
+
+    // Armazena globalmente para permitir pause/resume
+    window.__iconsObserver = obs;
   }
 
   async function init() {
@@ -120,6 +150,21 @@
     await ensureSpriteInjected();
     normalizeAll();
   }
+
+  // Expor controle do observer para permitir pausa durante renderizações pesadas
+  window.__iconsObserverCtrl = {
+    pause: function() {
+      if (window.__iconsObserver) {
+        window.__iconsObserver.disconnect();
+      }
+    },
+    resume: function() {
+      if (window.__iconsObserver) {
+        startObserver();
+        normalizeAll();
+      }
+    }
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });

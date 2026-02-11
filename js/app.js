@@ -493,9 +493,11 @@
     const percentEl = qs('#loaderPercent');
     const textEl = qs('#loaderText');
 
-    if (!loader || !bar || !percentEl) return;
+    // Se não há loader, aborta.
+    // Mas se faltar só a barra ou o texto, seguimos para destravar a tela.
+    if (!loader) return;
 
-    // Marcador para fallback no HTML saber que o loader foi inicializado.
+    // Marcador para fallback no HTML saber que o loader foi inicializado (ou tentado).
     window.__cfLoaderInit = true;
 
     document.body.classList.add('is-loading');
@@ -527,8 +529,9 @@
       // Sobe rápido no começo e desacelera
       const step = p < 55 ? 6 : p < 80 ? 3 : 1;
       p = Math.min(92, p + step);
-      bar.style.width = `${p}%`;
-      percentEl.textContent = `${p}%`;
+      
+      if (bar) bar.style.width = `${p}%`;
+      if (percentEl) percentEl.textContent = `${p}%`;
     };
 
     const timer = window.setInterval(tick, 120);
@@ -544,8 +547,8 @@
       if (textEl) textEl.classList.remove('is-visible');
 
       p = 100;
-      bar.style.width = '100%';
-      percentEl.textContent = '100%';
+      if (bar) bar.style.width = '100%';
+      if (percentEl) percentEl.textContent = '100%';
       // Removed 'Pronto!' change to keep the phrase visible until fade out
 
       window.setTimeout(() => {
@@ -718,6 +721,7 @@
 
   function renderModuleCards(container, data) {
     container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
     for (const module of data) {
       const total = module.groups.reduce((acc, g) => acc + g.items.length, 0);
@@ -758,12 +762,15 @@
       desc.textContent = module.description;
 
       card.append(top, title, desc);
-      container.append(card);
+      fragment.append(card);
     }
+    
+    container.append(fragment);
   }
 
   function renderModulesAccordion(container, data) {
     container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
     for (const module of data) {
       const total = module.groups.reduce((acc, g) => acc + g.items.length, 0);
@@ -837,8 +844,10 @@
 
       panel.append(content);
       item.append(btn, panel);
-      container.append(item);
+      fragment.append(item);
     }
+    
+    container.append(fragment);
   }
 
   function setPanelOpen(accItem, open) {
@@ -890,8 +899,18 @@
 
     if (!cards || !acc || !input || !clearBtn || !meta || !noResults) return;
 
+    // Pausa o MutationObserver durante renderização pesada
+    if (window.__iconsObserverCtrl) {
+      window.__iconsObserverCtrl.pause();
+    }
+
     renderModuleCards(cards, modulesData);
     renderModulesAccordion(acc, modulesData);
+
+    // Retoma o observer e normaliza todos os ícones de uma vez
+    if (window.__iconsObserverCtrl) {
+      window.__iconsObserverCtrl.resume();
+    }
 
     // Clique no card => scroll + abre o acordeão correspondente
     cards.addEventListener('click', (e) => {
@@ -1238,9 +1257,13 @@
     initIntersectionAnimations();
     initThemeToggle();
 
-    initModulesUI();
-    initFAQ();
-    initContactForm();
-    initYear();
+    // Posterga renderização pesada para depois do loader
+    // Isso evita travar o navegador durante o carregamento inicial
+    window.setTimeout(() => {
+      initModulesUI();
+      initFAQ();
+      initContactForm();
+      initYear();
+    }, 100);
   });
 })();

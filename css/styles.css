@@ -1348,6 +1348,7 @@ body.is-menu-open { overflow: hidden; }
   pointer-events: none;
   transition: opacity 360ms var(--ease), transform 360ms var(--ease);
 }
+.loader[hidden] { display: none !important; }
 .loader.is-visible {
   opacity: 1;
   transform: scale(1);

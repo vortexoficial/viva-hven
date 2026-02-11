@@ -31,13 +31,6 @@
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/icons-sprite.js" defer></script>
 
-    <noscript>
-      <style>
-        body { overflow: auto !important; }
-        #loader { display: none !important; }
-      </style>
-    </noscript>
-
     <script>
       // Evita flash de tema ao carregar
       (function () {
@@ -883,40 +876,67 @@
           return document.querySelector(sel);
         }
 
+        function hasClass(el, name) {
+          if (!el) return false;
+          if (el.classList) return el.classList.contains(name);
+          return ((' ' + (el.className || '') + ' ').indexOf(' ' + name + ' ') !== -1);
+        }
+
+        function addClass(el, name) {
+          if (!el) return;
+          if (el.classList) {
+            el.classList.add(name);
+            return;
+          }
+          if (!hasClass(el, name)) el.className = ((el.className || '') + ' ' + name).trim();
+        }
+
+        function removeClass(el, name) {
+          if (!el) return;
+          if (el.classList) {
+            el.classList.remove(name);
+            return;
+          }
+          el.className = (' ' + (el.className || '') + ' ').replace(' ' + name + ' ', ' ').trim();
+        }
+
         function hideLoader() {
           var loader = qs('#loader');
           if (!loader) return;
 
-          loader.classList.add('is-hidden');
-          document.body.classList.remove('is-loading');
+          addClass(loader, 'is-hidden');
+          removeClass(document.body, 'is-loading');
 
           window.setTimeout(function () {
             loader.setAttribute('hidden', '');
+            loader.style.display = 'none';
           }, 380);
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-          // Se o app.js não tiver inicializado o loader em alguns segundos,
-          // remove o overlay para o site não ficar travado.
-          window.setTimeout(function () {
-            if (window.__cfLoaderInit) return;
+        // Importante: NÃO depende de DOMContentLoaded.
+        // Se algum <script defer> ficar pendurado (bloqueado por rede/extensão),
+        // o DOMContentLoaded pode nunca disparar e o loader ficaria infinito.
 
-            var bar = qs('#loaderBar');
-            var pct = qs('#loaderPercent');
-            if (bar) bar.style.width = '100%';
-            if (pct) pct.textContent = '100%';
+        // Se o app.js não tiver inicializado o loader em alguns segundos,
+        // remove o overlay para o site não ficar travado.
+        window.setTimeout(function () {
+          if (window.__cfLoaderInit) return;
+
+          var bar = qs('#loaderBar');
+          var pct = qs('#loaderPercent');
+          if (bar) bar.style.width = '100%';
+          if (pct) pct.textContent = '100%';
+          hideLoader();
+        }, 3000);
+
+        // Failsafe adicional: se o loader ainda estiver em 0% após alguns segundos,
+        // libera o site mesmo que o app.js tenha falhado após iniciar.
+        window.setTimeout(function () {
+          var pct = qs('#loaderPercent');
+          if (pct && String(pct.textContent || '').trim() === '0%') {
             hideLoader();
-          }, 3000);
-
-          // Failsafe adicional: se o loader ainda estiver em 0% após alguns segundos,
-          // libera o site mesmo que o app.js tenha falhado após iniciar.
-          window.setTimeout(function () {
-            var pct = qs('#loaderPercent');
-            if (pct && String(pct.textContent || '').trim() === '0%') {
-              hideLoader();
-            }
-          }, 6000);
-        });
+          }
+        }, 6000);
       })();
     </script>
 

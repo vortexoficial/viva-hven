@@ -361,7 +361,7 @@
          </div>
         </div>
 
-        <div style="flex: 1"></div> <! -- spacer -->
+        <div style="flex: 1"></div> <!-- spacer -->
         
         <div style="position: relative; z-index: 10; color: var(--faint); font-size: 12px;">
           &copy; 2026 Viva Haven Tecnologia.
@@ -371,19 +371,19 @@
       <!-- Right Side (Form) -->
       <main class="loginFormWrapper">
         <div class="loginCard">
-          <div class="loginHeader" data-anim class="stagger-1">
+          <div class="loginHeader stagger-1" data-anim>
             <img src="assets/logo.svg" alt="Viva Haven" class="loginLogo" />
             <h2 class="loginTitle">Bem-vindo de volta!</h2>
             <p class="loginSubtitle">Insira suas credenciais para acessar.</p>
           </div>
 
           <!-- Profile Switcher (Mockup) -->
-          <div class="profileSwitch" data-anim class="stagger-2">
+          <div class="profileSwitch stagger-2" data-anim>
             <button class="switchBtn active" onclick="switchProfile(this, 'sindico')">Gestor / Síndico</button>
             <button class="switchBtn" onclick="switchProfile(this, 'morador')">Morador</button>
           </div>
 
-          <form onsubmit="event.preventDefault();" data-anim class="stagger-3">
+          <form onsubmit="event.preventDefault();" class="stagger-3" data-anim>
             <div class="formGroup">
               <label class="inputLabel" for="email">E-mail corporativo ou CPF</label>
               <input type="text" id="email" class="inputField" placeholder="ex: sindico@condominio.com" />
@@ -398,7 +398,7 @@
             <button type="submit" class="submitBtn">Entrar na plataforma</button>
             
             <div class="sso">
-              <button class="sso__btn">
+                <button class="sso__btn" type="button">
                  <svg class="icon icon--sm"><use href="assets/icons.svg#shield"></use></svg>
                  Entrar com SSO (Single Sign-On)
               </button>
