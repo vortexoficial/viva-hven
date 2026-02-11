@@ -1,6 +1,6 @@
-# CondoFlow — Site (HTML/CSS/JS) + Express
+# Viva Haven — Site (HTML/CSS/JS) + Express
 
-Site 100% responsivo (mobile/tablet/desktop) para apresentar as funções do **CondoFlow**.
+Site 100% responsivo (mobile/tablet/desktop) para apresentar as funções do **Viva Haven**.
 
 ## Requisitos
 

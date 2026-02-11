@@ -1,4 +1,4 @@
-/* CondoFlow | app.js (vanilla) */
+/* Viva Haven | app.js (vanilla) */
 
 (function () {
   const qs = (sel, root = document) => root.querySelector(sel);
@@ -1027,7 +1027,7 @@
     try {
       const countRendered = qsa('.featureItem', acc).length;
       if (countRendered !== totalFeaturesCount) {
-        console.warn('[CondoFlow] Contagem divergente de funcionalidades:', {
+        console.warn('[Viva Haven] Contagem divergente de funcionalidades:', {
           dataset: totalFeaturesCount,
           rendered: countRendered,
         });

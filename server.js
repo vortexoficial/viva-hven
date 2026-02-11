@@ -14,5 +14,5 @@ app.use(express.static(publicDir));
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`CondoFlow site rodando em http://localhost:${PORT}`);
+  console.log(`Viva Haven site rodando em http://localhost:${PORT}`);
 });
