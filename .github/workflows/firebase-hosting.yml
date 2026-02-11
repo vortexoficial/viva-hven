@@ -42,7 +42,7 @@ jobs:
           fi
 
           if [ -n "$FIREBASE_TOKEN" ]; then
-            firebase deploy --only hosting,firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN"
+            firebase deploy --only hosting,firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN"
           else
-            firebase deploy --only hosting,firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID"
+            firebase deploy --only hosting,firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID"
           fi

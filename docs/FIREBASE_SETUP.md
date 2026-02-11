@@ -42,6 +42,8 @@ Este projeto é **estático (HTML/CSS/JS)** e não usa bundler. A integração d
 2. **Get started**
 3. Selecione a região
 
+> Observação: alguns projetos/planos podem exigir upgrade para habilitar o Storage. Se você não for usar upload de arquivos no MVP, pode pular esta etapa.
+
 ## 7) Instalar Firebase CLI
 
 Requer Node.js instalado.
@@ -78,6 +80,10 @@ Depois, para testar local:
 Na raiz do projeto:
 
 - `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage`
+
+Se você **não** habilitou Storage:
+
+- `firebase deploy --only hosting,firestore:rules,firestore:indexes`
 
 ## 9) Como usar o init do Firebase no site
 
