@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CondoFlow | Gestão condominial completa, moderna e auditável</title>
+    <meta
+      name="description"
+      content="CondoFlow é um ecossistema completo para governança, finanças, manutenção, segurança e comunicação. Do condomínio único à gestão de carteira."
+    />
+
+    <meta property="og:title" content="CondoFlow | Gestão condominial completa" />
+    <meta
+      property="og:description"
+      content="Governança, financeiro, manutenção, segurança, obras, comunicação e modo carteira. Tudo em um só lugar."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <meta name="theme-color" content="#0b1220" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <script>
+      // Evita flash de tema ao carregar
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <!-- Loader (bloqueia scroll até liberar) -->
+    <div id="loader" class="loader" role="status" aria-live="polite" aria-label="Carregando o site">
+      <div class="loader__inner">
+        <div class="loader__mark">
+          <img class="loader__logo" src="assets/logo.svg" alt="" aria-hidden="true" />
+          <span class="loader__brand">CondoFlow</span>
+        </div>
+        <p class="loader__text" id="loaderText">Preparando sua experiência…</p>
+        <div class="loader__bar" aria-hidden="true">
+          <div class="loader__barFill" id="loaderBar"></div>
+        </div>
+        <div class="loader__meta" aria-hidden="true">
+          <span id="loaderPercent">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll progress bar -->
+    <div class="scrollProgress" aria-hidden="true">
+      <div class="scrollProgress__bar" id="scrollProgressBar"></div>
+    </div>
+
+    <header class="header">
+      <div class="container header__inner">
+        <a class="brand" href="#top" aria-label="Ir para o topo">
+          <img class="brand__logo" src="assets/logo.svg" alt="" aria-hidden="true" />
+          <span class="brand__name">CondoFlow</span>
+        </a>
+
+        <nav class="nav" aria-label="Navegação principal">
+          <button
+            class="nav__toggle"
+            id="navToggle"
+            type="button"
+            aria-label="Abrir menu"
+            aria-expanded="false"
+            aria-controls="navMenu"
+          >
+            <span class="nav__toggleLines" aria-hidden="true"></span>
+          </button>
+
+          <div class="nav__menu" id="navMenu">
+            <a class="nav__link" href="#modulos">Módulos</a>
+            <a class="nav__link" href="#carteira">Modo Carteira</a>
+            <a class="nav__link" href="#app-morador">App do Morador</a>
+            <a class="nav__link" href="#planos">Planos</a>
+            <a class="nav__link" href="#faq">FAQ</a>
+            <a class="nav__link" href="#contato">Contato</a>
+
+            <div class="nav__actions">
+              <button
+                class="btn btn--ghost"
+                id="themeToggle"
+                type="button"
+                aria-label="Alternar modo escuro"
+                aria-pressed="false"
+              >
+                <span class="btn__icon" aria-hidden="true">
+                  <svg class="icon icon--sm" aria-hidden="true">
+                    <use href="assets/icons.svg#moon"></use>
+                  </svg>
+                </span>
+                <span class="btn__text">Tema</span>
+              </button>
+              <a class="btn btn--primary" href="#contato">Solicitar demonstração</a>
+            </div>
+          </div>
+
+          <div class="nav__backdrop" id="navBackdrop" aria-hidden="true"></div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero__grid">
+          <div class="hero__copy" data-animate>
+            <p class="badge">Gestão condominial, do básico ao nível carteira</p>
+            <h1 class="hero__title">
+              O jeito mais claro e confiável de operar um condomínio e escalar para uma carteira inteira.
+            </h1>
+            <p class="hero__subtitle">
+              Um ecossistema completo para governança, finanças, manutenção, segurança e comunicação.
+              Do condomínio único à gestão de carteira.
+            </p>
+
+            <div class="hero__cta">
+              <a class="btn btn--primary" href="#modulos">Ver todas as funções</a>
+              <a class="btn btn--ghost" href="#contato">Solicitar demonstração</a>
+            </div>
+
+            <div class="hero__trust" aria-label="Destaques de valor">
+              <div class="trustItem">
+                <span class="trustItem__icon" aria-hidden="true">
+                  <svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
+                </span>
+                <span class="trustItem__kpi">+17</span>
+                <span class="trustItem__label">módulos completos</span>
+              </div>
+              <div class="trustItem">
+                <span class="trustItem__icon" aria-hidden="true">
+                  <svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#brain"></use></svg>
+                </span>
+                <span class="trustItem__kpi">IA</span>
+                <span class="trustItem__label">para alertas e insights</span>
+              </div>
+              <div class="trustItem">
+                <span class="trustItem__icon" aria-hidden="true">
+                  <svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#lock"></use></svg>
+                </span>
+                <span class="trustItem__kpi">Auditável</span>
+                <span class="trustItem__label">logs e rastreabilidade</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero__panel" data-animate>
+            <div class="glassCard">
+              <div class="glassCard__header">
+                <h2 class="glassCard__title">Visão de Gestão</h2>
+                <p class="glassCard__subtitle">Uma tela, decisões melhores.</p>
+              </div>
+              <div class="miniGrid" aria-label="Cartões de exemplo">
+                <div class="miniCard">
+                  <p class="miniCard__label">Saúde financeira</p>
+                  <p class="miniCard__value">Estável</p>
+                  <p class="miniCard__hint">IA monitora desvios</p>
+                </div>
+                <div class="miniCard">
+                  <p class="miniCard__label">Inadimplência</p>
+                  <p class="miniCard__value">Baixa</p>
+                  <p class="miniCard__hint">Ações automáticas</p>
+                </div>
+                <div class="miniCard">
+                  <p class="miniCard__label">Manutenções</p>
+                  <p class="miniCard__value">Em dia</p>
+                  <p class="miniCard__hint">Agenda + alertas</p>
+                </div>
+                <div class="miniCard">
+                  <p class="miniCard__label">Ocorrências</p>
+                  <p class="miniCard__value">1 nova</p>
+                  <p class="miniCard__hint">Registro com mídia</p>
+                </div>
+              </div>
+              <div class="glassCard__footer">
+                <p class="finePrint">* Exemplo ilustrativo do produto.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="para-quem">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Para quem é</h2>
+            <p class="section__subtitle">Experiência orientada por perfil, com permissões e auditoria.</p>
+          </div>
+
+          <div class="grid grid--4" data-animate>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#chart"></use></svg>
+              </div>
+              <h3 class="card__title">Gestor</h3>
+              <p class="card__text">Rotina operacional, indicadores e padronização para eficiência.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#shield"></use></svg>
+              </div>
+              <h3 class="card__title">Síndico</h3>
+              <p class="card__text">Transparência, prestação de contas e decisões com rastreabilidade.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
+              </div>
+              <h3 class="card__title">Administradora</h3>
+              <p class="card__text">Escala, controles e modelos prontos para reduzir retrabalho.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#phone"></use></svg>
+              </div>
+              <h3 class="card__title">Morador</h3>
+              <p class="card__text">Autoatendimento: 2ª via, reservas, chamados e comunicados.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="como-funciona">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Como funciona</h2>
+            <p class="section__subtitle">Do setup à auditoria, sem complexidade desnecessária.</p>
+          </div>
+
+          <ol class="steps" data-animate>
+            <li class="step">
+              <span class="step__num">1</span>
+              <div class="step__body">
+                <h3 class="step__title">Configurar condomínio</h3>
+                <p class="step__text">Cadastros, regras e perfis. Pronto para operar.</p>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step__num">2</span>
+              <div class="step__body">
+                <h3 class="step__title">Operar rotina</h3>
+                <p class="step__text">Financeiro, manutenção e comunicação em fluxo contínuo.</p>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step__num">3</span>
+              <div class="step__body">
+                <h3 class="step__title">Escalar e auditar</h3>
+                <p class="step__text">Modo carteira, alertas e relatórios consolidados.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section" id="beneficios">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Benefícios</h2>
+            <p class="section__subtitle">Menos ruído operacional. Mais governança e previsibilidade.</p>
+          </div>
+
+          <div class="grid grid--3" data-animate>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#doc"></use></svg>
+              </div>
+              <h3 class="card__title">Transparência</h3>
+              <p class="card__text">Prestação de contas pronta para assembleia, com evidências.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#spark"></use></svg>
+              </div>
+              <h3 class="card__title">Redução de custos</h3>
+              <p class="card__text">Alertas de desvios e sugestões de economia com IA.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
+              </div>
+              <h3 class="card__title">Padronização</h3>
+              <p class="card__text">Modelos e processos replicáveis para operar com consistência.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#bolt"></use></svg>
+              </div>
+              <h3 class="card__title">Rapidez</h3>
+              <p class="card__text">Automação de rotinas: boletos, lembretes e notificações.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#lock"></use></svg>
+              </div>
+              <h3 class="card__title">Segurança de dados</h3>
+              <p class="card__text">Permissões por perfil e rastreabilidade das ações.</p>
+            </article>
+            <article class="card">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#building"></use></svg>
+              </div>
+              <h3 class="card__title">Escala</h3>
+              <p class="card__text">Do condomínio único à carteira com visão global e auditoria.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="diferenciais">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Diferenciais</h2>
+            <p class="section__subtitle">IA, automações e auditoria para operar com confiança.</p>
+          </div>
+
+          <div class="grid grid--3" data-animate>
+            <article class="card card--feature">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#brain"></use></svg>
+              </div>
+              <h3 class="card__title">IA no dashboard</h3>
+              <p class="card__text">Alertas de gastos fora do padrão, inadimplência e riscos futuros.</p>
+            </article>
+            <article class="card card--feature">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#bolt"></use></svg>
+              </div>
+              <h3 class="card__title">Automações</h3>
+              <p class="card__text">Boletos, lembretes de assembleia, manutenções e contratos no piloto.</p>
+            </article>
+            <article class="card card--feature">
+              <div class="card__icon" aria-hidden="true">
+                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#lock"></use></svg>
+              </div>
+              <h3 class="card__title">Auditoria</h3>
+              <p class="card__text">Logs por usuário e histórico por módulo. Sem perda de contexto.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="modulos">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Módulos do sistema</h2>
+            <p class="section__subtitle">
+              Explore todas as funcionalidades por módulo. Use a busca para filtrar em tempo real.
+            </p>
+          </div>
+
+          <div class="tools" data-animate>
+            <div class="search">
+              <label class="srOnly" for="featureSearch">Buscar funcionalidades</label>
+              <input
+                class="search__input"
+                id="featureSearch"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                placeholder="Buscar por termo (ex.: boleto, assembleia, SLA, contratos, Pix…)"
+                aria-label="Buscar funcionalidades"
+              />
+              <button class="search__clear" id="searchClear" type="button" aria-label="Limpar busca">
+                Limpar
+              </button>
+            </div>
+            <div class="tools__meta" aria-live="polite">
+              <span id="searchMeta">Digite para filtrar as funções.</span>
+            </div>
+          </div>
+
+          <div class="moduleCards" id="moduleCards" data-animate></div>
+
+          <div class="divider" aria-hidden="true"></div>
+
+          <div class="section__header" data-animate>
+            <h3 class="section__title section__title--sm" id="todos-modulos">Todos os módulos (acordeão)</h3>
+            <p class="section__subtitle">Abra e feche por módulo. Itens filtram pela busca.</p>
+          </div>
+
+          <div class="accordion" id="modulesAccordion" data-animate></div>
+
+          <div class="noResults" id="noResults" hidden>
+            <h4 class="noResults__title">Sem resultados</h4>
+            <p class="noResults__text">Tente outro termo (ex.: “Pix”, “contrato”, “manutenção”, “assembleia”).</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="carteira">
+        <div class="container">
+          <div class="spotlight" data-animate>
+            <div class="spotlight__copy">
+              <p class="badge badge--alt">Destaque</p>
+              <h2 class="spotlight__title">Modo Carteira (vários condomínios)</h2>
+              <p class="spotlight__text">
+                Visão global, comparativos e auditoria para operar dezenas (ou centenas) de condomínios com padrão.
+              </p>
+              <ul class="bullets" aria-label="Pontos principais do modo carteira">
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#chart"></use></svg></span>Comparativos financeiros, inadimplência e custo por unidade</li>
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#layers"></use></svg></span>Modelos e padrões replicáveis (comunicados, assembleias, orçamentos)</li>
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#lock"></use></svg></span>Auditoria com alertas de atraso e risco</li>
+              </ul>
+              <a class="btn btn--primary" href="#modulos">Ver módulos relacionados</a>
+            </div>
+            <div class="spotlight__side">
+              <div class="statCard">
+                <p class="statCard__label">Visão Global</p>
+                <p class="statCard__value">Todos os condomínios</p>
+                <p class="statCard__hint">Painel consolidado + alertas</p>
+              </div>
+              <div class="statCard">
+                <p class="statCard__label">Auditoria</p>
+                <p class="statCard__value">Rastreável</p>
+                <p class="statCard__hint">Logs e relatórios consolidados</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="app-morador">
+        <div class="container">
+          <div class="spotlight" data-animate>
+            <div class="spotlight__copy">
+              <p class="badge">Destaque</p>
+              <h2 class="spotlight__title">App do Morador (integrado)</h2>
+              <p class="spotlight__text">
+                Autoatendimento com comunicação, chamados e serviços, reduzindo demandas da administração.
+              </p>
+              <ul class="bullets" aria-label="Principais recursos do app do morador">
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#wallet"></use></svg></span>2ª via de boleto, reservas e chamados</li>
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#megaphone"></use></svg></span>Comunicados, enquetes e acompanhamento de obras</li>
+                <li><span class="bulletIcon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#doc"></use></svg></span>Transparência com prestação de contas</li>
+              </ul>
+              <a class="btn btn--ghost" href="#contato">Quero ver uma demo</a>
+            </div>
+            <div class="spotlight__side">
+              <div class="phoneMock" aria-hidden="true">
+                <div class="phoneMock__top"></div>
+                <div class="phoneMock__screen">
+                  <div class="phoneMock__tile"></div>
+                  <div class="phoneMock__tile"></div>
+                  <div class="phoneMock__tile"></div>
+                  <div class="phoneMock__tile"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="planos">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Planos</h2>
+            <p class="section__subtitle">Exemplos de pacotes para diferentes níveis de operação.</p>
+          </div>
+
+          <div class="pricing" data-animate>
+            <article class="priceCard">
+              <h3 class="priceCard__name">Start</h3>
+              <p class="priceCard__price">Sob consulta</p>
+              <p class="priceCard__desc">Para começar com governança e rotinas essenciais.</p>
+              <ul class="priceCard__list" aria-label="Recursos do plano Start">
+                <li>Governança e administração</li>
+                <li>Financeiro (receitas/despesas)</li>
+                <li>Comunicação básica</li>
+              </ul>
+              <a class="btn btn--ghost" href="#contato">Solicitar proposta</a>
+            </article>
+
+            <article class="priceCard priceCard--featured">
+              <div class="priceCard__badge">Mais escolhido</div>
+              <h3 class="priceCard__name">Pro</h3>
+              <p class="priceCard__price">Sob consulta</p>
+              <p class="priceCard__desc">Para gestão completa com automações e auditoria.</p>
+              <ul class="priceCard__list" aria-label="Recursos do plano Pro">
+                <li>Financeiro completo + relatórios</li>
+                <li>Manutenção, segurança e obras</li>
+                <li>Logs e permissões por perfil</li>
+              </ul>
+              <a class="btn btn--primary" href="#contato">Solicitar proposta</a>
+            </article>
+
+            <article class="priceCard">
+              <h3 class="priceCard__name">Carteira</h3>
+              <p class="priceCard__price">Sob consulta</p>
+              <p class="priceCard__desc">Para administradoras e gestores com visão global.</p>
+              <ul class="priceCard__list" aria-label="Recursos do plano Carteira">
+                <li>Painel com todos os condomínios</li>
+                <li>Comparativos e relatórios consolidados</li>
+                <li>Padronização e auditoria em escala</li>
+              </ul>
+              <a class="btn btn--ghost" href="#contato">Falar com vendas</a>
+            </article>
+          </div>
+
+          <div class="tableWrap" data-animate aria-label="Tabela comparativa de planos">
+            <table class="compare">
+              <thead>
+                <tr>
+                  <th scope="col">Recursos</th>
+                  <th scope="col">Start</th>
+                  <th scope="col">Pro</th>
+                  <th scope="col">Carteira</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Módulos essenciais</th>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Dashboard IA</th>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Automações</th>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Modo Carteira</th>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Relatórios consolidados</th>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--no" aria-label="Não incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></span></td>
+                  <td><span class="cellIcon cellIcon--yes" aria-label="Incluído"><svg class="icon icon--sm" aria-hidden="true"><use href="assets/icons.svg#check-circle"></use></svg></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cta" data-animate>
+            <div class="cta__inner">
+              <div>
+                <h3 class="cta__title">Quer ver o CondoFlow em ação?</h3>
+                <p class="cta__text">Conte seu cenário e receba uma demonstração guiada.</p>
+              </div>
+              <a class="btn btn--primary" href="#contato">Solicitar demonstração</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="faq">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">FAQ</h2>
+            <p class="section__subtitle">Perguntas frequentes sobre implantação, segurança e operação.</p>
+          </div>
+
+          <div class="faq" id="faqAccordion" data-animate>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#layers"></use></svg></span>
+                O CondoFlow funciona para condomínio único e carteira?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Você pode operar um único condomínio ou ativar o Modo Carteira para visão global, comparativos e relatórios consolidados.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#lock"></use></svg></span>
+                Como é feito o controle de permissões?
+              </button>
+              <div class="faqItem__a" hidden>
+                Por perfis (síndico, subsíndico, conselho, porteiro, morador, gestor de carteira), com logs de auditoria das ações.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#wallet"></use></svg></span>
+                O financeiro inclui Pix e conciliação?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Há Pix automático com conciliação, além de boletos, rateios, acordos e relatórios completos.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#doc"></use></svg></span>
+                Existe suporte a assembleias digitais?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Convocação, confirmação, registro de quórum, geração de ata e histórico com busca por assunto.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#bell"></use></svg></span>
+                O sistema ajuda a reduzir inadimplência?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Lista automática de inadimplentes, juros e multas automáticas, carta de cobrança e integração futura com negativação.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#wrench"></use></svg></span>
+                Como funciona a manutenção preventiva e corretiva?
+              </button>
+              <div class="faqItem__a" hidden>
+                Preventiva com plano anual, agenda e alertas; corretiva com chamados, SLA, fotos antes/depois e custos por manutenção.
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#doc"></use></svg></span>
+                Há documentação digital e busca por palavra-chave?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Biblioteca de documentos, controle de versões e permissões por perfil (armazenamento em nuvem previsto como feature).
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#megaphone"></use></svg></span>
+                O envio de comunicados inclui WhatsApp?
+              </button>
+              <div class="faqItem__a" hidden>
+                Sim. Comunicados podem ser enviados por push, e-mail e WhatsApp (integrações variam por operação).
+              </div>
+            </div>
+            <div class="faqItem">
+              <button class="faqItem__q" type="button" aria-expanded="false">
+                <span class="faqItem__icon" aria-hidden="true"><svg class="icon icon--sm"><use href="assets/icons.svg#spark"></use></svg></span>
+                Quanto tempo leva para implantar?
+              </button>
+              <div class="faqItem__a" hidden>
+                Depende do volume de cadastros e do modelo operacional. Em geral, começamos com o essencial e evoluímos por módulos.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="contato">
+        <div class="container">
+          <div class="section__header" data-animate>
+            <h2 class="section__title">Contato</h2>
+            <p class="section__subtitle">Fale com a gente. Resposta rápida (envio simulado nesta página).</p>
+          </div>
+
+          <div class="contact" data-animate>
+            <form class="form" id="contactForm" novalidate>
+              <div class="form__row">
+                <div class="field">
+                  <label class="field__label" for="name">Nome</label>
+                  <input class="field__input" id="name" name="name" type="text" autocomplete="name" required />
+                  <p class="field__error" id="err-name" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="email">E-mail</label>
+                  <input
+                    class="field__input"
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                  />
+                  <p class="field__error" id="err-email" aria-live="polite"></p>
+                </div>
+              </div>
+
+              <div class="form__row">
+                <div class="field">
+                  <label class="field__label" for="phone">Telefone</label>
+                  <input
+                    class="field__input"
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    placeholder="(11) 99999-9999"
+                    required
+                  />
+                  <p class="field__error" id="err-phone" aria-live="polite"></p>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="profile">Perfil</label>
+                  <select class="field__input" id="profile" name="profile" required>
+                    <option value="" selected disabled>Selecione</option>
+                    <option value="Gestor">Gestor</option>
+                    <option value="Síndico">Síndico</option>
+                    <option value="Administradora">Administradora</option>
+                    <option value="Morador">Morador</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                  <p class="field__error" id="err-profile" aria-live="polite"></p>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="message">Mensagem</label>
+                <textarea
+                  class="field__input field__input--textarea"
+                  id="message"
+                  name="message"
+                  rows="5"
+                  placeholder="Conte um pouco sobre seu cenário (nº de unidades, condomínios, dores atuais...)"
+                  required
+                ></textarea>
+                <p class="field__error" id="err-message" aria-live="polite"></p>
+              </div>
+
+              <div class="form__actions">
+                <button class="btn btn--primary" type="submit">Enviar</button>
+                <p class="finePrint">Ao enviar, você concorda com as políticas (placeholders) no rodapé.</p>
+              </div>
+            </form>
+
+            <aside class="sideCard" aria-label="Informações">
+              <h3 class="sideCard__title">Preferência por WhatsApp?</h3>
+              <p class="sideCard__text">Nós podemos agendar uma demonstração e alinhar integrações conforme sua operação.</p>
+              <div class="sideCard__list">
+                <div class="sideCard__item"><span class="dot"></span> Onboarding guiado</div>
+                <div class="sideCard__item"><span class="dot"></span> Treinamento por perfil</div>
+                <div class="sideCard__item"><span class="dot"></span> Evolução por módulos</div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer__grid">
+        <div class="footer__brand">
+          <a class="brand" href="#top" aria-label="Ir para o topo">
+            <img class="brand__logo" src="assets/logo.svg" alt="" aria-hidden="true" />
+            <span class="brand__name">CondoFlow</span>
+          </a>
+          <p class="footer__text">
+            A plataforma definitiva para quem busca gestão condominial séria, moderna e auditável.
+          </p>
+          <div class="footer__socials">
+            <a href="#" class="footer__social" aria-label="Instagram">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+            </a>
+            <a href="#" class="footer__social" aria-label="LinkedIn">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                <rect x="2" y="9" width="4" height="12"></rect>
+                <circle cx="4" cy="4" r="2"></circle>
+              </svg>
+            </a>
+            <a href="#" class="footer__social" aria-label="YouTube">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
+                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer__cols" aria-label="Links do rodapé">
+          <div class="footer__col">
+            <h4 class="footer__title">Produto</h4>
+            <a href="#modulos" class="footer__link">Módulos</a>
+            <a href="#carteira" class="footer__link">Modo Carteira</a>
+            <a href="#planos" class="footer__link">Planos</a>
+            <a href="#faq" class="footer__link">Perguntas Frequentes</a>
+          </div>
+          <div class="footer__col">
+            <h4 class="footer__title">Institucional</h4>
+            <a href="#" class="footer__link">Sobre Nós</a>
+            <a href="#" class="footer__link">Carreiras</a>
+            <a href="#" class="footer__link">Blog</a>
+            <a href="#" class="footer__link">Imprensa</a>
+          </div>
+          <div class="footer__col">
+            <h4 class="footer__title">Suporte</h4>
+            <a href="#" class="footer__link">Central de Ajuda</a>
+            <a href="#" class="footer__link">Status do Sistema</a>
+            <a href="#" class="footer__link">Fale Conosco</a>
+          </div>
+        </div>
+
+        <div class="footer__addr">
+          <h4 class="footer__title">Contato</h4>
+          <div class="footer__contactItem">
+            <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <span>contato@condoflow.com.br</span>
+          </div>
+          <div class="footer__contactItem">
+            <svg class="icon icon--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>Av. Paulista, 1234 - São Paulo/SP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="container footer__bottom">
+        <p class="finePrint">© 2026 CondoFlow Tecnologia Ltda. Todos os direitos reservados.</p>
+        <div class="footer__legal">
+          <a href="#" class="finePrint">Termos de Uso</a>
+          <a href="#" class="finePrint">Privacidade</a>
+          <a href="#" class="finePrint">Cookies</a>
+        </div>
+      </div>
+    </footer>
+
+    <button class="backTop" id="backTop" type="button" aria-label="Voltar ao topo">
+      <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#arrow-up"></use></svg>
+    </button>
+
+    <div class="toastWrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="js/app.js" defer></script>
+  </body>
+</html>
