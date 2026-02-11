@@ -663,6 +663,12 @@
     const targets = qsa('[data-animate]');
     if (!targets.length) return;
 
+    // Failsafe: mesmo com JS ativo, nunca deixamos o layout invisível.
+    // Se por qualquer motivo o observer não rodar, liberamos tudo.
+    window.setTimeout(() => {
+      targets.forEach((el) => el.classList.add('in-view'));
+    }, 1500);
+
     // Fallback: em browsers antigos (ou WebViews) sem IntersectionObserver,
     // não podemos deixar o conteúdo invisível.
     if (!('IntersectionObserver' in window)) {
@@ -1218,6 +1224,12 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     setDefaultThemeIfMissing();
+
+    // Só ativa o estado inicial de animação quando o JS carregou de fato.
+    // Assim, se o app.js der erro/404, o conteúdo permanece visível.
+    try {
+      document.documentElement.classList.add('js-animate');
+    } catch (e) {}
 
     initLoader();
     initScrollProgress();

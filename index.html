@@ -68,6 +68,21 @@
       </div>
     </div>
 
+    <script>
+      // Bootstrap do loader: mostra imediatamente (mesmo antes do app.js).
+      // Se o app.js falhar, o fallback no final da página remove o overlay.
+      (function () {
+        try {
+          var loader = document.getElementById('loader');
+          if (!loader) return;
+          document.body.classList.add('is-loading');
+          window.requestAnimationFrame(function () {
+            loader.classList.add('is-visible');
+          });
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Scroll progress bar -->
     <div class="scrollProgress" aria-hidden="true">
       <div class="scrollProgress__bar" id="scrollProgressBar"></div>

@@ -1399,13 +1399,21 @@ body.is-menu-open { overflow: hidden; }
 }
 .loader__meta { margin-top: 10px; color: var(--faint); font-weight: 800; font-size: 12px; }
 
-/* Animations on scroll (ativadas somente quando JS está disponível) */
-.js [data-animate] {
+/* Animations on scroll
+   Importante: o conteúdo NÃO pode ficar invisível caso o JS falhe/404.
+   Por isso, só aplicamos o estado inicial (opacity 0) quando o JS habilita
+   explicitamente via classe .js-animate.
+*/
+[data-animate] {
+  opacity: 1;
+  transform: none;
+}
+.js-animate [data-animate] {
   opacity: 0;
   transform: translateY(10px) scale(0.99);
   transition: opacity 520ms var(--ease), transform 520ms var(--ease);
 }
-.js [data-animate].in-view {
+.js-animate [data-animate].in-view {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
