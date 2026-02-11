@@ -1,33 +1,22 @@
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-.env
-.env.*
-
-.DS_Store
-Thumbs.db
-
-.vscode/
-
+# build outputs
 dist/
-build/# dependencies
-node_modules/
+build/
 
 # logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
+pnpm-debug.log*
 
 # env
 .env
 .env.*
+
+# OS
+.DS_Store
+Thumbs.db
 
 # editor
 .vscode/
