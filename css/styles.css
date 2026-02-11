@@ -887,32 +887,51 @@ img { display: block; max-width: 100%; }
 .statCard__value { margin: 8px 0 2px; font-weight: 900; letter-spacing: -0.5px; }
 .statCard__hint { margin: 0; color: var(--muted); font-size: 12px; }
 
-.phoneMock {
-  border-radius: 26px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
-  padding: 14px;
-  box-shadow: var(--shadow);
-  max-width: 320px;
+.residentCard {
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
 }
-.phoneMock__top {
-  height: 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  margin-bottom: 12px;
+.residentCard__window {
+  position: relative;
+  display: flex;
+  justify-content: center;
 }
-.phoneMock__screen {
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  padding: 12px;
-  display: grid;
-  gap: 10px;
+.residentCard__content {
+  display: none;
 }
-.phoneMock__tile {
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, rgba(124, 58, 237, 0.12) 45%, var(--surface));
+.residentCard__resident {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: -120px; /* Efeito 3D estourando para cima */
+}
+.residentCard__image {
+  width: 140%;
+  max-width: none;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25));
+  transform: translateY(-20px);
+}
+
+/* Responsivo Mobile */
+@media (max-width: 919px) {
+  .residentCard {
+    max-width: 100%;
+    margin-top: 60px; /* Compensa o estouro negativo */
+  }
+  .residentCard__window {
+    min-height: auto;
+  }
+  .residentCard__resident {
+    margin-top: -60px;
+  }
+  .residentCard__image {
+    width: 120%;
+    transform: none;
+  }
 }
 
 @media (min-width: 920px) {
