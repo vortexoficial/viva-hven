@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Reformas | Viva Haven</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 72px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Reformas</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Solicite e acompanhe reformas na sua unidade.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Minhas solicitações</h2>
+          <div id="reformList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Solicitar reforma</h2>
+          <form id="reformForm" style="display:grid;gap:10px;">
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="reformTitle" class="input" placeholder="Ex: Reforma de banheiro" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <textarea id="reformDesc" class="input" rows="3" placeholder="Descreva o que será feito" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Unidade</label>
+                <input id="reformUnitLabel" class="input" placeholder="Ex: Bloco A • 301" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Início</label>
+                <input id="reformStart" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fim</label>
+                <input id="reformEnd" class="input" type="date" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contratada</label>
+                <input id="reformContractor" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contato</label>
+                <input id="reformContact" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo (opcional)</label>
+              <input id="reformFile" class="input" type="file" />
+              <p style="margin:6px 0 0;font-size:12px;color:var(--muted);">Envie o anexo depois de abrir (no detalhe).</p>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="reformOpenBtn" class="btn" type="submit">Enviar solicitação</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Detalhe</h2>
+          <input type="hidden" id="reformId" />
+          <div id="reformDetail" style="font-size:12px;color:var(--muted);"></div>
+          <div id="reformAttachments" style="display:grid;gap:10px;margin-top:10px;"></div>
+
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Adicionar anexo</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <input id="addFile" class="input" type="file" style="flex:1;min-width:220px;" />
+              <button id="addFileBtn" class="btn" type="button">Enviar</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import { listUnitReforms, createUnitReform, addUnitReformAttachment } from '/js/modules/works.js';
+
+      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name || c.id;
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function fmtDateTimeMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            return d.toLocaleString('pt-BR');
+          }
+          if (v instanceof Date) return v.toLocaleString('pt-BR');
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function renderAttachments(container, attachments) {
+        container.innerHTML = '';
+        const list = Array.isArray(attachments) ? attachments : [];
+        if (list.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+          return;
+        }
+        list.forEach((a) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.padding = '12px';
+          const url = a && a.url ? String(a.url) : '';
+          const name = a && a.name ? String(a.name) : 'anexo';
+          card.innerHTML =
+            '<div style="font-weight:800;margin-bottom:8px;">' + name + '</div>' +
+            (url ? '<a class="btn" target="_blank" href="' + url + '">Abrir</a>' : '<div style="font-size:12px;color:var(--muted);">Sem URL</div>');
+          container.appendChild(card);
+        });
+      }
+
+      function renderList(container, items, onPick) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma solicitação.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const subtitle = [it.status ? ('status: ' + it.status) : null, it.unitLabel ? ('unidade: ' + it.unitLabel) : null].filter(Boolean).join(' • ');
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+            '<div>' +
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '</div>' +
+            '<button class="btn btn--ghost" type="button">Abrir</button>' +
+            '</div>';
+
+          row.querySelector('button').addEventListener('click', () => onPick(it));
+          container.appendChild(row);
+        });
+      }
+
+      async function refreshReforms() {
+        const cId = currentCondoId();
+
+        $('reformId').value = '';
+        $('reformDetail').textContent = '';
+        $('reformAttachments').innerHTML = '';
+
+        if (!cId) {
+          renderList($('reformList'), [], () => {});
+          return;
+        }
+
+        const items = await listUnitReforms(cId, { mineOnly: true });
+        renderList($('reformList'), items, (it) => {
+          $('reformId').value = it.id;
+          $('reformDetail').innerHTML =
+            '<div><strong>Status:</strong> ' + (it.status || '') + '</div>' +
+            (it.unitLabel ? '<div><strong>Unidade:</strong> ' + it.unitLabel + '</div>' : '') +
+            (it.contractor ? '<div><strong>Contratada:</strong> ' + it.contractor + '</div>' : '') +
+            (it.contact ? '<div><strong>Contato:</strong> ' + it.contact + '</div>' : '') +
+            (it.decisionNote ? '<div><strong>Obs.:</strong> ' + it.decisionNote + '</div>' : '') +
+            (it.updatedAt ? '<div><strong>Atualizado:</strong> ' + fmtDateTimeMaybe(it.updatedAt) + '</div>' : '');
+
+          renderAttachments($('reformAttachments'), it.attachments);
+          setStatus('Solicitação selecionada.');
+        });
+      }
+
+      // Logout
+      $('logoutBtn').addEventListener('click', async () => {
+        await withBusy($('logoutBtn'), async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refreshReforms();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        await withBusy(null, refreshReforms);
+      });
+
+      // Abrir reforma
+      $('reformForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          return;
+        }
+
+        const payload = {
+          title: $('reformTitle').value,
+          description: $('reformDesc').value,
+          unitLabel: $('reformUnitLabel').value,
+          contractor: $('reformContractor').value,
+          contact: $('reformContact').value,
+          startDate: $('reformStart').value,
+          endDate: $('reformEnd').value,
+        };
+
+        await withBusy($('reformOpenBtn'), async () => {
+          await createUnitReform(cId, payload);
+          $('reformTitle').value = '';
+          $('reformDesc').value = '';
+          $('reformUnitLabel').value = '';
+          $('reformContractor').value = '';
+          $('reformContact').value = '';
+          $('reformStart').value = '';
+          $('reformEnd').value = '';
+          $('reformFile').value = '';
+          await refreshReforms();
+          setStatus('Solicitação enviada.');
+        });
+      });
+
+      // Adicionar anexo
+      $('addFileBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const rId = $('reformId').value;
+        const file = $('addFile').files && $('addFile').files[0] ? $('addFile').files[0] : null;
+        if (!cId || !rId) {
+          setStatus('Selecione uma solicitação.');
+          return;
+        }
+        if (!file) {
+          setStatus('Selecione um arquivo.');
+          return;
+        }
+
+        await withBusy($('addFileBtn'), async () => {
+          await addUnitReformAttachment(cId, rId, file);
+          $('addFile').value = '';
+          await refreshReforms();
+          setStatus('Anexo enviado.');
+        });
+      });
+
+      // Init
+      const condos = await listCondos();
+      fillCondoSelect(condos);
+      await withBusy(null, refreshReforms);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

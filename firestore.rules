@@ -1,0 +1,593 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && uid() == userId;
+    }
+
+    function isActiveMembershipDoc(mDoc) {
+      return signedIn() && mDoc.exists() && mDoc.data.uid == uid() && mDoc.data.status == 'active';
+    }
+
+    function condoMembershipId(userId, condoId) {
+      return userId + '_' + condoId;
+    }
+
+    function orgMembershipId(userId, orgId) {
+      return userId + '_org_' + orgId;
+    }
+
+    function membershipForCondo(condoId) {
+      return get(/databases/$(database)/documents/memberships/$(condoMembershipId(uid(), condoId)));
+    }
+
+    function membershipForOrg(orgId) {
+      return get(/databases/$(database)/documents/memberships/$(orgMembershipId(uid(), orgId)));
+    }
+
+    function hasCondoRole(condoId, roles) {
+      let m = membershipForCondo(condoId);
+      return isActiveMembershipDoc(m) && (m.data.role in roles) && m.data.scope == 'condo' && m.data.condoId == condoId;
+    }
+
+    function hasOrgRole(orgId, roles) {
+      let m = membershipForOrg(orgId);
+      return isActiveMembershipDoc(m) && (m.data.role in roles) && m.data.scope == 'org' && m.data.orgId == orgId && m.data.condoId == null;
+    }
+
+    function condoDoc(condoId) {
+      return get(/databases/$(database)/documents/condos/$(condoId));
+    }
+
+    function orgIdForCondo(condoId) {
+      let c = condoDoc(condoId);
+      return c.exists() ? c.data.orgId : null;
+    }
+
+    // Leitura de dados do condomínio: membro do condo OU carteira/admin da organização do condo
+    function canReadCondo(condoId) {
+      return hasCondoRole(condoId, ['morador', 'gestor', 'sindico', 'admin']) ||
+             (orgIdForCondo(condoId) != null && hasOrgRole(orgIdForCondo(condoId), ['carteira', 'administradora', 'admin']));
+    }
+
+    // Escrita administrativa do condomínio
+    function canManageCondo(condoId) {
+      return hasCondoRole(condoId, ['gestor', 'sindico', 'admin']) ||
+             (orgIdForCondo(condoId) != null && hasOrgRole(orgIdForCondo(condoId), ['carteira', 'administradora', 'admin']));
+    }
+
+    // ===== users =====
+    match /users/{userId} {
+      function roleIsMorador() {
+        return (request.resource.data.role is string) && request.resource.data.role == 'MORADOR';
+      }
+
+      function roleUnchangedOrMoradorDefault() {
+        return (
+          ('role' in resource.data) &&
+          (request.resource.data.role is string) &&
+          request.resource.data.role == resource.data.role
+        ) || (
+          !('role' in resource.data) &&
+          roleIsMorador()
+        );
+      }
+
+      allow get: if isSelf(userId);
+      allow list: if false;
+
+      // Perfil do próprio usuário (mínimo). Para campos sensíveis, valide no app/server.
+      allow create: if isSelf(userId) && roleIsMorador();
+      allow update: if isSelf(userId) && roleUnchangedOrMoradorDefault();
+      allow delete: if isSelf(userId);
+    }
+
+    // ===== organizations =====
+    match /organizations/{orgId} {
+      // Apenas quem tem membership org-scoped ativo para esta organização
+      allow get, list: if hasOrgRole(orgId, ['carteira', 'administradora', 'admin']);
+      allow create, update, delete: if hasOrgRole(orgId, ['admin']);
+    }
+
+    // ===== condos + subcoleções =====
+    match /condos/{condoId} {
+      allow get, list: if canReadCondo(condoId);
+
+      // Criar/editar condomínio: somente carteira/admin da organização (orgId no doc)
+      allow create: if signedIn() &&
+                    request.resource.data.orgId is string &&
+                    hasOrgRole(request.resource.data.orgId, ['carteira', 'administradora', 'admin']);
+
+      // orgId é imutável (não permitir mover condomínio entre organizações via client)
+      allow update: if canManageCondo(condoId) &&
+            request.resource.data.orgId == resource.data.orgId;
+
+      allow delete: if canManageCondo(condoId);
+
+      match /blocks/{blockId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /units/{unitId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /mandates/{mandateId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /assemblies/{assemblyId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      // ===== Financeiro (por condomínio) =====
+      match /charges/{chargeId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /payments/{paymentId} {
+        // Morador precisa ler para baixar comprovante
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /expenses/{expenseId} {
+        // MVP: despesas são administrativas
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /ledger/{entryId} {
+        // MVP: livro razão é administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      // ===== Manutenção (por condomínio) =====
+      match /assets/{assetId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /maintenancePlans/{planId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /tickets/{ticketId} {
+        function isOwner() {
+          return signedIn() && (resource.data.createdBy is string) && resource.data.createdBy == uid();
+        }
+
+        // Gestão vê tudo; morador vê apenas os próprios
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isOwner());
+
+        // Para morador, só permite list quando a query filtra por createdBy == uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('createdBy', '==', uid())
+        );
+
+        // Morador pode abrir chamado para si
+        allow create: if canReadCondo(condoId) &&
+                      request.resource.data.condoId == condoId &&
+                      request.resource.data.createdBy == uid() &&
+                      (request.resource.data.orgId is string) &&
+                      (request.resource.data.status is string);
+
+        // Morador pode editar apenas o próprio chamado, sem mudar status/assigned
+        allow update: if canManageCondo(condoId) || (
+                      canReadCondo(condoId) &&
+                      isOwner() &&
+                      request.resource.data.condoId == resource.data.condoId &&
+                      request.resource.data.orgId == resource.data.orgId &&
+                      request.resource.data.createdBy == resource.data.createdBy &&
+                      request.resource.data.status == resource.data.status &&
+                      request.resource.data.assignedTo == resource.data.assignedTo
+                    );
+
+        allow delete: if canManageCondo(condoId);
+      }
+
+      // ===== Obras e Reformas (por condomínio) =====
+      match /projects/{projectId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /unitReforms/{reformId} {
+        function isOwner() {
+          return signedIn() && (resource.data.createdBy is string) && resource.data.createdBy == uid();
+        }
+
+        // Gestão vê tudo; morador vê apenas as próprias solicitações
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isOwner());
+
+        // Para morador, só permite list quando a query filtra por createdBy == uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('createdBy', '==', uid())
+        );
+
+        // Morador pode criar solicitação para si (sempre inicia em 'solicitado')
+        allow create: if canReadCondo(condoId) &&
+                      request.resource.data.condoId == condoId &&
+                      request.resource.data.createdBy == uid() &&
+                      (request.resource.data.orgId is string) &&
+                      request.resource.data.status == 'solicitado' &&
+                      request.resource.data.decisionBy == null &&
+                      request.resource.data.decisionAt == null;
+
+        // Morador pode atualizar apenas a própria solicitação, sem mudar status/decisão
+        allow update: if canManageCondo(condoId) || (
+                      canReadCondo(condoId) &&
+                      isOwner() &&
+                      request.resource.data.condoId == resource.data.condoId &&
+                      request.resource.data.orgId == resource.data.orgId &&
+                      request.resource.data.createdBy == resource.data.createdBy &&
+                      request.resource.data.status == resource.data.status &&
+                      request.resource.data.decisionBy == resource.data.decisionBy &&
+                      request.resource.data.decisionAt == resource.data.decisionAt
+                    );
+
+        allow delete: if canManageCondo(condoId);
+      }
+
+      // ===== Gestão de Moradores (por condomínio) =====
+      match /residents/{residentId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /vehicles/{vehicleId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /pets/{petId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      // ===== Comunicação =====
+      match /announcements/{announcementId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /polls/{pollId} {
+        allow get, list: if canReadCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+
+        match /votes/{voteId} {
+          function isVoter() {
+            return signedIn() && voteId == uid();
+          }
+
+          // Gestão pode ver resultados; morador só pode ver o próprio voto
+          allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isVoter());
+          allow list: if canManageCondo(condoId);
+
+          // Um voto por usuário (docId = uid)
+          allow create: if canReadCondo(condoId) &&
+                        isVoter() &&
+                        request.resource.data.condoId == condoId &&
+                        request.resource.data.pollId == pollId &&
+                        request.resource.data.uid == uid() &&
+                        (request.resource.data.orgId is string);
+
+          allow update, delete: if false;
+        }
+      }
+
+      match /readReceipts/{receiptId} {
+        function isOwner() {
+          return signedIn() && (resource.data.uid is string) && resource.data.uid == uid();
+        }
+
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isOwner());
+
+        // Para morador, só permite list quando a query filtra por uid == request.auth.uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('uid', '==', uid())
+        );
+
+        // Confirmação de leitura é do próprio usuário
+        allow create: if canReadCondo(condoId) &&
+                      request.resource.data.condoId == condoId &&
+                      request.resource.data.uid == uid() &&
+                      (request.resource.data.kind in ['announcement', 'poll']) &&
+                      (request.resource.data.targetId is string);
+
+        allow update, delete: if false;
+      }
+
+      // ===== Contratos e Fornecedores + Seguros e Riscos =====
+      match /suppliers/{supplierId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /contracts/{contractId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /insurances/{insuranceId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /risks/{riskId} {
+        // MVP: cadastro administrativo
+        allow get, list: if canManageCondo(condoId);
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /reservations/{reservationId} {
+        function isOwner() {
+          return signedIn() && (resource.data.createdBy is string) && resource.data.createdBy == uid();
+        }
+
+        // Gestão vê tudo; morador vê apenas as próprias reservas
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isOwner());
+
+        // Para morador, só permite list quando a query filtra por createdBy == uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('createdBy', '==', uid())
+        );
+
+        // Morador cria reserva para si (sempre inicia em 'solicitado')
+        allow create: if canReadCondo(condoId) &&
+                      request.resource.data.condoId == condoId &&
+                      request.resource.data.createdBy == uid() &&
+                      (request.resource.data.orgId is string) &&
+                      request.resource.data.status == 'solicitado' &&
+                      request.resource.data.decisionBy == null &&
+                      request.resource.data.decisionAt == null;
+
+        // Morador pode ajustar apenas a própria reserva, sem mudar status/decisão
+        allow update: if canManageCondo(condoId) || (
+                      canReadCondo(condoId) &&
+                      isOwner() &&
+                      request.resource.data.condoId == resource.data.condoId &&
+                      request.resource.data.orgId == resource.data.orgId &&
+                      request.resource.data.createdBy == resource.data.createdBy &&
+                      request.resource.data.status == resource.data.status &&
+                      request.resource.data.decisionBy == resource.data.decisionBy &&
+                      request.resource.data.decisionAt == resource.data.decisionAt
+                    );
+
+        allow delete: if canManageCondo(condoId);
+      }
+
+      match /warnings/{warningId} {
+        function isTarget() {
+          return signedIn() && (resource.data.targetUid is string) && resource.data.targetUid == uid();
+        }
+
+        // Gestão vê tudo; morador vê apenas se for o alvo
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isTarget());
+
+        // Para morador, só permite list quando a query filtra por targetUid == uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('targetUid', '==', uid())
+        );
+
+        // Advertência é administrativa
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+
+      match /fines/{fineId} {
+        function isTarget() {
+          return signedIn() && (resource.data.targetUid is string) && resource.data.targetUid == uid();
+        }
+
+        // Gestão vê tudo; morador vê apenas se for o alvo
+        allow get: if canManageCondo(condoId) || (canReadCondo(condoId) && isTarget());
+
+        // Para morador, só permite list quando a query filtra por targetUid == uid
+        allow list: if canManageCondo(condoId) || (
+          canReadCondo(condoId) &&
+          request.query.where('targetUid', '==', uid())
+        );
+
+        // Multa é administrativa
+        allow create, update, delete: if canManageCondo(condoId);
+      }
+    }
+
+    // ===== assemblies (raiz) + subcoleções =====
+    // Doc raiz espelha metadata (condoId/orgId) e hospeda subcoleções.
+    match /assemblies/{assemblyId} {
+      function parentAssembly() {
+        return get(/databases/$(database)/documents/assemblies/$(assemblyId));
+      }
+
+      function parentCondoId() {
+        let a = parentAssembly();
+        return (a.exists() && (a.data.condoId is string)) ? a.data.condoId : null;
+      }
+
+      function parentOrgId() {
+        let a = parentAssembly();
+        return (a.exists() && (a.data.orgId is string)) ? a.data.orgId : null;
+      }
+
+      function parentVoteIsOpen() {
+        let a = parentAssembly();
+        return a.exists() && a.data.voteStatus == 'open';
+      }
+
+      // Leitura do doc raiz: precisa ter acesso ao condo do assembly
+      allow get: if signedIn() && (resource.data.condoId is string) && canReadCondo(resource.data.condoId);
+      allow list: if false;
+
+      // Escrita do doc raiz: somente gestão do condo (ou carteira/admin org via canManageCondo)
+      allow create: if signedIn() &&
+                    request.resource.data.condoId is string &&
+                    request.resource.data.orgId is string &&
+                    canManageCondo(request.resource.data.condoId);
+
+      // condoId/orgId imutáveis
+      allow update: if signedIn() &&
+                    (resource.data.condoId is string) &&
+                    canManageCondo(resource.data.condoId) &&
+                    request.resource.data.condoId == resource.data.condoId &&
+                    request.resource.data.orgId == resource.data.orgId;
+
+      allow delete: if signedIn() && (resource.data.condoId is string) && canManageCondo(resource.data.condoId);
+
+      // Presenças (morador): 1 doc por usuário
+      match /attendances/{userId} {
+        allow get: if isSelf(userId) && parentCondoId() != null && canReadCondo(parentCondoId());
+        allow list: if false;
+
+        // Permite confirmar presença apenas para si mesmo
+        allow create, update: if isSelf(userId) &&
+                              parentCondoId() != null &&
+                              canReadCondo(parentCondoId()) &&
+                              request.resource.data.uid == request.auth.uid &&
+                              request.resource.data.condoId == parentCondoId();
+
+        allow delete: if false;
+      }
+
+      // Votos (morador): 1 doc por usuário, somente quando voteStatus == 'open'
+      match /votes/{userId} {
+        allow get: if isSelf(userId) && parentCondoId() != null && canReadCondo(parentCondoId());
+        allow list: if false;
+
+        allow create, update: if isSelf(userId) &&
+                              parentCondoId() != null &&
+                              canReadCondo(parentCondoId()) &&
+                              parentVoteIsOpen() &&
+                              request.resource.data.uid == request.auth.uid &&
+                              request.resource.data.condoId == parentCondoId() &&
+                              (request.resource.data.choice in ['sim', 'nao', 'abstencao']);
+
+        allow delete: if false;
+      }
+
+      // Ata
+      match /minutes/{minuteId} {
+        allow get: if signedIn() && parentCondoId() != null && canReadCondo(parentCondoId());
+        allow list: if false;
+        allow create, update, delete: if signedIn() && parentCondoId() != null && canManageCondo(parentCondoId());
+      }
+    }
+
+    // ===== memberships =====
+    match /memberships/{membershipId} {
+      // O usuário lê apenas as próprias memberships (mesmo que adivinhe o ID)
+      allow get: if signedIn() && resource.data.uid == uid();
+      allow list: if false;
+
+      function validMembershipShape() {
+        return request.resource.data.uid is string &&
+               request.resource.data.orgId is string &&
+               request.resource.data.status is string &&
+               request.resource.data.role is string &&
+               request.resource.data.scope is string;
+      }
+
+      function isCondoScopedMembership() {
+        return request.resource.data.scope == 'condo' &&
+               request.resource.data.condoId is string &&
+               membershipId == condoMembershipId(request.resource.data.uid, request.resource.data.condoId);
+      }
+
+      function isOrgScopedMembership() {
+        return request.resource.data.scope == 'org' &&
+               request.resource.data.condoId == null &&
+               membershipId == orgMembershipId(request.resource.data.uid, request.resource.data.orgId);
+      }
+
+      // Admin de org (carteira/admin) ou gestor/síndico/admin do condo consegue gerenciar memberships
+      function canManageMembershipWrite() {
+        return (
+          // Org-scoped
+          (request.resource.data.orgId is string && hasOrgRole(request.resource.data.orgId, ['carteira', 'administradora', 'admin']))
+        ) || (
+          // Condo-scoped
+          (request.resource.data.condoId is string && canManageCondo(request.resource.data.condoId))
+        );
+      }
+
+      function canManageMembershipDelete() {
+        return (
+          (resource.data.orgId is string && hasOrgRole(resource.data.orgId, ['carteira', 'administradora', 'admin']))
+        ) || (
+          (resource.data.condoId is string && canManageCondo(resource.data.condoId))
+        );
+      }
+
+      allow create: if signedIn() &&
+                    validMembershipShape() &&
+                    (isCondoScopedMembership() || isOrgScopedMembership()) &&
+                    canManageMembershipWrite();
+
+      allow update: if signedIn() &&
+                    validMembershipShape() &&
+                    (isCondoScopedMembership() || isOrgScopedMembership()) &&
+                    canManageMembershipWrite() &&
+                    // Imutáveis
+                    request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.orgId == resource.data.orgId &&
+                    request.resource.data.scope == resource.data.scope &&
+                    request.resource.data.condoId == resource.data.condoId;
+
+      allow delete: if signedIn() && canManageMembershipDelete();
+    }
+
+    // ===== auditLogs =====
+    match /auditLogs/{logId} {
+      // Leitura: gestão do condo ou carteira/admin do org
+      allow get: if signedIn() && (
+        (resource.data.condoId is string && canManageCondo(resource.data.condoId)) ||
+        (resource.data.orgId is string && hasOrgRole(resource.data.orgId, ['carteira', 'administradora', 'admin']))
+      );
+      allow list: if false;
+
+      // Escrita: cria apenas logs do próprio usuário; se tiver condoId, precisa ter acesso ao condo
+      allow create: if signedIn() &&
+                    request.resource.data.actorUid == uid() &&
+                    request.resource.data.orgId is string &&
+                    (
+                      request.resource.data.condoId == null ||
+                      (request.resource.data.condoId is string && canReadCondo(request.resource.data.condoId))
+                    );
+
+      // Nunca permitir alteração/remoção pelo client (auditoria imutável)
+      allow update, delete: if false;
+    }
+
+    // Default: bloqueia qualquer coisa não mapeada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

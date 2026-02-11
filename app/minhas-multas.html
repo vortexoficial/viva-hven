@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morador • Minhas Multas</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/perfil.html">← Voltar</a>
+      <h1 class="h1">Minhas Multas</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Filtros</h2>
+      <div class="grid grid--3">
+        <label class="field">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="status" class="input">
+            <option value="">(todos)</option>
+            <option value="aberta">aberta</option>
+            <option value="paga">paga</option>
+            <option value="cancelada">cancelada</option>
+          </select>
+        </label>
+        <div class="field" style="display:flex; gap:8px; align-items:flex-end;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+        </div>
+      </div>
+      <p id="msg" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Lista</h2>
+      <div id="list" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+    import { listFines } from '/js/modules/residents.js';
+
+    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+    };
+
+    function setMsg(msg, isErr) {
+      $('msg').textContent = msg || '';
+      $('msg').classList.toggle('error', !!isErr);
+    }
+
+    function formatMoney(cents) {
+      return (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function asItemRow(title, subtitle, right) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+        </div>
+      `;
+    }
+
+    async function loadCondos() {
+      const condos = await listCondos();
+      return Array.isArray(condos) ? condos : [];
+    }
+
+    async function render() {
+      if (!state.condoId) return;
+      setMsg('Carregando...');
+      try {
+        const status = $('status').value;
+        const items = await listFines(state.condoId, { mineOnly: true, status });
+        $('list').innerHTML = items.length
+          ? items.map((f) => {
+              const right = `Status: <span class="badge">${f.status || 'aberta'}</span>`;
+              const subtitle = `Valor: ${formatMoney(f.amountCents)}${f.dueAt ? ` • Venc: ${formatTs(f.dueAt)}` : ''}${f.paidAt ? ` • Pago: ${formatTs(f.paidAt)}` : ''}`;
+              return asItemRow(f.title, subtitle, right);
+            }).join('')
+          : '<p class="muted">Nenhuma multa encontrada.</p>';
+        setMsg(`Total: ${items.length}`);
+      } catch (err) {
+        setMsg(err.message || String(err), true);
+      }
+    }
+
+    async function bootstrap() {
+      const { auth, db } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      $('refreshBtn').addEventListener('click', render);
+      $('status').addEventListener('change', render);
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await loadCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          setMsg('Você não tem memberships para nenhum condomínio.', true);
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          await render();
+        });
+
+        await render();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

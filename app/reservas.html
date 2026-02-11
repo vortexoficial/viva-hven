@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morador • Reservas</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/perfil.html">← Voltar</a>
+      <h1 class="h1">Reservas</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Nova reserva</h2>
+      <form id="reservationForm" class="grid grid--3">
+        <label class="field">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <label class="field">
+          <span>Área *</span>
+          <input id="area" class="input" required placeholder="Ex.: Salão de festas" />
+        </label>
+        <label class="field">
+          <span>Título *</span>
+          <input id="title" class="input" required placeholder="Ex.: Aniversário" />
+        </label>
+        <label class="field">
+          <span>Início *</span>
+          <input id="startAt" type="datetime-local" class="input" required />
+        </label>
+        <label class="field">
+          <span>Fim *</span>
+          <input id="endAt" type="datetime-local" class="input" required />
+        </label>
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observação</span>
+          <textarea id="note" class="input" rows="3"></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Enviar</button>
+          <span id="msg" class="muted"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Minhas reservas</h2>
+      <div class="row" style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+        <button id="refreshBtn" class="btn btn--ghost">Atualizar</button>
+        <span id="listMsg" class="muted"></span>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+
+    import { createReservation, listReservations } from '/js/modules/residents.js';
+
+    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+    };
+
+    function setMsg(el, msg, isErr) {
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function asItemRow(title, subtitle, right) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+        </div>
+      `;
+    }
+
+    async function loadCondos() {
+      const condos = await listCondos();
+      return Array.isArray(condos) ? condos : [];
+    }
+
+    async function renderList() {
+      if (!state.condoId) return;
+      setMsg($('listMsg'), 'Carregando...');
+      try {
+        const items = await listReservations(state.condoId, { mineOnly: true });
+        $('list').innerHTML = items.length
+          ? items.map((r) => {
+              const start = formatTs(r.startAt);
+              const end = formatTs(r.endAt);
+              const right = `Status: <span class="badge">${r.status || 'solicitado'}</span>`;
+              return asItemRow(
+                r.title,
+                `Área: ${r.area} • ${start} → ${end}${r.decisionNote ? ` • Obs: ${r.decisionNote}` : ''}`,
+                right
+              );
+            }).join('')
+          : '<p class="muted">Nenhuma reserva encontrada.</p>';
+        setMsg($('listMsg'), `Total: ${items.length}`);
+      } catch (err) {
+        setMsg($('listMsg'), err.message || String(err), true);
+      }
+    }
+
+    async function bootstrap() {
+      const { auth, db } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      $('refreshBtn').addEventListener('click', renderList);
+
+      $('reservationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('msg'), 'Enviando...');
+        try {
+          await createReservation(state.condoId, {
+            area: $('area').value,
+            title: $('title').value,
+            note: $('note').value,
+            startAt: $('startAt').value,
+            endAt: $('endAt').value,
+          });
+          e.target.reset();
+          setMsg($('msg'), 'Reserva enviada (aguardando aprovação).');
+          await renderList();
+        } catch (err) {
+          setMsg($('msg'), err.message || String(err), true);
+        }
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await loadCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          setMsg($('msg'), 'Você não tem memberships para nenhum condomínio.', true);
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          await renderList();
+        });
+
+        await renderList();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

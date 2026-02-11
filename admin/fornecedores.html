@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Fornecedores & Contratos</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Fornecedores & Contratos</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="ctxHint" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Fornecedores</h2>
+
+      <form id="supplierForm" class="grid grid--3">
+        <input type="hidden" id="supplierId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Nome *</span>
+          <input id="supplierName" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>CNPJ</span>
+          <input id="supplierCnpj" class="input" placeholder="00.000.000/0000-00" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input id="supplierEmail" class="input" type="email" />
+        </label>
+        <label class="field">
+          <span>Telefone</span>
+          <input id="supplierPhone" class="input" />
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="supplierStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="inativo">inativo</option>
+          </select>
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="supplierNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="supplierClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="supplierDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="supplierMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="suppliersList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Contratos</h2>
+      <p class="muted" style="margin-top:-8px;">Alerta “vencendo” é calculado na tela (até 30 dias antes do fim).</p>
+
+      <form id="contractForm" class="grid grid--3">
+        <input type="hidden" id="contractId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="contractTitle" class="input" required />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Fornecedor (opcional)</span>
+          <select id="contractSupplier" class="input"></select>
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="contractStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="encerrado">encerrado</option>
+            <option value="cancelado">cancelado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Início (opcional)</span>
+          <input id="contractStart" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Fim (opcional)</span>
+          <input id="contractEnd" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Valor (opcional)</span>
+          <input id="contractValue" class="input" type="number" step="0.01" placeholder="0,00" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="contractNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="contractClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="contractDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="contractMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="contractsList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+
+    import {
+      listSuppliers,
+      createSupplier,
+      updateSupplier,
+      deleteSupplier,
+      listContracts,
+      createContract,
+      updateContract,
+      deleteContract,
+    } from '/js/modules/contracts.js';
+
+    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+      suppliers: [],
+      contracts: [],
+    };
+
+    function setMsg(el, msg, isErr) {
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function tsToDate(ts) {
+      if (!ts) return null;
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate();
+        const d = new Date(ts);
+        return Number.isNaN(d.getTime()) ? null : d;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function toDateInputValue(ts) {
+      const d = tsToDate(ts);
+      if (!d) return '';
+      try {
+        return d.toISOString().slice(0, 10);
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function daysUntil(dateObj) {
+      if (!dateObj) return null;
+      const today = new Date();
+      const a = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const b = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      const diff = (b.getTime() - a.getTime()) / 86400000;
+      if (!Number.isFinite(diff)) return null;
+      return Math.round(diff);
+    }
+
+    function dueSoonBadge(endAtTs, status) {
+      if (String(status || '').toLowerCase() !== 'ativo') return '';
+      const d = tsToDate(endAtTs);
+      const delta = daysUntil(d);
+      if (delta == null) return '';
+      if (delta < 0) return '';
+      if (delta > 30) return '';
+      return `<span class="badge badge--alt">Vencendo (${delta}d)</span>`;
+    }
+
+    function asItemRow(title, subtitle, right, actionsHtml) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+          <div class="list__actions">${actionsHtml || ''}</div>
+        </div>
+      `;
+    }
+
+    function clearSupplierForm() {
+      $('supplierId').value = '';
+      $('supplierName').value = '';
+      $('supplierCnpj').value = '';
+      $('supplierEmail').value = '';
+      $('supplierPhone').value = '';
+      $('supplierStatus').value = 'ativo';
+      $('supplierNotes').value = '';
+      setMsg($('supplierMsg'), '');
+    }
+
+    function fillSupplierForm(s) {
+      $('supplierId').value = s.id;
+      $('supplierName').value = s.name || '';
+      $('supplierCnpj').value = s.cnpj || '';
+      $('supplierEmail').value = s.email || '';
+      $('supplierPhone').value = s.phone || '';
+      $('supplierStatus').value = s.status || 'ativo';
+      $('supplierNotes').value = s.notes || '';
+      setMsg($('supplierMsg'), 'Editando fornecedor.');
+    }
+
+    function clearContractForm() {
+      $('contractId').value = '';
+      $('contractTitle').value = '';
+      $('contractSupplier').value = '';
+      $('contractStatus').value = 'ativo';
+      $('contractStart').value = '';
+      $('contractEnd').value = '';
+      $('contractValue').value = '';
+      $('contractNotes').value = '';
+      setMsg($('contractMsg'), '');
+    }
+
+    function fillContractForm(c) {
+      $('contractId').value = c.id;
+      $('contractTitle').value = c.title || '';
+      $('contractSupplier').value = c.supplierId || '';
+      $('contractStatus').value = c.status || 'ativo';
+      $('contractStart').value = toDateInputValue(c.startAt);
+      $('contractEnd').value = toDateInputValue(c.endAt);
+      $('contractValue').value = (typeof c.value === 'number' && Number.isFinite(c.value)) ? String(c.value) : '';
+      $('contractNotes').value = c.notes || '';
+      setMsg($('contractMsg'), 'Editando contrato.');
+    }
+
+    function renderSupplierOptions() {
+      const sel = $('contractSupplier');
+      sel.innerHTML = '';
+      const opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = '(sem fornecedor)';
+      sel.appendChild(opt0);
+
+      for (const s of state.suppliers) {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name || s.id;
+        sel.appendChild(opt);
+      }
+    }
+
+    function supplierNameById(id) {
+      const sid = String(id || '');
+      if (!sid) return '-';
+      const s = state.suppliers.find((x) => x && x.id === sid);
+      return s && s.name ? s.name : sid;
+    }
+
+    async function renderAll() {
+      if (!state.condoId) return;
+
+      try {
+        setMsg($('ctxHint'), 'Carregando...');
+        state.suppliers = await listSuppliers(state.condoId);
+        state.contracts = await listContracts(state.condoId);
+        renderSupplierOptions();
+
+        $('suppliersList').innerHTML = state.suppliers.length
+          ? state.suppliers.map((s) => asItemRow(
+              `${(s.name || '(sem nome)')} <span class="badge">${s.status || 'ativo'}</span>`,
+              `CNPJ: ${s.cnpj || '-'} • Email: ${s.email || '-'} • Tel: ${s.phone || '-'}${s.notes ? ` • ${s.notes}` : ''}`,
+              `Atualizado: ${formatTs(s.updatedAt)}`,
+              `<button class="btn btn--ghost" type="button" data-action="supplier-edit" data-id="${s.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="supplier-del" data-id="${s.id}">Excluir</button>`
+            )).join('')
+          : '<p class="muted">Nenhum fornecedor cadastrado.</p>';
+
+        $('contractsList').innerHTML = state.contracts.length
+          ? state.contracts.map((c) => {
+              const supplierLabel = c.supplierId ? supplierNameById(c.supplierId) : '-';
+              const endBadge = dueSoonBadge(c.endAt, c.status);
+              const dates = `${toDateInputValue(c.startAt) || '-'} → ${toDateInputValue(c.endAt) || '-'}`;
+              const right = `${endBadge} <span class="badge">${c.status || 'ativo'}</span>`;
+              const sub = `Fornecedor: ${supplierLabel} • Período: ${dates}${c.value != null ? ` • Valor: ${c.value}` : ''}${c.notes ? ` • ${c.notes}` : ''}`;
+              return asItemRow(
+                `${(c.title || '(sem título)')}`,
+                sub,
+                right,
+                `<button class="btn btn--ghost" type="button" data-action="contract-edit" data-id="${c.id}">Editar</button>
+                 <button class="btn btn--ghost" type="button" data-action="contract-del" data-id="${c.id}">Excluir</button>`
+              );
+            }).join('')
+          : '<p class="muted">Nenhum contrato cadastrado.</p>';
+
+        setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
+      } catch (err) {
+        setMsg($('ctxHint'), err.message || String(err), true);
+      }
+    }
+
+    function bindActions() {
+      $('suppliersList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'supplier-edit') {
+          const s = state.suppliers.find((x) => x && x.id === id);
+          if (s) fillSupplierForm(s);
+          return;
+        }
+
+        if (action === 'supplier-del') {
+          if (!confirm('Excluir este fornecedor?')) return;
+          try {
+            await deleteSupplier(state.condoId, id);
+            setMsg($('supplierMsg'), 'Fornecedor excluído.');
+            if ($('supplierId').value === id) clearSupplierForm();
+            await renderAll();
+          } catch (err) {
+            setMsg($('supplierMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('contractsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'contract-edit') {
+          const c = state.contracts.find((x) => x && x.id === id);
+          if (c) fillContractForm(c);
+          return;
+        }
+
+        if (action === 'contract-del') {
+          if (!confirm('Excluir este contrato?')) return;
+          try {
+            await deleteContract(state.condoId, id);
+            setMsg($('contractMsg'), 'Contrato excluído.');
+            if ($('contractId').value === id) clearContractForm();
+            await renderAll();
+          } catch (err) {
+            setMsg($('contractMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await renderAll();
+      });
+
+      $('supplierClearBtn').addEventListener('click', () => clearSupplierForm());
+      $('contractClearBtn').addEventListener('click', () => clearContractForm());
+
+      $('supplierDeleteBtn').addEventListener('click', async () => {
+        const id = String($('supplierId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este fornecedor?')) return;
+        try {
+          await deleteSupplier(state.condoId, id);
+          clearSupplierForm();
+          setMsg($('supplierMsg'), 'Fornecedor excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('supplierMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('contractDeleteBtn').addEventListener('click', async () => {
+        const id = String($('contractId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este contrato?')) return;
+        try {
+          await deleteContract(state.condoId, id);
+          clearContractForm();
+          setMsg($('contractMsg'), 'Contrato excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('contractMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('supplierForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('supplierId').value || '');
+          const payload = {
+            name: $('supplierName').value,
+            cnpj: $('supplierCnpj').value,
+            email: $('supplierEmail').value,
+            phone: $('supplierPhone').value,
+            status: $('supplierStatus').value,
+            notes: $('supplierNotes').value,
+          };
+
+          if (id) {
+            await updateSupplier(state.condoId, id, payload);
+            setMsg($('supplierMsg'), 'Fornecedor atualizado.');
+          } else {
+            await createSupplier(state.condoId, payload);
+            setMsg($('supplierMsg'), 'Fornecedor cadastrado.');
+          }
+
+          clearSupplierForm();
+          await renderAll();
+        } catch (err) {
+          setMsg($('supplierMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('contractForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('contractId').value || '');
+          const payload = {
+            title: $('contractTitle').value,
+            supplierId: $('contractSupplier').value,
+            status: $('contractStatus').value,
+            startDate: $('contractStart').value,
+            endDate: $('contractEnd').value,
+            value: $('contractValue').value,
+            notes: $('contractNotes').value,
+          };
+
+          if (id) {
+            await updateContract(state.condoId, id, payload);
+            setMsg($('contractMsg'), 'Contrato atualizado.');
+          } else {
+            await createContract(state.condoId, payload);
+            setMsg($('contractMsg'), 'Contrato cadastrado.');
+          }
+
+          clearContractForm();
+          await renderAll();
+        } catch (err) {
+          setMsg($('contractMsg'), err.message || String(err), true);
+        }
+      });
+    }
+
+    async function bootstrap() {
+      const { auth } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await listCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          setMsg($('ctxHint'), 'Você não tem memberships para nenhum condomínio.', true);
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+        setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
+
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          clearSupplierForm();
+          clearContractForm();
+          await renderAll();
+        });
+
+        bindActions();
+        clearSupplierForm();
+        clearContractForm();
+        await renderAll();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

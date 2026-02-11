@@ -1,0 +1,116 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function condoMembershipId(condoId) {
+      return uid() + '_' + condoId;
+    }
+
+    function orgMembershipId(orgId) {
+      return uid() + '_org_' + orgId;
+    }
+
+    function condoDoc(condoId) {
+      return firestore.get(/databases/(default)/documents/condos/$(condoId));
+    }
+
+    function orgIdForCondo(condoId) {
+      let c = condoDoc(condoId);
+      return c.exists() ? c.data.orgId : null;
+    }
+
+    function membershipForCondo(condoId) {
+      return firestore.get(/databases/(default)/documents/memberships/$(condoMembershipId(condoId)));
+    }
+
+    function membershipForOrg(orgId) {
+      return firestore.get(/databases/(default)/documents/memberships/$(orgMembershipId(orgId)));
+    }
+
+    function isActiveMembership(mDoc) {
+      return mDoc.exists() && mDoc.data.uid == uid() && mDoc.data.status == 'active';
+    }
+
+    function canReadCondo(condoId) {
+      let m = membershipForCondo(condoId);
+      if (signedIn() && isActiveMembership(m) && (m.data.role in ['morador', 'gestor', 'sindico', 'admin'])) return true;
+
+      let orgId = orgIdForCondo(condoId);
+      if (orgId == null) return false;
+      let om = membershipForOrg(orgId);
+      return signedIn() && isActiveMembership(om) && (om.data.role in ['carteira', 'administradora', 'admin']);
+    }
+
+    function canManageCondo(condoId) {
+      let m = membershipForCondo(condoId);
+      if (signedIn() && isActiveMembership(m) && (m.data.role in ['gestor', 'sindico', 'admin'])) return true;
+
+      let orgId = orgIdForCondo(condoId);
+      if (orgId == null) return false;
+      let om = membershipForOrg(orgId);
+      return signedIn() && isActiveMembership(om) && (om.data.role in ['carteira', 'administradora', 'admin']);
+    }
+
+    function ticketDoc(condoId, ticketId) {
+      return firestore.get(/databases/(default)/documents/condos/$(condoId)/tickets/$(ticketId));
+    }
+
+    function isTicketOwner(condoId, ticketId) {
+      let t = ticketDoc(condoId, ticketId);
+      return signedIn() && t.exists() && (t.data.createdBy is string) && t.data.createdBy == uid();
+    }
+
+    function unitReformDoc(condoId, reformId) {
+      return firestore.get(/databases/(default)/documents/condos/$(condoId)/unitReforms/$(reformId));
+    }
+
+    function isUnitReformOwner(condoId, reformId) {
+      let r = unitReformDoc(condoId, reformId);
+      return signedIn() && r.exists() && (r.data.createdBy is string) && r.data.createdBy == uid();
+    }
+
+    match /condos/{condoId}/tickets/{ticketId}/photos/{fileName} {
+      allow read: if canReadCondo(condoId);
+      allow write: if (
+        canManageCondo(condoId) || (canReadCondo(condoId) && isTicketOwner(condoId, ticketId))
+      ) && (
+        request.resource == null ||
+        (request.resource.size < 10485760 && request.resource.contentType.matches('image/.*'))
+      );
+    }
+
+    match /condos/{condoId}/projects/{projectId}/attachments/{fileName} {
+      allow read: if canReadCondo(condoId);
+      allow write: if canManageCondo(condoId) && (
+        request.resource == null || request.resource.size < 15728640
+      );
+    }
+
+    match /condos/{condoId}/unitReforms/{reformId}/attachments/{fileName} {
+      allow read: if canReadCondo(condoId);
+      allow write: if (
+        canManageCondo(condoId) || (canReadCondo(condoId) && isUnitReformOwner(condoId, reformId))
+      ) && (
+        request.resource == null || request.resource.size < 15728640
+      );
+    }
+
+    // Anexos do financeiro (despesas/comprovantes) em paths controlados
+    match /condos/{condoId}/{kind}/{docId}/{fileName} {
+      allow read: if canReadCondo(condoId);
+      allow write: if canManageCondo(condoId) && (kind in ['expenses', 'payments']);
+    }
+
+    // Default: bloqueia
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

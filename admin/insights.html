@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Insights</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <style>
+    .kpi { font-size: 22px; font-weight: 800; margin: 0; }
+    .kpiSub { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .insightNote { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+    .pill--warn { border-color: var(--border-2); }
+    .chart { display: grid; gap: 10px; }
+    .chartRow { display: grid; grid-template-columns: 84px 1fr 120px; gap: 10px; align-items: center; }
+    .chartLabel { color: var(--muted); font-size: 12px; }
+    .chartValue { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+    .chartTrack { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--border); }
+    .chartFill { height: 100%; width: 0%; background: var(--brand); }
+    .miniList { display: grid; gap: 10px; }
+    .miniItem { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+    .mono { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Insights</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="ctxHint" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid--3" style="margin-top: 16px;">
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Gastos fora do padrão</h2>
+        <p id="spendKpi" class="kpi">—</p>
+        <p id="spendSub" class="kpiSub">—</p>
+        <div id="spendFlag" class="insightNote"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Aumento de inadimplência</h2>
+        <p id="delinqKpi" class="kpi">—</p>
+        <p id="delinqSub" class="kpiSub">—</p>
+        <div id="delinqFlag" class="insightNote"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Manutenções vencidas</h2>
+        <p id="maintKpi" class="kpi">—</p>
+        <p id="maintSub" class="kpiSub">—</p>
+        <div id="maintList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+    </section>
+
+    <section class="grid grid--3" style="margin-top: 16px;">
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Ranking de custos (categoria)</h2>
+        <p id="rankSub" class="kpiSub">—</p>
+        <div id="rankList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 2;">
+        <h2 class="h2">Despesas — últimos 4 meses</h2>
+        <div id="expChart" class="chart" style="margin-top: 12px;"></div>
+        <p class="finePrint" style="margin-top: 10px;">Gráfico leve (barras em CSS), sem bibliotecas.</p>
+      </article>
+
+      <article class="card" style="grid-column: 1 / -1;">
+        <h2 class="h2">Inadimplência (open/partial) — últimos 4 meses</h2>
+        <div id="delinqChart" class="chart" style="margin-top: 12px;"></div>
+        <p class="finePrint" style="margin-top: 10px;">Cálculo via charges com status open/partial por referenceMonth.</p>
+      </article>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { logoutUser } from '/js/auth.js';
+
+    import { listCondos } from '/js/modules/governance.js';
+    import { getCondoInsights } from '/js/modules/insights.js';
+
+    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      user: null,
+      condos: [],
+      condoId: null,
+      loading: false,
+    };
+
+    function setHint(msg, isErr) {
+      const el = $('ctxHint');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.style.color = isErr ? 'var(--muted)' : '';
+    }
+
+    function fmtPct(p) {
+      if (typeof p !== 'number' || !Number.isFinite(p)) return '—';
+      try {
+        return (p * 100).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + '%';
+      } catch (e) {
+        return Math.round(p * 100) + '%';
+      }
+    }
+
+    function moneyBrFromCents(cents) {
+      const v = typeof cents === 'number' ? cents : 0;
+      const n = v / 100;
+      try {
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      } catch (e) {
+        return 'R$ ' + n.toFixed(2).replace('.', ',');
+      }
+    }
+
+    function monthShort(ref) {
+      const s = String(ref || '');
+      if (!/^[0-9]{4}-[0-9]{2}$/.test(s)) return s || '—';
+      const parts = s.split('-');
+      return parts[1] + '/' + parts[0].slice(2);
+    }
+
+    function renderBarChart(containerEl, series, valueKey, labelKey, formatValue) {
+      if (!containerEl) return;
+      const arr = Array.isArray(series) ? series.slice() : [];
+      const max = arr.reduce((m, it) => Math.max(m, (typeof it[valueKey] === 'number' ? it[valueKey] : 0)), 0);
+      containerEl.innerHTML = '';
+
+      if (!arr.length) {
+        containerEl.innerHTML = '<p class="muted">Sem dados.</p>';
+        return;
+      }
+
+      arr.forEach((it) => {
+        const v = typeof it[valueKey] === 'number' ? it[valueKey] : 0;
+        const pct = max > 0 ? Math.max(0, Math.min(100, (v / max) * 100)) : 0;
+
+        const row = document.createElement('div');
+        row.className = 'chartRow';
+
+        const label = document.createElement('div');
+        label.className = 'chartLabel';
+        label.textContent = monthShort(it[labelKey]);
+
+        const track = document.createElement('div');
+        track.className = 'chartTrack';
+
+        const fill = document.createElement('div');
+        fill.className = 'chartFill';
+        fill.style.width = pct.toFixed(1) + '%';
+        track.appendChild(fill);
+
+        const value = document.createElement('div');
+        value.className = 'chartValue mono';
+        value.textContent = formatValue ? formatValue(v, it) : String(v);
+
+        row.appendChild(label);
+        row.appendChild(track);
+        row.appendChild(value);
+
+        containerEl.appendChild(row);
+      });
+    }
+
+    function setText(id, text) {
+      const el = $(id);
+      if (el) el.textContent = text;
+    }
+
+    function setHtml(id, html) {
+      const el = $(id);
+      if (el) el.innerHTML = html;
+    }
+
+    function renderMiniList(containerEl, items, leftKey, rightKey) {
+      if (!containerEl) return;
+      containerEl.innerHTML = '';
+      const arr = Array.isArray(items) ? items : [];
+      if (!arr.length) {
+        containerEl.innerHTML = '<p class="muted">Nada a destacar.</p>';
+        return;
+      }
+
+      arr.forEach((it) => {
+        const row = document.createElement('div');
+        row.className = 'miniItem';
+        const left = document.createElement('div');
+        left.textContent = it[leftKey] || '—';
+        const right = document.createElement('div');
+        right.className = 'mono';
+        right.textContent = it[rightKey] || '—';
+        row.appendChild(left);
+        row.appendChild(right);
+        containerEl.appendChild(row);
+      });
+    }
+
+    async function renderAll() {
+      if (!state.condoId) return;
+      if (state.loading) return;
+      state.loading = true;
+      setHint('Carregando insights…');
+
+      try {
+        const data = await getCondoInsights(state.condoId);
+        setHint(`CondoId: ${data.condoId} • Mês: ${data.monthRef}`);
+
+        // Gastos fora do padrão
+        setText('spendKpi', data.spendingOutlier.currentBr || '—');
+        if (data.spendingOutlier.baselineAvgBr) {
+          setText('spendSub', `Média 3 meses: ${data.spendingOutlier.baselineAvgBr}`);
+        } else {
+          setText('spendSub', 'Média 3 meses: —');
+        }
+
+        if (data.spendingOutlier.isOutlier) {
+          setHtml('spendFlag', `<span class="pill pill--warn">⚠ Fora do padrão: +${fmtPct(data.spendingOutlier.deltaPct)}</span>`);
+        } else {
+          setHtml('spendFlag', data.spendingOutlier.note ? `<span class="muted">${data.spendingOutlier.note}</span>` : '<span class="muted">Dentro do esperado.</span>');
+        }
+
+        // Inadimplência
+        setText('delinqKpi', data.delinquencyIncrease.currentBr || '—');
+        if (data.delinquencyIncrease.baselineAvgBr) {
+          setText('delinqSub', `Média 3 meses: ${data.delinquencyIncrease.baselineAvgBr}`);
+        } else {
+          setText('delinqSub', 'Média 3 meses: —');
+        }
+
+        if (data.delinquencyIncrease.isOutlier) {
+          setHtml('delinqFlag', `<span class="pill pill--warn">⚠ Aumento: +${fmtPct(data.delinquencyIncrease.deltaPct)}</span>`);
+        } else {
+          setHtml('delinqFlag', data.delinquencyIncrease.note ? `<span class="muted">${data.delinquencyIncrease.note}</span>` : '<span class="muted">Sem aumento relevante.</span>');
+        }
+
+        // Manutenções vencidas
+        setText('maintKpi', String(data.overdueMaintenance.overdueCount || 0));
+        setText('maintSub', 'Planos ativos com nextDueAt antes de hoje');
+        renderMiniList($('maintList'), data.overdueMaintenance.items || [], 'title', 'nextDueISO');
+
+        // Ranking de custos
+        setText('rankSub', `Total do mês: ${data.costRanking.monthTotalBr || '—'}`);
+        const rankItems = (data.costRanking.topCategories || []).map((x) => ({
+          category: x.category,
+          amountBr: x.amountBr,
+        }));
+        renderMiniList($('rankList'), rankItems, 'category', 'amountBr');
+
+        // Gráficos
+        renderBarChart($('expChart'), data.charts.expensesByMonth, 'totalCents', 'monthRef', (v) => moneyBrFromCents(v));
+        renderBarChart($('delinqChart'), data.charts.delinquencyByMonth, 'amountCents', 'monthRef', (v, it) => {
+          const count = typeof it.openCount === 'number' ? it.openCount : 0;
+          return `${moneyBrFromCents(v)} • ${count} em aberto`;
+        });
+      } catch (err) {
+        setHint(err.message || String(err), true);
+      } finally {
+        state.loading = false;
+      }
+    }
+
+    async function bootstrap() {
+      const { auth } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        try {
+          await logoutUser();
+        } finally {
+          location.href = '/login.html';
+        }
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await listCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          setHint('Você não tem memberships para nenhum condomínio.', true);
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          await renderAll();
+        });
+
+        $('refreshBtn').addEventListener('click', async () => {
+          await renderAll();
+        });
+
+        await renderAll();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

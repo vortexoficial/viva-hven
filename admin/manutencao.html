@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Manutenção | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Manutenção (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Ativos, planos preventivos e chamados corretivos (SLA/prioridade/status).
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Ativos</h2>
+
+          <div id="assetList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="assetForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="assetId" />
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                <input id="assetName" class="input" placeholder="Ex: Elevador Social" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Categoria</label>
+                <input id="assetCategory" class="input" placeholder="Ex: elevador" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Local</label>
+                <input id="assetLocation" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Serial</label>
+                <input id="assetSerial" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+              <select id="assetStatus" class="input">
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="manutencao">Em manutenção</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Notas</label>
+              <textarea id="assetNotes" class="input" rows="2" placeholder="Opcional"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="assetSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="assetClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="assetDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Planos preventivos</h2>
+
+          <div id="planList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="planForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="planId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="planTitle" class="input" placeholder="Ex: Revisão elevadores" required />
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ativo</label>
+                <select id="planAssetId" class="input">
+                  <option value="">(Opcional)</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Frequência (dias)</label>
+                <input id="planFreq" class="input" type="number" min="1" placeholder="Ex: 30" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Próxima data</label>
+                <input id="planNext" class="input" type="date" required />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+              <select id="planStatus" class="input">
+                <option value="ativo">Ativo</option>
+                <option value="pausado">Pausado</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Notas</label>
+              <textarea id="planNotes" class="input" rows="2" placeholder="Opcional"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="planSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="planClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="planDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Chamados</h2>
+
+          <div id="ticketList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="ticketForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="ticketId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="ticketTitle" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <textarea id="ticketDesc" class="input" rows="3" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ativo</label>
+                <select id="ticketAssetId" class="input">
+                  <option value="">(Opcional)</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+                <select id="ticketPriority" class="input">
+                  <option value="baixa">Baixa</option>
+                  <option value="media" selected>Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">SLA (horas)</label>
+                <input id="ticketSla" class="input" type="number" min="1" placeholder="Ex: 24" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="ticketStatus" class="input">
+                  <option value="aberto">Aberto</option>
+                  <option value="em_andamento">Em andamento</option>
+                  <option value="resolvido">Resolvido</option>
+                  <option value="fechado">Fechado</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Responsável (uid)</label>
+                <input id="ticketAssigned" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Adicionar foto</label>
+                <input id="ticketPhoto" class="input" type="file" />
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="ticketSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="ticketClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="ticketDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+            </div>
+
+            <div id="ticketPhotos" style="display:grid;gap:10px;"></div>
+          </form>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import {
+        listAssets,
+        createAsset,
+        updateAsset,
+        deleteAsset,
+        listMaintenancePlans,
+        createMaintenancePlan,
+        updateMaintenancePlan,
+        deleteMaintenancePlan,
+        listTickets,
+        createTicket,
+        updateTicket,
+        deleteTicket,
+        addTicketPhoto,
+      } from '/js/modules/maintenance.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fmtDateMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          if (v instanceof Date) {
+            const yyyy = v.getFullYear();
+            const mm = String(v.getMonth() + 1).padStart(2, '0');
+            const dd = String(v.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function renderList(container, items, onPick, emptyMsg) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">' + (emptyMsg || 'Nenhum registro.') + '</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const head = document.createElement('div');
+          head.style.display = 'flex';
+          head.style.alignItems = 'center';
+          head.style.justifyContent = 'space-between';
+          head.style.gap = '10px';
+
+          const left = document.createElement('div');
+          left.innerHTML = it.__html || '<div style="font-weight:800;">' + (it.title || it.name || it.id) + '</div>';
+
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'btn btn--ghost';
+          pickBtn.textContent = 'Abrir';
+          pickBtn.addEventListener('click', () => onPick(it));
+
+          head.appendChild(left);
+          head.appendChild(pickBtn);
+          row.appendChild(head);
+          container.appendChild(row);
+        });
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function fillAssetSelect(selectEl, assets, includeEmpty) {
+        if (!selectEl) return;
+        selectEl.innerHTML = includeEmpty ? '<option value="">(Opcional)</option>' : '';
+        (assets || []).forEach((a) => {
+          const opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = a.name || a.id;
+          selectEl.appendChild(opt);
+        });
+      }
+
+      function clearAssetForm() {
+        $('assetId').value = '';
+        $('assetName').value = '';
+        $('assetCategory').value = '';
+        $('assetLocation').value = '';
+        $('assetSerial').value = '';
+        $('assetStatus').value = 'ativo';
+        $('assetNotes').value = '';
+      }
+
+      function clearPlanForm() {
+        $('planId').value = '';
+        $('planTitle').value = '';
+        $('planAssetId').value = '';
+        $('planFreq').value = '';
+        $('planNext').value = '';
+        $('planStatus').value = 'ativo';
+        $('planNotes').value = '';
+      }
+
+      function clearTicketForm() {
+        $('ticketId').value = '';
+        $('ticketTitle').value = '';
+        $('ticketDesc').value = '';
+        $('ticketAssetId').value = '';
+        $('ticketPriority').value = 'media';
+        $('ticketSla').value = '';
+        $('ticketStatus').value = 'aberto';
+        $('ticketAssigned').value = '';
+        $('ticketPhoto').value = '';
+        $('ticketPhotos').innerHTML = '';
+      }
+
+      function renderPhotos(container, photos) {
+        container.innerHTML = '';
+        if (!photos || photos.length === 0) return;
+
+        photos.forEach((p) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.padding = '12px';
+          const url = p && p.url ? String(p.url) : '';
+          const name = p && p.name ? String(p.name) : 'foto';
+          card.innerHTML =
+            '<div style="font-weight:800;margin-bottom:8px;">' + name + '</div>' +
+            (url ? ('<a class="btn btn--ghost" target="_blank" href="' + url + '">Abrir</a>') : '<div style="font-size:12px;color:var(--muted);">Sem URL</div>');
+          container.appendChild(card);
+        });
+      }
+
+      async function refreshAll() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('assetList'), [], () => {}, 'Selecione um condomínio.');
+          renderList($('planList'), [], () => {}, 'Selecione um condomínio.');
+          renderList($('ticketList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+
+        const assets = await listAssets(cId);
+        fillAssetSelect($('planAssetId'), assets, true);
+        fillAssetSelect($('ticketAssetId'), assets, true);
+
+        const assetsDecorated = assets.map((a) => {
+          const sub = [a.category ? ('cat: ' + a.category) : null, a.status ? ('status: ' + a.status) : null].filter(Boolean).join(' • ');
+          return {
+            ...a,
+            __html:
+              '<div style="font-weight:800;">' + (a.name || a.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>',
+          };
+        });
+
+        renderList($('assetList'), assetsDecorated, (it) => {
+          $('assetId').value = it.id;
+          $('assetName').value = it.name || '';
+          $('assetCategory').value = it.category || '';
+          $('assetLocation').value = it.location || '';
+          $('assetSerial').value = it.serial || '';
+          $('assetStatus').value = it.status || 'ativo';
+          $('assetNotes').value = it.notes || '';
+          setStatus('Ativo selecionado.');
+        });
+
+        const plans = await listMaintenancePlans(cId);
+        const plansDecorated = plans.map((p) => {
+          const next = p.nextDueAt ? fmtDateMaybe(p.nextDueAt) : '';
+          const sub = [p.assetId ? ('asset: ' + p.assetId) : null, p.frequencyDays ? ('freq: ' + p.frequencyDays + 'd') : null, next ? ('prox: ' + next) : null, p.status ? ('status: ' + p.status) : null]
+            .filter(Boolean)
+            .join(' • ');
+          return {
+            ...p,
+            __html:
+              '<div style="font-weight:800;">' + (p.title || p.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>',
+          };
+        });
+
+        renderList($('planList'), plansDecorated, (it) => {
+          $('planId').value = it.id;
+          $('planTitle').value = it.title || '';
+          $('planAssetId').value = it.assetId || '';
+          $('planFreq').value = it.frequencyDays != null ? String(it.frequencyDays) : '';
+          $('planNext').value = it.nextDueAt ? fmtDateMaybe(it.nextDueAt) : '';
+          $('planStatus').value = it.status || 'ativo';
+          $('planNotes').value = it.notes || '';
+          setStatus('Plano selecionado.');
+        });
+
+        const tickets = await listTickets(cId);
+        const ticketsDecorated = tickets.map((t) => {
+          const sub = [t.status ? ('status: ' + t.status) : null, t.priority ? ('prio: ' + t.priority) : null, t.slaHours ? ('sla: ' + t.slaHours + 'h') : null].filter(Boolean).join(' • ');
+          return {
+            ...t,
+            __html:
+              '<div style="font-weight:800;">' + (t.title || t.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+              (t.createdBy ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">criado por: ' + t.createdBy + '</div>') : ''),
+          };
+        });
+
+        renderList($('ticketList'), ticketsDecorated, (it) => {
+          $('ticketId').value = it.id;
+          $('ticketTitle').value = it.title || '';
+          $('ticketDesc').value = it.description || '';
+          $('ticketAssetId').value = it.assetId || '';
+          $('ticketPriority').value = it.priority || 'media';
+          $('ticketSla').value = it.slaHours != null ? String(it.slaHours) : '';
+          $('ticketStatus').value = it.status || 'aberto';
+          $('ticketAssigned').value = it.assignedTo || '';
+          $('ticketPhoto').value = '';
+          renderPhotos($('ticketPhotos'), Array.isArray(it.photos) ? it.photos : []);
+          setStatus('Chamado selecionado.');
+        });
+      }
+
+      // Logout
+      const logoutBtn = $('logoutBtn');
+      logoutBtn.addEventListener('click', async () => {
+        await withBusy(logoutBtn, async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refreshAll();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        clearAssetForm();
+        clearPlanForm();
+        clearTicketForm();
+        await withBusy(null, refreshAll);
+      });
+
+      // Assets
+      $('assetClearBtn').addEventListener('click', () => {
+        clearAssetForm();
+        setStatus('');
+      });
+
+      $('assetDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assetId').value;
+        if (!cId || !aId) return;
+        if (!confirm('Excluir este ativo?')) return;
+        await withBusy($('assetDeleteBtn'), async () => {
+          await deleteAsset(cId, aId);
+          clearAssetForm();
+          await refreshAll();
+          setStatus('Ativo excluído.');
+        });
+      });
+
+      $('assetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const aId = $('assetId').value;
+        const data = {
+          name: $('assetName').value,
+          category: $('assetCategory').value,
+          location: $('assetLocation').value,
+          serial: $('assetSerial').value,
+          status: $('assetStatus').value,
+          notes: $('assetNotes').value,
+        };
+
+        await withBusy($('assetSaveBtn'), async () => {
+          if (aId) {
+            await updateAsset(cId, aId, data);
+            setStatus('Ativo atualizado.');
+          } else {
+            const created = await createAsset(cId, data);
+            $('assetId').value = created.id;
+            setStatus('Ativo criado.');
+          }
+          await refreshAll();
+        });
+      });
+
+      // Plans
+      $('planClearBtn').addEventListener('click', () => {
+        clearPlanForm();
+        setStatus('');
+      });
+
+      $('planDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('planId').value;
+        if (!cId || !pId) return;
+        if (!confirm('Excluir este plano?')) return;
+        await withBusy($('planDeleteBtn'), async () => {
+          await deleteMaintenancePlan(cId, pId);
+          clearPlanForm();
+          await refreshAll();
+          setStatus('Plano excluído.');
+        });
+      });
+
+      $('planForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const pId = $('planId').value;
+        const data = {
+          title: $('planTitle').value,
+          assetId: $('planAssetId').value,
+          frequencyDays: $('planFreq').value,
+          nextDueDate: $('planNext').value,
+          status: $('planStatus').value,
+          notes: $('planNotes').value,
+        };
+
+        await withBusy($('planSaveBtn'), async () => {
+          if (pId) {
+            await updateMaintenancePlan(cId, pId, data);
+            setStatus('Plano atualizado.');
+          } else {
+            const created = await createMaintenancePlan(cId, data);
+            $('planId').value = created.id;
+            setStatus('Plano criado.');
+          }
+          await refreshAll();
+        });
+      });
+
+      // Tickets
+      $('ticketClearBtn').addEventListener('click', () => {
+        clearTicketForm();
+        setStatus('');
+      });
+
+      $('ticketDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        if (!cId || !tId) return;
+        if (!confirm('Excluir este chamado?')) return;
+        await withBusy($('ticketDeleteBtn'), async () => {
+          await deleteTicket(cId, tId);
+          clearTicketForm();
+          await refreshAll();
+          setStatus('Chamado excluído.');
+        });
+      });
+
+      $('ticketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const tId = $('ticketId').value;
+        const photo = $('ticketPhoto').files && $('ticketPhoto').files[0] ? $('ticketPhoto').files[0] : null;
+
+        const data = {
+          title: $('ticketTitle').value,
+          description: $('ticketDesc').value,
+          assetId: $('ticketAssetId').value,
+          priority: $('ticketPriority').value,
+          slaHours: $('ticketSla').value,
+          status: $('ticketStatus').value,
+          assignedTo: $('ticketAssigned').value,
+        };
+
+        await withBusy($('ticketSaveBtn'), async () => {
+          if (tId) {
+            await updateTicket(cId, tId, data);
+            if (photo) await addTicketPhoto(cId, tId, photo);
+            setStatus('Chamado atualizado.');
+          } else {
+            const created = await createTicket(cId, { ...data, photos: photo ? [photo] : [] });
+            $('ticketId').value = created.id;
+            setStatus('Chamado criado.');
+          }
+
+          $('ticketPhoto').value = '';
+          await refreshAll();
+        });
+      });
+
+      // Init
+      const condos = await listCondos();
+      fillCondoSelect(condos);
+      await withBusy(null, refreshAll);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

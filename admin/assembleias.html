@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Assembleias | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Assembleias (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Criar, convocar, abrir/fechar votação e gerar ata.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Lista</h2>
+          <div id="assemblyList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Formulário</h2>
+          <form id="assemblyForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="assemblyId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="assemblyTitle" class="input" placeholder="Ex: Assembleia Ordinária" required />
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
+                <input id="assemblyDate" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Local</label>
+                <input id="assemblyLocation" class="input" placeholder="Ex: Salão de festas" />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Texto da convocação</label>
+              <textarea id="assemblyNotice" class="input" rows="3" placeholder="Opcional"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn" type="submit" id="assemblySaveBtn">Salvar</button>
+              <button class="btn btn--ghost" type="button" id="assemblyClearBtn">Limpar</button>
+              <button class="btn btn--ghost" type="button" id="assemblyDeleteBtn">Excluir</button>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn--ghost" type="button" id="callBtn">Convocar</button>
+              <button class="btn btn--ghost" type="button" id="openVoteBtn">Abrir votação</button>
+              <button class="btn btn--ghost" type="button" id="closeVoteBtn">Fechar votação</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Ata</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="btn btn--ghost" type="button" id="genMinutesBtn">Gerar texto</button>
+            <button class="btn" type="button" id="saveMinutesBtn">Salvar ata</button>
+          </div>
+          <textarea id="minutesText" class="input" rows="10" placeholder="A ata será gerada aqui (ou você pode editar manualmente)."></textarea>
+          <p style="margin:8px 0 0;font-size:12px;color:var(--muted);">A ata é salva em <code>assemblies/{assemblyId}/minutes/latest</code>.</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import {
+        listAssembliesForCondo,
+        createAssembly,
+        updateAssembly,
+        deleteAssembly,
+        callAssembly,
+        openVoting,
+        closeVoting,
+        generateMinutesText,
+        saveMinutes,
+        getLatestMinutes,
+      } from '/js/modules/assemblies.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fmtDateMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function renderList(container, items, onPick) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhum registro.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const head = document.createElement('div');
+          head.style.display = 'flex';
+          head.style.alignItems = 'center';
+          head.style.justifyContent = 'space-between';
+          head.style.gap = '10px';
+
+          const left = document.createElement('div');
+          const title = it.title || it.id;
+          const date = it.date ? fmtDateMaybe(it.date) : '';
+          const subtitle = [it.id, date ? ('data: ' + date) : null, it.status ? ('status: ' + it.status) : null, it.voteStatus ? ('voto: ' + it.voteStatus) : null]
+            .filter(Boolean)
+            .join(' • ');
+
+          left.innerHTML = '<div style="font-weight:800;">' + title + '</div>' +
+                           '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>';
+
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'btn btn--ghost';
+          pickBtn.textContent = 'Abrir';
+          pickBtn.addEventListener('click', () => onPick(it));
+
+          head.appendChild(left);
+          head.appendChild(pickBtn);
+          row.appendChild(head);
+          container.appendChild(row);
+        });
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function clearForm() {
+        $('assemblyId').value = '';
+        $('assemblyTitle').value = '';
+        $('assemblyDate').value = '';
+        $('assemblyLocation').value = '';
+        $('assemblyNotice').value = '';
+        $('minutesText').value = '';
+      }
+
+      async function refresh() {
+        const condos = await listCondos();
+        fillCondoSelect(condos);
+        await refreshAssemblies();
+      }
+
+      async function refreshAssemblies() {
+        const cId = currentCondoId();
+        const listEl = $('assemblyList');
+        if (!cId) {
+          renderList(listEl, [], () => {});
+          return;
+        }
+        const items = await listAssembliesForCondo(cId);
+        renderList(listEl, items, async (it) => {
+          $('assemblyId').value = it.id;
+          $('assemblyTitle').value = it.title || '';
+          $('assemblyDate').value = fmtDateMaybe(it.date);
+          $('assemblyLocation').value = it.location || '';
+          $('assemblyNotice').value = it.noticeText || '';
+
+          const min = await getLatestMinutes(it.id);
+          $('minutesText').value = min && min.text ? String(min.text) : '';
+
+          setStatus('Assembleia selecionada: ' + it.id);
+        });
+      }
+
+      // Logout
+      const logoutBtn = $('logoutBtn');
+      logoutBtn.addEventListener('click', async () => {
+        await withBusy(logoutBtn, async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refresh();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        clearForm();
+        await withBusy(null, refreshAssemblies);
+      });
+
+      $('assemblyClearBtn').addEventListener('click', () => {
+        clearForm();
+        setStatus('');
+      });
+
+      $('assemblyDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) return;
+        if (!confirm('Excluir esta assembleia?')) return;
+        await withBusy($('assemblyDeleteBtn'), async () => {
+          await deleteAssembly(cId, aId);
+          clearForm();
+          await refreshAssemblies();
+          setStatus('Assembleia excluída.');
+        });
+      });
+
+      $('assemblyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        const title = $('assemblyTitle').value;
+        const date = $('assemblyDate').value;
+        const location = $('assemblyLocation').value;
+
+        await withBusy($('assemblySaveBtn'), async () => {
+          if (!cId) throw new Error('Selecione um condomínio.');
+          if (aId) {
+            await updateAssembly(cId, aId, { title, date, location });
+            setStatus('Assembleia atualizada.');
+          } else {
+            const created = await createAssembly(cId, { title, date, location });
+            $('assemblyId').value = created.id;
+            setStatus('Assembleia criada: ' + created.id);
+          }
+          await refreshAssemblies();
+        });
+      });
+
+      $('callBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        const noticeText = $('assemblyNotice').value;
+        if (!cId || !aId) return;
+        await withBusy($('callBtn'), async () => {
+          await callAssembly(cId, aId, noticeText);
+          await refreshAssemblies();
+          setStatus('Convocação registrada.');
+        });
+      });
+
+      $('openVoteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) return;
+        await withBusy($('openVoteBtn'), async () => {
+          await openVoting(cId, aId);
+          await refreshAssemblies();
+          setStatus('Votação aberta.');
+        });
+      });
+
+      $('closeVoteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) return;
+        await withBusy($('closeVoteBtn'), async () => {
+          await closeVoting(cId, aId);
+          await refreshAssemblies();
+          setStatus('Votação fechada.');
+        });
+      });
+
+      $('genMinutesBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) return;
+        await withBusy($('genMinutesBtn'), async () => {
+          const text = await generateMinutesText(cId, aId);
+          $('minutesText').value = text;
+          setStatus('Texto gerado.');
+        });
+      });
+
+      $('saveMinutesBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        const text = $('minutesText').value;
+        if (!cId || !aId) return;
+        await withBusy($('saveMinutesBtn'), async () => {
+          await saveMinutes(aId, cId, text);
+          setStatus('Ata salva.');
+        });
+      });
+
+      await withBusy(null, refresh);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

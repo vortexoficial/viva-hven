@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Carteira</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Carteira</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Organização</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Org ID</span>
+          <input id="orgId" class="input" placeholder="(carregando...)" disabled />
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="msg" class="muted"></span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:10px;">Comparativo por condomínio: inadimplência (cotas vencidas), tickets em aberto e gastos do mês.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Resumo</h2>
+      <div class="grid grid--3">
+        <div class="field">
+          <span>Condomínios</span>
+          <div id="sumCondos" class="badge"></div>
+        </div>
+        <div class="field">
+          <span>Inadimplência</span>
+          <div id="sumDelinquency" class="badge"></div>
+        </div>
+        <div class="field">
+          <span>Tickets abertos</span>
+          <div id="sumTickets" class="badge"></div>
+        </div>
+        <div class="field">
+          <span>Gastos (mês)</span>
+          <div id="sumExpenses" class="badge"></div>
+        </div>
+        <div class="field" style="grid-column:1/-1;">
+          <span>Mês de referência</span>
+          <div id="sumMonth" class="badge"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Condomínios</h2>
+      <div id="condosList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+
+    import { getOrgPortfolio, getMyProfile, listVisibleCondos } from '/js/modules/portfolio.js';
+
+    await protect(['/admin/'], ['CARTEIRA', 'ADMINISTRADORA']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      user: null,
+      orgId: null,
+      portfolio: null,
+    };
+
+    function setMsg(msg, isErr) {
+      const el = $('msg');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function asItemRow(title, subtitle, right) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+        </div>
+      `;
+    }
+
+    async function detectOrgId() {
+      const profile = await getMyProfile();
+      const oId = profile && typeof profile.orgId === 'string' ? String(profile.orgId).trim() : '';
+      if (oId) return oId;
+
+      // Fallback: tenta inferir pelo(s) condos visíveis
+      const condos = await listVisibleCondos();
+      const orgIds = Array.from(new Set((condos || []).map((c) => String(c.orgId || '').trim()).filter(Boolean)));
+      if (orgIds.length === 1) return orgIds[0];
+
+      return '';
+    }
+
+    function render() {
+      const p = state.portfolio;
+      if (!p) {
+        $('condosList').innerHTML = '<p class="muted">Sem dados.</p>';
+        return;
+      }
+
+      const fmt = p.format && typeof p.format.centsToBr === 'function' ? p.format.centsToBr : (v) => String(v);
+      const t = p.totals || {};
+
+      $('sumCondos').textContent = String(t.condosCount || 0);
+      $('sumDelinquency').textContent = `${fmt(t.delinquentCents || 0)} • ${t.delinquentCount || 0} cobranças`;
+      $('sumTickets').textContent = String(t.openTicketsCount || 0);
+      $('sumExpenses').textContent = fmt(t.monthExpensesCents || 0);
+      $('sumMonth').textContent = String(p.monthRef || '-');
+
+      const items = Array.isArray(p.items) ? p.items : [];
+      $('condosList').innerHTML = items.length
+        ? items.map((x) => {
+            const right = `
+              <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                <span class="badge">Tickets: ${x.openTicketsCount || 0}</span>
+                <span class="badge">Inad.: ${fmt(x.delinquentCents || 0)}</span>
+                <span class="badge">Gastos mês: ${fmt(x.monthExpensesCents || 0)}</span>
+              </div>
+            `;
+
+            const sub = `Inadimplência: ${x.delinquentCount || 0} cobranças vencidas • CondoId: ${x.condoId}`;
+            return asItemRow(x.condoName || x.condoId, sub, right);
+          }).join('')
+        : '<p class="muted">Nenhum condomínio encontrado para esta org.</p>';
+    }
+
+    async function refresh() {
+      try {
+        setMsg('Carregando...');
+        const orgId = await detectOrgId();
+        state.orgId = orgId || null;
+        $('orgId').value = state.orgId || '';
+
+        if (!state.orgId) {
+          setMsg('Org ID não encontrado no perfil (users/{uid}.orgId) e não foi possível inferir pelos condos.', true);
+          state.portfolio = null;
+          render();
+          return;
+        }
+
+        state.portfolio = await getOrgPortfolio(state.orgId);
+        setMsg('OK');
+        render();
+      } catch (err) {
+        setMsg(err.message || String(err), true);
+        state.portfolio = null;
+        render();
+      }
+    }
+
+    async function bootstrap() {
+      const { auth } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await refresh();
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+        await refresh();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Comunicação | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Comunicação (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Avisos (com confirmação de leitura) e Enquetes (voto único por morador).
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Avisos</h2>
+
+          <div id="annList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="annForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="annId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="annTitle" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Conteúdo</label>
+              <textarea id="annBody" class="input" rows="4" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="annStatus" class="input">
+                  <option value="rascunho">Rascunho</option>
+                  <option value="publicado">Publicado</option>
+                  <option value="arquivado">Arquivado</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data (opcional)</label>
+                <input id="annDate" class="input" type="date" />
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button id="annSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="annClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="annDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              <span id="annMsg" style="font-size:12px;color:var(--muted);"></span>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Enquetes</h2>
+
+          <div id="pollList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="pollForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="pollId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="pollTitle" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição (opcional)</label>
+              <textarea id="pollDesc" class="input" rows="3"></textarea>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Opções (1 por linha)</label>
+              <textarea id="pollOptions" class="input" rows="4" placeholder="Ex:\nSim\nNão" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="pollStatus" class="input">
+                  <option value="aberta">Aberta</option>
+                  <option value="encerrada">Encerrada</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Encerrar em (opcional)</label>
+                <input id="pollClose" class="input" type="date" />
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button id="pollSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="pollClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="pollDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              <button id="pollResultsBtn" class="btn btn--ghost" type="button">Ver resultados</button>
+              <span id="pollMsg" style="font-size:12px;color:var(--muted);"></span>
+            </div>
+
+            <div id="pollResults" style="margin-top:6px;font-size:12px;color:var(--muted);"></div>
+          </form>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { initFirebase } from '/js/firebase-init.js';
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+
+      import {
+        listAnnouncements,
+        createAnnouncement,
+        updateAnnouncement,
+        deleteAnnouncement,
+        listPolls,
+        createPoll,
+        updatePoll,
+        deletePoll,
+        listPollVotes,
+      } from '/js/modules/comms.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+
+      const state = {
+        condoId: null,
+        condos: [],
+        announcements: [],
+        polls: [],
+      };
+
+      function setStatus(msg, isErr) {
+        const el = $('status');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.style.color = isErr ? 'var(--brand-b)' : 'var(--muted)';
+      }
+
+      function setMsg(el, msg, isErr) {
+        if (!el) return;
+        el.textContent = msg || '';
+        el.style.color = isErr ? 'var(--brand-b)' : 'var(--muted)';
+      }
+
+      function formatTs(ts) {
+        if (!ts) return '';
+        try {
+          if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+          return new Date(ts).toLocaleString('pt-BR');
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function asListItem(title, subtitle, rightHtml) {
+        return `
+          <div class="list__item">
+            <div class="list__main">
+              <div class="list__title">${title}</div>
+              <div class="list__sub">${subtitle || ''}</div>
+            </div>
+            <div class="list__meta">${rightHtml || ''}</div>
+          </div>
+        `;
+      }
+
+      function clearAnnForm() {
+        $('annId').value = '';
+        $('annTitle').value = '';
+        $('annBody').value = '';
+        $('annStatus').value = 'rascunho';
+        $('annDate').value = '';
+        setMsg($('annMsg'), '');
+      }
+
+      function clearPollForm() {
+        $('pollId').value = '';
+        $('pollTitle').value = '';
+        $('pollDesc').value = '';
+        $('pollOptions').value = '';
+        $('pollStatus').value = 'aberta';
+        $('pollClose').value = '';
+        $('pollResults').innerHTML = '';
+        setMsg($('pollMsg'), '');
+      }
+
+      function fillAnnForm(item) {
+        $('annId').value = item.id;
+        $('annTitle').value = item.title || '';
+        $('annBody').value = item.body || '';
+        $('annStatus').value = item.status || 'rascunho';
+        try {
+          const d = item.publishedAt && typeof item.publishedAt.toDate === 'function' ? item.publishedAt.toDate() : null;
+          $('annDate').value = d ? d.toISOString().slice(0, 10) : '';
+        } catch (e) {
+          $('annDate').value = '';
+        }
+      }
+
+      function fillPollForm(item) {
+        $('pollId').value = item.id;
+        $('pollTitle').value = item.title || '';
+        $('pollDesc').value = item.description || '';
+        $('pollStatus').value = item.status || 'aberta';
+        const options = Array.isArray(item.options) ? item.options : [];
+        $('pollOptions').value = options.map((o) => (o && o.label ? o.label : '')).filter(Boolean).join('\n');
+        try {
+          const d = item.closeAt && typeof item.closeAt.toDate === 'function' ? item.closeAt.toDate() : null;
+          $('pollClose').value = d ? d.toISOString().slice(0, 10) : '';
+        } catch (e) {
+          $('pollClose').value = '';
+        }
+        $('pollResults').innerHTML = '';
+      }
+
+      async function renderAnnouncements() {
+        const root = $('annList');
+        if (!root) return;
+        const items = Array.isArray(state.announcements) ? state.announcements : [];
+        root.innerHTML = items.length
+          ? items
+              .map((a) => {
+                const right = `
+                  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button class="btn btn--ghost" data-ann-edit="${a.id}" type="button">Editar</button>
+                  </div>
+                `;
+                const subtitle = `${a.status || 'rascunho'}${a.publishedAt ? ` • ${formatTs(a.publishedAt)}` : ''}`;
+                return asListItem(a.title || '(sem título)', subtitle, right);
+              })
+              .join('')
+          : '<p class="muted">Nenhum aviso.</p>';
+
+        root.querySelectorAll('button[data-ann-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-ann-edit');
+            const item = items.find((x) => x.id === id);
+            if (item) fillAnnForm(item);
+          });
+        });
+      }
+
+      async function renderPolls() {
+        const root = $('pollList');
+        if (!root) return;
+        const items = Array.isArray(state.polls) ? state.polls : [];
+        root.innerHTML = items.length
+          ? items
+              .map((p) => {
+                const right = `
+                  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button class="btn btn--ghost" data-poll-edit="${p.id}" type="button">Editar</button>
+                  </div>
+                `;
+                const subtitle = `${p.status || 'aberta'}${p.closeAt ? ` • até ${formatTs(p.closeAt)}` : ''}`;
+                return asListItem(p.title || '(sem título)', subtitle, right);
+              })
+              .join('')
+          : '<p class="muted">Nenhuma enquete.</p>';
+
+        root.querySelectorAll('button[data-poll-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-poll-edit');
+            const item = items.find((x) => x.id === id);
+            if (item) fillPollForm(item);
+          });
+        });
+      }
+
+      async function refreshAll() {
+        if (!state.condoId) return;
+        setStatus('Carregando...');
+        try {
+          state.announcements = await listAnnouncements(state.condoId, {});
+          state.polls = await listPolls(state.condoId, {});
+          await renderAnnouncements();
+          await renderPolls();
+          setStatus(`OK • avisos: ${state.announcements.length} • enquetes: ${state.polls.length}`);
+        } catch (e) {
+          setStatus(e && e.message ? e.message : String(e), true);
+        }
+      }
+
+      async function showPollResults() {
+        const pollId = $('pollId').value;
+        if (!state.condoId || !pollId) {
+          $('pollResults').innerHTML = '<span class="muted">Selecione/edite uma enquete para ver resultados.</span>';
+          return;
+        }
+
+        $('pollResults').innerHTML = '<span class="muted">Carregando resultados...</span>';
+        try {
+          const poll = state.polls.find((p) => p.id === pollId);
+          const votes = await listPollVotes(state.condoId, pollId);
+          const counts = {};
+          votes.forEach((v) => {
+            const k = String(v.choiceId || '');
+            if (!k) return;
+            counts[k] = (counts[k] || 0) + 1;
+          });
+
+          const options = poll && Array.isArray(poll.options) ? poll.options : [];
+          const html = `
+            <div style="display:grid;gap:6px;">
+              <div><strong>Total de votos:</strong> ${votes.length}</div>
+              ${options
+                .map((o) => {
+                  const n = counts[String(o.id || '')] || 0;
+                  return `<div>• ${o.label || o.id}: <strong>${n}</strong></div>`;
+                })
+                .join('')}
+            </div>
+          `;
+
+          $('pollResults').innerHTML = html;
+        } catch (e) {
+          $('pollResults').innerHTML = `<span class="muted">${e && e.message ? e.message : String(e)}</span>`;
+        }
+      }
+
+      async function bootstrap() {
+        const { auth } = await initFirebase();
+
+        $('logoutBtn').addEventListener('click', async () => {
+          await logoutUser();
+          location.href = '/login.html';
+        });
+
+        $('refreshBtn').addEventListener('click', refreshAll);
+        $('annClearBtn').addEventListener('click', clearAnnForm);
+        $('pollClearBtn').addEventListener('click', clearPollForm);
+        $('pollResultsBtn').addEventListener('click', showPollResults);
+
+        $('annDeleteBtn').addEventListener('click', async () => {
+          const id = $('annId').value;
+          if (!id || !state.condoId) return;
+          if (!confirm('Excluir este aviso?')) return;
+          setMsg($('annMsg'), 'Excluindo...');
+          try {
+            await deleteAnnouncement(state.condoId, id);
+            clearAnnForm();
+            await refreshAll();
+            setMsg($('annMsg'), 'Excluído.');
+          } catch (e) {
+            setMsg($('annMsg'), e && e.message ? e.message : String(e), true);
+          }
+        });
+
+        $('pollDeleteBtn').addEventListener('click', async () => {
+          const id = $('pollId').value;
+          if (!id || !state.condoId) return;
+          if (!confirm('Excluir esta enquete?')) return;
+          setMsg($('pollMsg'), 'Excluindo...');
+          try {
+            await deletePoll(state.condoId, id);
+            clearPollForm();
+            await refreshAll();
+            setMsg($('pollMsg'), 'Excluída.');
+          } catch (e) {
+            setMsg($('pollMsg'), e && e.message ? e.message : String(e), true);
+          }
+        });
+
+        $('annForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          if (!state.condoId) return;
+
+          setMsg($('annMsg'), 'Salvando...');
+          const id = $('annId').value;
+
+          try {
+            const payload = {
+              title: $('annTitle').value,
+              body: $('annBody').value,
+              status: $('annStatus').value,
+              publishedDate: $('annDate').value,
+            };
+
+            if (id) await updateAnnouncement(state.condoId, id, payload);
+            else await createAnnouncement(state.condoId, payload);
+
+            clearAnnForm();
+            await refreshAll();
+            setMsg($('annMsg'), 'OK.');
+          } catch (e) {
+            setMsg($('annMsg'), e && e.message ? e.message : String(e), true);
+          }
+        });
+
+        $('pollForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          if (!state.condoId) return;
+
+          setMsg($('pollMsg'), 'Salvando...');
+          const id = $('pollId').value;
+          try {
+            const options = String($('pollOptions').value || '')
+              .split(/\r?\n/)
+              .map((s) => String(s || '').trim())
+              .filter(Boolean);
+
+            const payload = {
+              title: $('pollTitle').value,
+              description: $('pollDesc').value,
+              options,
+              status: $('pollStatus').value,
+              closeDate: $('pollClose').value,
+            };
+
+            if (id) await updatePoll(state.condoId, id, payload);
+            else await createPoll(state.condoId, payload);
+
+            clearPollForm();
+            await refreshAll();
+            setMsg($('pollMsg'), 'OK.');
+          } catch (e) {
+            setMsg($('pollMsg'), e && e.message ? e.message : String(e), true);
+          }
+        });
+
+        auth.onAuthStateChanged(async (user) => {
+          if (!user) return;
+          try {
+            state.condos = await listCondos();
+            const select = $('ctxCondo');
+            select.innerHTML = '<option value="">Selecione um condomínio…</option>';
+            (state.condos || []).forEach((c) => {
+              const opt = document.createElement('option');
+              opt.value = c.id;
+              opt.textContent = c.name;
+              select.appendChild(opt);
+            });
+
+            if (state.condos && state.condos.length) {
+              state.condoId = state.condos[0].id;
+              select.value = state.condoId;
+              await refreshAll();
+            }
+
+            select.addEventListener('change', async () => {
+              state.condoId = select.value || null;
+              clearAnnForm();
+              clearPollForm();
+              await refreshAll();
+            });
+          } catch (e) {
+            setStatus(e && e.message ? e.message : String(e), true);
+          }
+        });
+      }
+
+      bootstrap();
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

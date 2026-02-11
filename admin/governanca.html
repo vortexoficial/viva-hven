@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Governança | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Governança (Cadastros)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:840px;">
+            Cadastros básicos: Condomínios, Blocos, Unidades e Mandatos.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio atual</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div style="min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Org ID (para criar condomínio)</label>
+            <input id="ctxOrgId" class="input" placeholder="ex: org_abc" />
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar listas</button>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn--ghost" type="button" data-tab="condos">Condomínio</button>
+        <button class="btn btn--ghost" type="button" data-tab="blocks">Blocos</button>
+        <button class="btn btn--ghost" type="button" data-tab="units">Unidades</button>
+        <button class="btn btn--ghost" type="button" data-tab="mandates">Mandatos</button>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <!-- CONDOS -->
+      <section id="tab-condos" style="margin-top: 14px;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Lista de condomínios</h2>
+            <div id="condoList" style="display:grid;gap:10px;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Formulário — Condomínio</h2>
+            <form id="condoForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="condoId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                  <input id="condoName" class="input" placeholder="Ex: Residencial Aurora" required />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="condoStatus" class="input">
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn" type="submit" id="condoSaveBtn">Salvar</button>
+                <button class="btn btn--ghost" type="button" id="condoClearBtn">Limpar</button>
+              </div>
+              <p style="margin:0;font-size:12px;color:var(--muted);">
+                Para criar um condomínio, informe o <strong>Org ID</strong> no topo.
+              </p>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- BLOCKS -->
+      <section id="tab-blocks" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Lista de blocos</h2>
+            <div id="blockList" style="display:grid;gap:10px;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Formulário — Bloco</h2>
+            <form id="blockForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="blockId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                  <input id="blockName" class="input" placeholder="Ex: Torre A" required />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ordem</label>
+                  <input id="blockOrder" class="input" placeholder="Ex: 1" inputmode="numeric" />
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn" type="submit" id="blockSaveBtn">Salvar</button>
+                <button class="btn btn--ghost" type="button" id="blockClearBtn">Limpar</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- UNITS -->
+      <section id="tab-units" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Lista de unidades</h2>
+            <div id="unitList" style="display:grid;gap:10px;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Formulário — Unidade</h2>
+            <form id="unitForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="unitId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Número</label>
+                  <input id="unitNumber" class="input" placeholder="Ex: 101" required />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Andar</label>
+                  <input id="unitFloor" class="input" placeholder="Ex: 10" inputmode="numeric" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Bloco</label>
+                  <select id="unitBlockId" class="input">
+                    <option value="">(sem bloco)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="unitStatus" class="input">
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn" type="submit" id="unitSaveBtn">Salvar</button>
+                <button class="btn btn--ghost" type="button" id="unitClearBtn">Limpar</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- MANDATES -->
+      <section id="tab-mandates" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Lista de mandatos</h2>
+            <div id="mandateList" style="display:grid;gap:10px;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Formulário — Mandato</h2>
+            <form id="mandateForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="mandateId" />
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+                <input id="mandateTitle" class="input" placeholder="Ex: Gestão 2026–2028" required />
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Início</label>
+                  <input id="mandateStart" class="input" type="date" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fim</label>
+                  <input id="mandateEnd" class="input" type="date" />
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Síndico(a) (nome)</label>
+                <input id="mandateSindico" class="input" placeholder="Ex: Maria Silva" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observações</label>
+                <textarea id="mandateNotes" class="input" rows="3" placeholder="Opcional"></textarea>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="mandateStatus" class="input">
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn" type="submit" id="mandateSaveBtn">Salvar</button>
+                <button class="btn btn--ghost" type="button" id="mandateClearBtn">Limpar</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import {
+        listCondos,
+        createCondo,
+        updateCondo,
+        deleteCondo,
+        listBlocks,
+        createBlock,
+        updateBlock,
+        deleteBlock,
+        listUnits,
+        createUnit,
+        updateUnit,
+        deleteUnit,
+        listMandates,
+        createMandate,
+        updateMandate,
+        deleteMandate,
+      } from '/js/modules/governance.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+
+      const statusEl = $('status');
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      // Tabs
+      const tabButtons = Array.from(document.querySelectorAll('[data-tab]'));
+      const tabIds = ['condos', 'blocks', 'units', 'mandates'];
+      function showTab(name) {
+        tabIds.forEach((t) => {
+          const el = document.getElementById('tab-' + t);
+          if (el) el.style.display = t === name ? '' : 'none';
+        });
+        setStatus('');
+      }
+      tabButtons.forEach((b) => {
+        b.addEventListener('click', () => showTab(b.getAttribute('data-tab')));
+      });
+      showTab('condos');
+
+      // Logout
+      const logoutBtn = $('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await withBusy(logoutBtn, async () => {
+            await logoutUser();
+            window.location.href = '/login.html';
+          });
+        });
+      }
+
+      // Context
+      const ctxCondo = $('ctxCondo');
+      const ctxOrgId = $('ctxOrgId');
+      let condosCache = [];
+      let blocksCache = [];
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fillCondoSelect(condos) {
+        const cur = currentCondoId();
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+        if (cur) ctxCondo.value = cur;
+      }
+
+      function clearCondoForm() {
+        $('condoId').value = '';
+        $('condoName').value = '';
+        $('condoStatus').value = 'active';
+      }
+
+      function clearBlockForm() {
+        $('blockId').value = '';
+        $('blockName').value = '';
+        $('blockOrder').value = '';
+      }
+
+      function clearUnitForm() {
+        $('unitId').value = '';
+        $('unitNumber').value = '';
+        $('unitFloor').value = '';
+        $('unitBlockId').value = '';
+        $('unitStatus').value = 'active';
+      }
+
+      function clearMandateForm() {
+        $('mandateId').value = '';
+        $('mandateTitle').value = '';
+        $('mandateStart').value = '';
+        $('mandateEnd').value = '';
+        $('mandateSindico').value = '';
+        $('mandateNotes').value = '';
+        $('mandateStatus').value = 'active';
+      }
+
+      function renderList(container, items, onEdit, onDelete) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhum registro.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const title = document.createElement('div');
+          title.style.display = 'flex';
+          title.style.alignItems = 'center';
+          title.style.justifyContent = 'space-between';
+          title.style.gap = '10px';
+
+          const left = document.createElement('div');
+          left.innerHTML = '<div style="font-weight:800;">' +
+            (it.name || it.title || it.number || it.id) +
+            '</div><div style="font-size:12px;color:var(--muted);">' + it.id + '</div>';
+
+          const actions = document.createElement('div');
+          actions.style.display = 'flex';
+          actions.style.gap = '8px';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'btn btn--ghost';
+          editBtn.textContent = 'Editar';
+          editBtn.addEventListener('click', () => onEdit(it));
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'btn btn--ghost';
+          delBtn.textContent = 'Excluir';
+          delBtn.addEventListener('click', () => onDelete(it, delBtn));
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          title.appendChild(left);
+          title.appendChild(actions);
+
+          row.appendChild(title);
+          container.appendChild(row);
+        });
+      }
+
+      async function refreshCondos() {
+        condosCache = await listCondos();
+        fillCondoSelect(condosCache);
+
+        const listEl = $('condoList');
+        renderList(
+          listEl,
+          condosCache.map((c) => ({ id: c.id, name: c.name || '', orgId: c.orgId || '', status: c.status || '' })),
+          (c) => {
+            $('condoId').value = c.id;
+            $('condoName').value = c.name || '';
+            $('condoStatus').value = c.status || 'active';
+            if (c.orgId && ctxOrgId) ctxOrgId.value = c.orgId;
+            setStatus('Editando condomínio: ' + c.id);
+          },
+          async (c, btn) => {
+            if (!confirm('Excluir este condomínio?')) return;
+            await withBusy(btn, async () => {
+              await deleteCondo(c.id);
+              clearCondoForm();
+              await refreshAll();
+              setStatus('Condomínio excluído.');
+            });
+          }
+        );
+      }
+
+      function fillBlocksForUnitSelect(blocks) {
+        const sel = $('unitBlockId');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">(sem bloco)</option>';
+        blocks.forEach((b) => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = (b.name || b.id) + (b.order != null ? ' (#' + b.order + ')' : '');
+          sel.appendChild(opt);
+        });
+        if (cur) sel.value = cur;
+      }
+
+      async function refreshBlocks() {
+        const condoId = currentCondoId();
+        blocksCache = condoId ? await listBlocks(condoId) : [];
+        fillBlocksForUnitSelect(blocksCache);
+
+        const listEl = $('blockList');
+        renderList(
+          listEl,
+          blocksCache.map((b) => ({ id: b.id, name: b.name || '', order: b.order })),
+          (b) => {
+            $('blockId').value = b.id;
+            $('blockName').value = b.name || '';
+            $('blockOrder').value = b.order != null ? String(b.order) : '';
+            setStatus('Editando bloco: ' + b.id);
+          },
+          async (b, btn) => {
+            if (!confirm('Excluir este bloco?')) return;
+            await withBusy(btn, async () => {
+              await deleteBlock(currentCondoId(), b.id);
+              clearBlockForm();
+              await refreshBlocks();
+              setStatus('Bloco excluído.');
+            });
+          }
+        );
+      }
+
+      async function refreshUnits() {
+        const condoId = currentCondoId();
+        const units = condoId ? await listUnits(condoId) : [];
+
+        const listEl = $('unitList');
+        renderList(
+          listEl,
+          units.map((u) => ({ id: u.id, number: u.number || '', blockId: u.blockId || null, floor: u.floor, status: u.status || '' })),
+          (u) => {
+            $('unitId').value = u.id;
+            $('unitNumber').value = u.number || '';
+            $('unitFloor').value = u.floor != null ? String(u.floor) : '';
+            $('unitBlockId').value = u.blockId || '';
+            $('unitStatus').value = u.status || 'active';
+            setStatus('Editando unidade: ' + u.id);
+          },
+          async (u, btn) => {
+            if (!confirm('Excluir esta unidade?')) return;
+            await withBusy(btn, async () => {
+              await deleteUnit(currentCondoId(), u.id);
+              clearUnitForm();
+              await refreshUnits();
+              setStatus('Unidade excluída.');
+            });
+          }
+        );
+      }
+
+      function fmtDateMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      async function refreshMandates() {
+        const condoId = currentCondoId();
+        const mandates = condoId ? await listMandates(condoId) : [];
+
+        const listEl = $('mandateList');
+        renderList(
+          listEl,
+          mandates.map((m) => ({ id: m.id, title: m.title || '', startsAt: m.startsAt || null, endsAt: m.endsAt || null, sindicoName: m.sindicoName || '', notes: m.notes || '', status: m.status || '' })),
+          (m) => {
+            $('mandateId').value = m.id;
+            $('mandateTitle').value = m.title || '';
+            $('mandateStart').value = fmtDateMaybe(m.startsAt);
+            $('mandateEnd').value = fmtDateMaybe(m.endsAt);
+            $('mandateSindico').value = m.sindicoName || '';
+            $('mandateNotes').value = m.notes || '';
+            $('mandateStatus').value = m.status || 'active';
+            setStatus('Editando mandato: ' + m.id);
+          },
+          async (m, btn) => {
+            if (!confirm('Excluir este mandato?')) return;
+            await withBusy(btn, async () => {
+              await deleteMandate(currentCondoId(), m.id);
+              clearMandateForm();
+              await refreshMandates();
+              setStatus('Mandato excluído.');
+            });
+          }
+        );
+      }
+
+      async function refreshAll() {
+        await refreshCondos();
+        await refreshBlocks();
+        await refreshUnits();
+        await refreshMandates();
+      }
+
+      // Events
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), refreshAll);
+        setStatus('Listas atualizadas.');
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        clearBlockForm();
+        clearUnitForm();
+        clearMandateForm();
+        await withBusy(null, async () => {
+          await refreshBlocks();
+          await refreshUnits();
+          await refreshMandates();
+        });
+      });
+
+      $('condoClearBtn').addEventListener('click', () => {
+        clearCondoForm();
+        setStatus('');
+      });
+
+      $('blockClearBtn').addEventListener('click', () => {
+        clearBlockForm();
+        setStatus('');
+      });
+
+      $('unitClearBtn').addEventListener('click', () => {
+        clearUnitForm();
+        setStatus('');
+      });
+
+      $('mandateClearBtn').addEventListener('click', () => {
+        clearMandateForm();
+        setStatus('');
+      });
+
+      $('condoForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = $('condoId').value;
+        const name = $('condoName').value;
+        const status = $('condoStatus').value;
+
+        await withBusy($('condoSaveBtn'), async () => {
+          if (id) {
+            await updateCondo(id, { name, status });
+            setStatus('Condomínio atualizado.');
+          } else {
+            await createCondo({ orgId: ctxOrgId.value, name, status });
+            setStatus('Condomínio criado.');
+          }
+          clearCondoForm();
+          await refreshAll();
+        });
+      });
+
+      $('blockForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const condoId = currentCondoId();
+        const id = $('blockId').value;
+        const name = $('blockName').value;
+        const order = $('blockOrder').value;
+
+        await withBusy($('blockSaveBtn'), async () => {
+          if (!condoId) throw new Error('Selecione um condomínio no topo.');
+          if (id) {
+            await updateBlock(condoId, id, { name, order });
+            setStatus('Bloco atualizado.');
+          } else {
+            await createBlock(condoId, { name, order });
+            setStatus('Bloco criado.');
+          }
+          clearBlockForm();
+          await refreshBlocks();
+        });
+      });
+
+      $('unitForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const condoId = currentCondoId();
+        const id = $('unitId').value;
+        const number = $('unitNumber').value;
+        const floor = $('unitFloor').value;
+        const blockId = $('unitBlockId').value;
+        const status = $('unitStatus').value;
+
+        await withBusy($('unitSaveBtn'), async () => {
+          if (!condoId) throw new Error('Selecione um condomínio no topo.');
+          if (id) {
+            await updateUnit(condoId, id, { number, floor, blockId, status });
+            setStatus('Unidade atualizada.');
+          } else {
+            await createUnit(condoId, { number, floor, blockId, status });
+            setStatus('Unidade criada.');
+          }
+          clearUnitForm();
+          await refreshUnits();
+        });
+      });
+
+      $('mandateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const condoId = currentCondoId();
+        const id = $('mandateId').value;
+        const title = $('mandateTitle').value;
+        const startsAt = $('mandateStart').value;
+        const endsAt = $('mandateEnd').value;
+        const sindicoName = $('mandateSindico').value;
+        const notes = $('mandateNotes').value;
+        const status = $('mandateStatus').value;
+
+        await withBusy($('mandateSaveBtn'), async () => {
+          if (!condoId) throw new Error('Selecione um condomínio no topo.');
+          if (id) {
+            await updateMandate(condoId, id, { title, startsAt, endsAt, sindicoName, notes, status });
+            setStatus('Mandato atualizado.');
+          } else {
+            await createMandate(condoId, { title, startsAt, endsAt, sindicoName, notes, status });
+            setStatus('Mandato criado.');
+          }
+          clearMandateForm();
+          await refreshMandates();
+        });
+      });
+
+      // First load
+      await withBusy(null, refreshAll);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

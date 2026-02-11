@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+
+    <title>Sem conexão | Viva Haven</title>
+    <meta name="robots" content="noindex" />
+
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <script>
+      // Preserva tema salvo
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+
+    <style>
+      .offlineWrap {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .offlineCard {
+        width: 100%;
+        max-width: 560px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: calc(var(--radius) + 6px);
+        box-shadow: var(--shadow-soft);
+        padding: 28px;
+      }
+      .offlineTop {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+      .offlineLogo {
+        width: 44px;
+        height: 44px;
+      }
+      .offlineTitle {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+      }
+      .offlineText {
+        margin: 10px 0 18px;
+        color: var(--muted);
+      }
+      .offlineActions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .offlineBtn {
+        border: 1px solid var(--border-2);
+        background: var(--surface-2);
+        color: var(--text);
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .offlineBtnPrimary {
+        border: none;
+        background: var(--brand);
+      }
+      .offlineHint {
+        margin: 14px 0 0;
+        font-size: 12px;
+        color: var(--faint);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="offlineWrap">
+      <main class="offlineCard" role="main" aria-label="Página offline">
+        <div class="offlineTop">
+          <img class="offlineLogo" src="assets/logo.svg" alt="" aria-hidden="true" />
+          <h1 class="offlineTitle">Você está sem conexão</h1>
+        </div>
+
+        <p class="offlineText">
+          Sem internet no momento. Quando a conexão voltar, você pode tentar novamente.
+        </p>
+
+        <div class="offlineActions">
+          <button class="offlineBtn offlineBtnPrimary" type="button" onclick="window.location.reload()">Tentar novamente</button>
+          <button class="offlineBtn" type="button" onclick="window.location.href='/'">Ir para o início</button>
+        </div>
+
+        <p class="offlineHint">Dica: depois de instalar, o acesso fica mais rápido e funciona melhor com cache.</p>
+      </main>
+    </div>
+  </body>
+</html>

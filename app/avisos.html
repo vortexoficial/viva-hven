@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morador • Avisos</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/perfil.html">← Voltar</a>
+      <h1 class="h1">Avisos</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="msg" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Avisos do condomínio</h2>
+      <div id="annList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Enquetes</h2>
+      <div id="pollList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+    import {
+      listAnnouncements,
+      listPolls,
+      getMyVote,
+      castVote,
+      listMyReadReceipts,
+      confirmRead,
+    } from '/js/modules/comms.js';
+
+    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+      receipts: new Map(),
+      votes: new Map(),
+    };
+
+    function setMsg(msg, isErr) {
+      const el = $('msg');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function asItemRow(title, subtitle, right) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+        </div>
+      `;
+    }
+
+    function receiptKey(kind, targetId) {
+      return `${kind}:${targetId}`;
+    }
+
+    async function loadContext() {
+      state.condos = await listCondos();
+      const select = $('condoSelect');
+      select.innerHTML = '';
+
+      if (!state.condos.length) {
+        select.innerHTML = '<option value="">(sem condomínios)</option>';
+        state.condoId = null;
+        return;
+      }
+
+      for (const c of state.condos) {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      }
+
+      state.condoId = state.condos[0].id;
+      select.value = state.condoId;
+
+      select.addEventListener('change', async () => {
+        state.condoId = select.value || null;
+        await refreshAll();
+      });
+    }
+
+    async function loadReceipts() {
+      state.receipts.clear();
+      const items = await listMyReadReceipts(state.condoId);
+      (items || []).forEach((r) => {
+        const kind = String(r.kind || '');
+        const targetId = String(r.targetId || '');
+        if (!kind || !targetId) return;
+        state.receipts.set(receiptKey(kind, targetId), r);
+      });
+    }
+
+    async function renderAnnouncements() {
+      const root = $('annList');
+      if (!root) return;
+
+      const items = await listAnnouncements(state.condoId, { publishedOnly: true });
+      if (!items.length) {
+        root.innerHTML = '<p class="muted">Nenhum aviso publicado.</p>';
+        return;
+      }
+
+      root.innerHTML = items
+        .map((a) => {
+          const read = state.receipts.has(receiptKey('announcement', a.id));
+          const right = read
+            ? '<span class="badge">Lido</span>'
+            : `<button class="btn btn--ghost" type="button" data-read-ann="${a.id}">Marcar como lido</button>`;
+          const subtitle = `${a.publishedAt ? formatTs(a.publishedAt) : ''} • ${String(a.body || '').slice(0, 160)}${String(a.body || '').length > 160 ? '…' : ''}`;
+          return asItemRow(a.title || '(sem título)', subtitle, right);
+        })
+        .join('');
+
+      root.querySelectorAll('button[data-read-ann]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-read-ann');
+          if (!id) return;
+          btn.disabled = true;
+          setMsg('Registrando leitura...');
+          try {
+            await confirmRead(state.condoId, 'announcement', id);
+            await loadReceipts();
+            await renderAnnouncements();
+            setMsg('Leitura confirmada.');
+          } catch (e) {
+            setMsg(e && e.message ? e.message : String(e), true);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    async function renderPolls() {
+      const root = $('pollList');
+      if (!root) return;
+
+      const polls = await listPolls(state.condoId, {});
+      if (!polls.length) {
+        root.innerHTML = '<p class="muted">Nenhuma enquete.</p>';
+        return;
+      }
+
+      // Carrega votos (somente get do próprio voto) de forma sequencial para manter simples.
+      state.votes.clear();
+      for (const p of polls) {
+        try {
+          const my = await getMyVote(state.condoId, p.id);
+          if (my) state.votes.set(p.id, my);
+        } catch (e) {}
+      }
+
+      root.innerHTML = polls
+        .map((p) => {
+          const status = String(p.status || 'aberta');
+          const myVote = state.votes.get(p.id) || null;
+          const options = Array.isArray(p.options) ? p.options : [];
+          const right = `<span class="badge">${status}</span>`;
+
+          let subtitle = p.description ? String(p.description) : '';
+          if (p.closeAt) subtitle = (subtitle ? subtitle + ' • ' : '') + `Até ${formatTs(p.closeAt)}`;
+          if (myVote) {
+            subtitle = (subtitle ? subtitle + ' • ' : '') + `Seu voto: ${myVote.choiceLabel || myVote.choiceId || ''}`;
+          }
+
+          const voteControls = !myVote && status === 'aberta'
+            ? `
+              <div style="margin-top:8px;display:grid;gap:8px;">
+                <select class="input" data-poll-choice="${p.id}">
+                  <option value="">Selecione…</option>
+                  ${options.map((o) => `<option value="${o.id}">${o.label}</option>`).join('')}
+                </select>
+                <button class="btn" type="button" data-poll-vote="${p.id}">Votar</button>
+              </div>
+            `
+            : '';
+
+          return `
+            <div class="list__item" style="align-items: flex-start;">
+              <div class="list__main">
+                <div class="list__title">${p.title || '(sem título)'}</div>
+                <div class="list__sub">${subtitle || ''}${voteControls}</div>
+              </div>
+              <div class="list__meta">${right}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      root.querySelectorAll('button[data-poll-vote]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const pollId = btn.getAttribute('data-poll-vote');
+          const select = root.querySelector(`select[data-poll-choice="${pollId}"]`);
+          const choiceId = select ? String(select.value || '').trim() : '';
+          if (!pollId) return;
+          if (!choiceId) {
+            setMsg('Selecione uma opção antes de votar.', true);
+            return;
+          }
+
+          btn.disabled = true;
+          setMsg('Enviando voto...');
+          try {
+            await castVote(state.condoId, pollId, choiceId);
+            // Registra leitura da enquete automaticamente
+            try { await confirmRead(state.condoId, 'poll', pollId); } catch (e) {}
+            await loadReceipts();
+            await renderPolls();
+            setMsg('Voto registrado.');
+          } catch (e) {
+            setMsg(e && e.message ? e.message : String(e), true);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    async function refreshAll() {
+      if (!state.condoId) return;
+      setMsg('Carregando...');
+      try {
+        await loadReceipts();
+        await renderAnnouncements();
+        await renderPolls();
+        setMsg('OK');
+      } catch (e) {
+        setMsg(e && e.message ? e.message : String(e), true);
+      }
+    }
+
+    async function bootstrap() {
+      const { auth } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      $('refreshBtn').addEventListener('click', refreshAll);
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        await loadContext();
+        await refreshAll();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Dashboard | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="/js/auth-mock.js" defer></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="h1">Dashboard</h1>
+      </div>
+      <div class="topbar__right">
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2 class="h2">Atalhos</h2>
+        <p id="demoHint" class="muted" style="margin-top:-8px;"></p>
+        <div class="grid grid--3" style="margin-top: 10px;">
+          <a class="card" href="/admin/insights.html" style="display:block;">
+            <div class="card__icon">
+              <svg class="icon icon--md"><use href="/assets/icons.svg#chart"></use></svg>
+            </div>
+            <h3 class="card__title">Insights</h3>
+            <p class="card__text">Heurísticas: gastos, inadimplência, manutenções, ranking.</p>
+          </a>
+
+          <a class="card" href="/admin/carteira.html" style="display:block;">
+            <div class="card__icon">
+              <svg class="icon icon--md"><use href="/assets/icons.svg#shield"></use></svg>
+            </div>
+            <h3 class="card__title">Carteira</h3>
+            <p class="card__text">Comparativos por organização (inadimplência, tickets, gastos).</p>
+          </a>
+
+          <a class="card" href="/admin/comunicacao.html" style="display:block;">
+            <div class="card__icon">
+              <svg class="icon icon--md"><use href="/assets/icons.svg#phone"></use></svg>
+            </div>
+            <h3 class="card__title">Comunicação</h3>
+            <p class="card__text">Avisos e enquetes para moradores.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { initFirebase } from '/js/firebase-init.js';
+
+      const guard = await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA']);
+
+      const badge = document.getElementById('userBadge');
+      const demoHint = document.getElementById('demoHint');
+
+      function isDemo() {
+        try {
+          const host = String(window.location.hostname || '').toLowerCase();
+          const isLocal = host === 'localhost' || host === '127.0.0.1';
+          if (!isLocal) return false;
+          return localStorage.getItem('vh_demo_mode') === '1' && window.AuthMock && window.AuthMock.getSession();
+        } catch (e) {
+          return false;
+        }
+      }
+
+      if (isDemo()) {
+        const s = window.AuthMock.getSession();
+        if (badge) badge.textContent = `DEMO • ${s.role || '—'}`;
+        if (demoHint) demoHint.textContent = 'Você está no modo DEMO (sem Firebase).';
+      } else {
+        try {
+          const { auth } = await initFirebase();
+          auth.onAuthStateChanged((u) => {
+            if (!u) return;
+            if (badge) badge.textContent = u.email || u.uid;
+          });
+        } catch (e) {
+          if (badge) badge.textContent = guard && guard.role ? guard.role : '';
+        }
+      }
+
+      const btn = document.getElementById('logoutBtn');
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          try {
+            btn.disabled = true;
+            if (isDemo()) {
+              try { window.AuthMock.logout(); } catch (e) {}
+              try { localStorage.removeItem('vh_demo_mode'); } catch (e) {}
+            } else {
+              await logoutUser();
+            }
+          } finally {
+            window.location.href = '/login.html';
+          }
+        });
+      }
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

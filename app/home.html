@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home | App do Morador</title>
+
+    <link rel="icon" href="/assets/logo.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      // Evita flash de tema ao carregar
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="appRoot"></div>
+
+    <template id="homeContent">
+      <div class="container" style="max-width: 430px; padding-top: 28px;">
+        <div
+          style="
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: calc(var(--radius) + 6px);
+            box-shadow: var(--shadow-soft);
+            padding: 18px;
+          "
+        >
+          <p style="margin: 0; color: var(--muted); font-weight: 700; font-size: 12px;">App do Morador</p>
+          <h1 style="margin: 6px 0 8px; font-size: 18px; letter-spacing: -0.3px;">Home (validação de navegação)</h1>
+          <p style="margin: 0; color: var(--muted);">
+            Esta é uma página simples usando o App Shell. Use a navegação inferior para voltar ao Perfil.
+          </p>
+
+          <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+            <button
+              id="logoutBtn"
+              type="button"
+              style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px 14px;
+                border-radius: 14px;
+                background: var(--surface-2);
+                color: var(--text);
+                font-weight: 800;
+                border: 1px solid var(--border-2);
+              "
+            >
+              Sair
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+            <a
+              href="/perfil.html"
+              style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px 14px;
+                border-radius: 14px;
+                background: var(--brand);
+                color: white;
+                font-weight: 800;
+                border: none;
+              "
+              >Ir para o Perfil</a
+            >
+            <a
+              href="/login.html"
+              style="
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px 14px;
+                border-radius: 14px;
+                background: var(--surface-2);
+                color: var(--text);
+                font-weight: 800;
+                border: 1px solid var(--border-2);
+              "
+              >Ir para Login</a
+            >
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="/js/app-shell.js" defer></script>
+    <script src="/js/a2hs.js" defer></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function () {
+        var tpl = document.getElementById('homeContent');
+        if (!tpl) return;
+
+        window.mountShell({
+          rootSelector: '#appRoot',
+          title: '',
+          activeTab: 'home',
+          contentHtml: tpl.innerHTML,
+        });
+      });
+    </script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+
+      await protect(['/app/'], ['MORADOR']);
+
+      const btn = document.getElementById('logoutBtn');
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          try {
+            btn.disabled = true;
+            await logoutUser();
+          } finally {
+            window.location.href = '/login.html';
+          }
+        });
+      }
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

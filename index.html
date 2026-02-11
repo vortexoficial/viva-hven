@@ -27,7 +27,11 @@
       rel="stylesheet"
     />
 
-    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/icons-sprite.js" defer></script>
 
@@ -938,6 +942,17 @@
       })();
     </script>
 
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+    <script src="js/a2hs.js" defer></script>
     <script src="js/app.js" defer></script>
   </body>
 </html>

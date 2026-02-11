@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login | Viva Haven</title>
+    <meta name="theme-color" content="#0b1120" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,8 +13,13 @@
       rel="stylesheet"
     />
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="js/icons-sprite.js" defer></script>
+    <script src="/js/auth-mock.js" defer></script>
 
     <style>
       /* Login Specific Styles */
@@ -383,7 +390,7 @@
             <button class="switchBtn" onclick="switchProfile(this, 'morador')">Morador</button>
           </div>
 
-          <form onsubmit="event.preventDefault();" class="stagger-3" data-anim>
+          <form id="loginForm" class="stagger-3" data-anim>
             <div class="formGroup">
               <label class="inputLabel" for="email">E-mail corporativo ou CPF</label>
               <input type="text" id="email" class="inputField" placeholder="ex: sindico@condominio.com" />
@@ -392,10 +399,22 @@
             <div class="formGroup">
               <label class="inputLabel" for="password">Senha</label>
               <input type="password" id="password" class="inputField" placeholder="••••••••" />
-              <a href="#" class="forgotLink">Esqueceu a senha?</a>
+              <a href="#" id="forgotPassword" class="forgotLink">Esqueceu a senha?</a>
             </div>
 
             <button type="submit" class="submitBtn">Entrar na plataforma</button>
+
+            <div style="margin-top: 12px; text-align: center;">
+              <a href="/register.html" class="forgotLink" style="display: inline-block;">Criar conta</a>
+            </div>
+
+            <div id="demoWrap" style="margin-top: 10px; text-align: center; display: none;">
+              <button id="demoBtn" class="sso__btn" type="button" style="justify-content:center;">
+                <svg class="icon icon--sm"><use href="assets/icons.svg#spark"></use></svg>
+                Entrar como demo
+              </button>
+              <div class="finePrint" style="margin-top: 6px;">Disponível apenas em localhost.</div>
+            </div>
             
             <div class="sso">
                 <button class="sso__btn" type="button">
@@ -456,7 +475,107 @@
           emailInput.placeholder = "ex: sindico@condominio.com";
           emailInput.previousElementSibling.textContent = "E-mail corporativo";
         }
+
+        try {
+          document.documentElement.setAttribute('data-login-type', type);
+        } catch (e) {}
       }
     </script>
+
+    <script type="module">
+      import { loginUser, requestPasswordReset } from '/js/auth.js';
+
+      const form = document.getElementById('loginForm');
+      const btn = form ? form.querySelector('button[type="submit"]') : null;
+
+      function value(id) {
+        const el = document.getElementById(id);
+        return el ? String(el.value || '').trim() : '';
+      }
+
+      async function onSubmit(event) {
+        event.preventDefault();
+        if (!form) return;
+
+        try {
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Entrando...';
+          }
+
+          const { role } = await loginUser({
+            identifier: value('email'),
+            password: value('password'),
+          });
+
+          if (String(role || '').toUpperCase() === 'MORADOR') window.location.href = '/app/home.html';
+          else window.location.href = '/admin/dashboard.html';
+        } catch (e) {
+          alert(e && e.message ? e.message : 'Falha ao entrar.');
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Entrar na plataforma';
+          }
+        }
+      }
+
+      if (form) form.addEventListener('submit', onSubmit);
+
+      (function () {
+        const forgot = document.getElementById('forgotPassword');
+        if (!forgot) return;
+        forgot.addEventListener('click', async (event) => {
+          event.preventDefault();
+          try {
+            const identifier = window.prompt('Digite seu e-mail ou CPF para recuperar a senha:');
+            if (!identifier) return;
+            await requestPasswordReset(identifier);
+            alert('Se houver uma conta para este e-mail/CPF, enviaremos um link de recuperação.');
+          } catch (e) {
+            alert(e && e.message ? e.message : 'Não foi possível solicitar a recuperação agora.');
+          }
+        });
+      })();
+
+      // DEMO (seguro): só habilita em localhost e usa AuthMock (sem Firebase)
+      (function () {
+        try {
+          const host = String(window.location.hostname || '').toLowerCase();
+          const isLocal = host === 'localhost' || host === '127.0.0.1';
+          const wrap = document.getElementById('demoWrap');
+          const demoBtn = document.getElementById('demoBtn');
+          if (!wrap || !demoBtn) return;
+          if (!isLocal) return;
+
+          wrap.style.display = 'block';
+          demoBtn.addEventListener('click', () => {
+            try {
+              if (!window.AuthMock || typeof window.AuthMock.login !== 'function') {
+                alert('AuthMock não disponível.');
+                return;
+              }
+              localStorage.setItem('vh_demo_mode', '1');
+              window.AuthMock.login('demo@localhost', 'demo', 'GESTOR');
+              window.location.href = '/admin/dashboard.html';
+            } catch (e) {
+              alert(e && e.message ? e.message : 'Falha ao entrar como demo.');
+            }
+          });
+        } catch (e) {}
+      })();
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+    <script src="js/a2hs.js" defer></script>
   </body>
 </html>

@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Financeiro | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Financeiro (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Cobranças, pagamentos, despesas e relatórios (MVP).
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Gerar cobrança mensal</h2>
+          <form id="genForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Mês (ref.)</label>
+                <input id="genRefMonth" class="input" type="month" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Vencimento</label>
+                <input id="genDue" class="input" type="date" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
+                <input id="genAmount" class="input" placeholder="Ex: 350,00" required />
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <input id="genDesc" class="input" placeholder="Opcional" />
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="genBtn" class="btn" type="submit">Gerar</button>
+            </div>
+            <p style="margin:0;font-size:12px;color:var(--muted);">Cria 1 cobrança por unidade cadastrada.</p>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Registrar pagamento (manual)</h2>
+          <form id="payForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Cobrança</label>
+                <select id="payCharge" class="input" required>
+                  <option value="">Selecione…</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
+                <input id="payDate" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
+                <input id="payAmount" class="input" placeholder="Opcional (usa o valor da cobrança)" />
+              </div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Método</label>
+                <select id="payMethod" class="input">
+                  <option value="manual">Manual</option>
+                  <option value="pix">Pix</option>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="transferencia">Transferência</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Comprovante</label>
+                <input id="payReceipt" class="input" type="file" />
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observação</label>
+              <input id="payNote" class="input" placeholder="Opcional" />
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="payBtn" class="btn" type="submit">Registrar</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Despesas</h2>
+          <form id="expForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
+                <input id="expDate" class="input" type="date" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Categoria</label>
+                <input id="expCategory" class="input" placeholder="Ex: limpeza" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
+                <input id="expAmount" class="input" placeholder="Ex: 120,00" required />
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <input id="expDesc" class="input" placeholder="Ex: Manutenção elevador" required />
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fornecedor</label>
+                <input id="expVendor" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo</label>
+                <input id="expAttachment" class="input" type="file" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="expBtn" class="btn" type="submit">Salvar despesa</button>
+            </div>
+          </form>
+
+          <div style="margin-top:12px;display:grid;gap:10px;" id="expenseList"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Inadimplência</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <button id="delinqBtn" class="btn btn--ghost" type="button">Recalcular</button>
+          </div>
+          <div id="delinqList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Relatórios</h2>
+          <div style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">De</label>
+                <input id="repFrom" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Até</label>
+                <input id="repTo" class="input" type="date" />
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="repBtn" class="btn" type="button">Gerar</button>
+            </div>
+
+            <div id="repSummary" style="font-size:12px;color:var(--muted);"></div>
+            <div id="repFlow" style="display:grid;gap:10px;"></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Cobranças (abertas)</h2>
+          <div id="chargeList" style="display:grid;gap:10px;"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import {
+        generateMonthlyCharges,
+        listCharges,
+        registerPayment,
+        listDelinquents,
+        createExpense,
+        listExpenses,
+        getSimpleReports,
+        Money,
+      } from '/js/modules/finance.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fmtDateMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          if (v instanceof Date) {
+            const yyyy = v.getFullYear();
+            const mm = String(v.getMonth() + 1).padStart(2, '0');
+            const dd = String(v.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function renderCardList(container, items, mapLine, emptyMsg) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">' + (emptyMsg || 'Nenhum registro.') + '</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+          row.innerHTML = mapLine(it);
+          container.appendChild(row);
+        });
+      }
+
+      async function refreshCharges() {
+        const cId = currentCondoId();
+        const listEl = $('chargeList');
+        const paySelect = $('payCharge');
+        listEl.innerHTML = '';
+        paySelect.innerHTML = '<option value="">Selecione…</option>';
+
+        if (!cId) return;
+
+        const items = await listCharges(cId, { status: 'open' });
+
+        items.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.unitNumber ? ('Unidade ' + c.unitNumber + ' — ') : '') + (c.referenceMonth || '') + ' — ' + Money.centsToBr(c.amountCents);
+          paySelect.appendChild(opt);
+        });
+
+        renderCardList(
+          listEl,
+          items,
+          (c) => {
+            const due = fmtDateMaybe(c.dueAt);
+            const unit = c.unitNumber ? ('Unidade ' + c.unitNumber) : (c.unitId || '');
+            const desc = c.description || '';
+            const sub = [c.referenceMonth ? ('ref: ' + c.referenceMonth) : null, due ? ('venc: ' + due) : null, c.status ? ('status: ' + c.status) : null].filter(Boolean).join(' • ');
+            return '<div style="font-weight:800;">' + unit + ' — ' + Money.centsToBr(c.amountCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+                   (desc ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">' + desc + '</div>') : '');
+          },
+          'Nenhuma cobrança em aberto.'
+        );
+      }
+
+      async function refreshDelinq() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const items = await listDelinquents(cId);
+
+        renderCardList(
+          $('delinqList'),
+          items,
+          (c) => {
+            const due = fmtDateMaybe(c.dueAt);
+            const unit = c.unitNumber ? ('Unidade ' + c.unitNumber) : (c.unitId || '');
+            const sub = [c.referenceMonth ? ('ref: ' + c.referenceMonth) : null, due ? ('venc: ' + due) : null].filter(Boolean).join(' • ');
+            return '<div style="font-weight:800;">' + unit + ' — ' + Money.centsToBr(c.amountCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>';
+          },
+          'Nenhuma cobrança vencida em aberto.'
+        );
+      }
+
+      async function refreshExpenses() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const items = await listExpenses(cId);
+
+        renderCardList(
+          $('expenseList'),
+          items,
+          (e) => {
+            const dt = fmtDateMaybe(e.date);
+            const sub = [dt ? ('data: ' + dt) : null, e.category ? ('cat: ' + e.category) : null, e.vendor ? ('forn: ' + e.vendor) : null].filter(Boolean).join(' • ');
+            const link = e.attachment && e.attachment.url ? ('<a class="btn btn--ghost" style="margin-top:8px;display:inline-flex;" target="_blank" href="' + e.attachment.url + '">Baixar anexo</a>') : '';
+            return '<div style="font-weight:800;">' + (e.description || e.id) + ' — ' + Money.centsToBr(e.amountCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+                   link;
+          },
+          'Nenhuma despesa cadastrada.'
+        );
+      }
+
+      async function refreshReports() {
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const from = $('repFrom').value;
+        const to = $('repTo').value;
+
+        const rep = await getSimpleReports(cId, { from, to });
+
+        const s = rep.summary || {};
+        $('repSummary').innerHTML =
+          '<div><strong>Balancete</strong></div>' +
+          '<div>Receitas (pagamentos): ' + (s.paymentsIn || '') + '</div>' +
+          '<div>Despesas: ' + (s.expensesOut || '') + '</div>' +
+          '<div>Resultado (caixa): ' + (s.netCash || '') + '</div>';
+
+        renderCardList(
+          $('repFlow'),
+          rep.cashFlow || [],
+          (e) => {
+            const dt = fmtDateMaybe(e.date);
+            const label = e.type === 'payment' ? 'Entrada' : 'Saída';
+            const sign = e.type === 'payment' ? '+' : '-';
+            return '<div style="font-weight:800;">' + label + ' — ' + sign + Money.centsToBr(e.amountCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + (dt ? ('data: ' + dt) : '') + '</div>';
+          },
+          'Sem lançamentos no período.'
+        );
+      }
+
+      async function refreshAll() {
+        const condos = await listCondos();
+        fillCondoSelect(condos);
+        await refreshCharges();
+        await refreshDelinq();
+        await refreshExpenses();
+      }
+
+      // Logout
+      const logoutBtn = $('logoutBtn');
+      logoutBtn.addEventListener('click', async () => {
+        await withBusy(logoutBtn, async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refreshAll();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        setStatus('');
+        await withBusy(null, async () => {
+          await refreshCharges();
+          await refreshDelinq();
+          await refreshExpenses();
+        });
+      });
+
+      $('genForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const referenceMonth = $('genRefMonth').value;
+        const dueDate = $('genDue').value;
+        const amount = $('genAmount').value;
+        const description = $('genDesc').value;
+
+        await withBusy($('genBtn'), async () => {
+          const res = await generateMonthlyCharges(cId, { referenceMonth, dueDate, amount, description });
+          await refreshCharges();
+          setStatus('Cobranças geradas: ' + res.createdCount + '.');
+        });
+      });
+
+      $('payForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const chargeId = $('payCharge').value;
+        const paidDate = $('payDate').value;
+        const amount = $('payAmount').value;
+        const method = $('payMethod').value;
+        const note = $('payNote').value;
+        const receiptFile = $('payReceipt').files && $('payReceipt').files[0] ? $('payReceipt').files[0] : null;
+
+        await withBusy($('payBtn'), async () => {
+          await registerPayment(cId, { chargeId, paidDate, amount, method, note, receiptFile });
+          $('payAmount').value = '';
+          $('payNote').value = '';
+          $('payReceipt').value = '';
+          await refreshCharges();
+          await refreshDelinq();
+          setStatus('Pagamento registrado.');
+        });
+      });
+
+      $('expForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const date = $('expDate').value;
+        const category = $('expCategory').value;
+        const amount = $('expAmount').value;
+        const description = $('expDesc').value;
+        const vendor = $('expVendor').value;
+        const attachmentFile = $('expAttachment').files && $('expAttachment').files[0] ? $('expAttachment').files[0] : null;
+
+        await withBusy($('expBtn'), async () => {
+          await createExpense(cId, { date, category, amount, description, vendor, attachmentFile });
+          $('expAmount').value = '';
+          $('expDesc').value = '';
+          $('expVendor').value = '';
+          $('expAttachment').value = '';
+          await refreshExpenses();
+          setStatus('Despesa salva.');
+        });
+      });
+
+      $('delinqBtn').addEventListener('click', async () => {
+        await withBusy($('delinqBtn'), async () => {
+          await refreshDelinq();
+          setStatus('Inadimplência atualizada.');
+        });
+      });
+
+      $('repBtn').addEventListener('click', async () => {
+        await withBusy($('repBtn'), async () => {
+          await refreshReports();
+          setStatus('Relatório gerado.');
+        });
+      });
+
+      await withBusy(null, refreshAll);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Boletos | Viva Haven</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 72px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Boletos</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Veja suas cobranças e baixe comprovantes (quando disponíveis).
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Cobranças</h2>
+          <div id="chargeList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Detalhe</h2>
+          <input type="hidden" id="chargeId" />
+          <div id="detail" style="font-size:12px;color:var(--muted);"></div>
+          <div id="receipt" style="margin-top:10px;"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import { listCharges, getPayment, Money } from '/js/modules/finance.js';
+
+      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fmtDateMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yyyy + '-' + mm + '-' + dd;
+          }
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function renderList(container, items, onPick) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma cobrança.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const head = document.createElement('div');
+          head.style.display = 'flex';
+          head.style.alignItems = 'center';
+          head.style.justifyContent = 'space-between';
+          head.style.gap = '10px';
+
+          const left = document.createElement('div');
+          const title = (it.referenceMonth ? ('Ref. ' + it.referenceMonth) : 'Cobrança') + (it.description ? (' — ' + it.description) : '');
+          const due = it.dueAt ? fmtDateMaybe(it.dueAt) : '';
+          const subtitle = [due ? ('venc: ' + due) : null, it.status ? ('status: ' + it.status) : null]
+            .filter(Boolean)
+            .join(' • ');
+
+          left.innerHTML =
+            '<div style="font-weight:800;">' + title + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '<div style="margin-top:6px;font-size:12px;color:var(--text-2);">' + Money.centsToBr(it.amountCents) + '</div>';
+
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'btn btn--ghost';
+          pickBtn.textContent = 'Abrir';
+          pickBtn.addEventListener('click', () => onPick(it));
+
+          head.appendChild(left);
+          head.appendChild(pickBtn);
+          row.appendChild(head);
+          container.appendChild(row);
+        });
+      }
+
+      async function refresh() {
+        const condos = await listCondos();
+        fillCondoSelect(condos);
+        await refreshCharges();
+      }
+
+      async function refreshCharges() {
+        const cId = currentCondoId();
+        const listEl = $('chargeList');
+        $('chargeId').value = '';
+        $('detail').textContent = '';
+        $('receipt').innerHTML = '';
+
+        if (!cId) {
+          renderList(listEl, [], () => {});
+          return;
+        }
+
+        const items = await listCharges(cId);
+
+        renderList(listEl, items, async (it) => {
+          $('chargeId').value = it.id;
+
+          const due = it.dueAt ? fmtDateMaybe(it.dueAt) : '';
+          const paid = it.paidAt && typeof it.paidAt.toDate === 'function' ? fmtDateMaybe(it.paidAt) : '';
+
+          $('detail').innerHTML =
+            '<div><strong>Valor:</strong> ' + Money.centsToBr(it.amountCents) + '</div>' +
+            (due ? '<div><strong>Vencimento:</strong> ' + due + '</div>' : '') +
+            (it.status ? '<div><strong>Status:</strong> ' + it.status + '</div>' : '') +
+            (paid ? '<div><strong>Pago em:</strong> ' + paid + '</div>' : '');
+
+          $('receipt').innerHTML = '';
+          if (it.paymentId) {
+            const payment = await getPayment(cId, it.paymentId);
+            const url = payment && payment.receipt && payment.receipt.url ? payment.receipt.url : '';
+            if (url) {
+              $('receipt').innerHTML = '<a class="btn" target="_blank" href="' + url + '">Baixar comprovante</a>';
+            } else {
+              $('receipt').innerHTML = '<p style="margin:0;font-size:12px;color:var(--muted);">Pagamento registrado, mas sem comprovante.</p>';
+            }
+          } else {
+            $('receipt').innerHTML = '<p style="margin:0;font-size:12px;color:var(--muted);">Sem comprovante disponível.</p>';
+          }
+
+          setStatus('Cobrança selecionada.');
+        });
+      }
+
+      const logoutBtn = $('logoutBtn');
+      logoutBtn.addEventListener('click', async () => {
+        await withBusy(logoutBtn, async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refresh();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        await withBusy(null, refreshCharges);
+      });
+
+      await withBusy(null, refresh);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

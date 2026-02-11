@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Moradores</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Moradores</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--2">
+        <label class="field">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+      </div>
+      <p id="ctxHint" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Cadastrar Morador</h2>
+      <form id="residentForm" class="grid grid--3">
+        <label class="field">
+          <span>Nome *</span>
+          <input id="residentName" class="input" required />
+        </label>
+        <label class="field">
+          <span>Unidade (label)</span>
+          <input id="residentUnitLabel" class="input" placeholder="Ex.: Bloco A • 101" />
+        </label>
+        <label class="field">
+          <span>UID (opcional)</span>
+          <input id="residentUid" class="input" placeholder="uid do Firebase Auth" />
+        </label>
+        <label class="field">
+          <span>Telefone</span>
+          <input id="residentPhone" class="input" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input id="residentEmail" type="email" class="input" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="residentStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="inativo">inativo</option>
+          </select>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Salvar</button>
+          <span id="residentMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="residentsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Cadastrar Veículo</h2>
+      <form id="vehicleForm" class="grid grid--3">
+        <label class="field">
+          <span>Placa *</span>
+          <input id="vehiclePlate" class="input" required />
+        </label>
+        <label class="field">
+          <span>Modelo</span>
+          <input id="vehicleModel" class="input" />
+        </label>
+        <label class="field">
+          <span>Cor</span>
+          <input id="vehicleColor" class="input" />
+        </label>
+        <label class="field">
+          <span>Unidade (label)</span>
+          <input id="vehicleUnitLabel" class="input" placeholder="Ex.: Bloco A • 101" />
+        </label>
+        <label class="field">
+          <span>Owner UID (opcional)</span>
+          <input id="vehicleOwnerUid" class="input" placeholder="uid do morador" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="vehicleStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="inativo">inativo</option>
+          </select>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Salvar</button>
+          <span id="vehicleMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="vehiclesList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Cadastrar Pet</h2>
+      <form id="petForm" class="grid grid--3">
+        <label class="field">
+          <span>Nome *</span>
+          <input id="petName" class="input" required />
+        </label>
+        <label class="field">
+          <span>Espécie</span>
+          <select id="petSpecies" class="input">
+            <option value="cachorro">cachorro</option>
+            <option value="gato">gato</option>
+            <option value="outro">outro</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Raça</span>
+          <input id="petBreed" class="input" />
+        </label>
+        <label class="field">
+          <span>Unidade (label)</span>
+          <input id="petUnitLabel" class="input" placeholder="Ex.: Bloco A • 101" />
+        </label>
+        <label class="field">
+          <span>Owner UID (opcional)</span>
+          <input id="petOwnerUid" class="input" placeholder="uid do morador" />
+        </label>
+        <label class="field">
+          <span>Observações</span>
+          <input id="petNotes" class="input" />
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Salvar</button>
+          <span id="petMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="petsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Reservas (aprovar/reprovar)</h2>
+      <form id="reservationDecisionForm" class="grid grid--3">
+        <label class="field">
+          <span>ID da Reserva *</span>
+          <input id="reservationId" class="input" required />
+        </label>
+        <label class="field">
+          <span>Ação</span>
+          <select id="reservationDecision" class="input">
+            <option value="aprovar">aprovar</option>
+            <option value="reprovar">reprovar</option>
+            <option value="cancelado">cancelado</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Observação</span>
+          <input id="reservationDecisionNote" class="input" placeholder="opcional" />
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Aplicar</button>
+          <span id="reservationMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="reservationsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Advertências</h2>
+      <form id="warningForm" class="grid grid--3">
+        <label class="field">
+          <span>Target UID *</span>
+          <input id="warningTargetUid" class="input" required />
+        </label>
+        <label class="field">
+          <span>Unidade (label)</span>
+          <input id="warningUnitLabel" class="input" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="warningStatus" class="input">
+            <option value="ativa">ativa</option>
+            <option value="encerrada">encerrada</option>
+          </select>
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Título *</span>
+          <input id="warningTitle" class="input" required />
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Descrição *</span>
+          <textarea id="warningDescription" class="input" rows="3" required></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Salvar</button>
+          <span id="warningMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="warningsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Multas</h2>
+      <form id="fineForm" class="grid grid--3">
+        <label class="field">
+          <span>Target UID *</span>
+          <input id="fineTargetUid" class="input" required />
+        </label>
+        <label class="field">
+          <span>Unidade (label)</span>
+          <input id="fineUnitLabel" class="input" />
+        </label>
+        <label class="field">
+          <span>Valor (centavos) *</span>
+          <input id="fineAmountCents" type="number" min="1" class="input" required />
+        </label>
+        <label class="field">
+          <span>Vencimento</span>
+          <input id="fineDueDate" type="date" class="input" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="fineStatus" class="input">
+            <option value="aberta">aberta</option>
+            <option value="paga">paga</option>
+            <option value="cancelada">cancelada</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Marcar como paga?</span>
+          <select id="finePaid" class="input">
+            <option value="0">não</option>
+            <option value="1">sim</option>
+          </select>
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Título *</span>
+          <input id="fineTitle" class="input" required />
+        </label>
+        <label class="field" style="grid-column: 1 / -1;">
+          <span>Descrição *</span>
+          <textarea id="fineDescription" class="input" rows="3" required></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center;">
+          <button class="btn" type="submit">Salvar</button>
+          <span id="fineMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="finesList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+
+    import {
+      listResidents, createResident,
+      listVehicles, createVehicle,
+      listPets, createPet,
+      listReservations, updateReservationAsAdmin,
+      listWarnings, createWarning,
+      listFines, createFine,
+    } from '/js/modules/residents.js';
+
+    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+    };
+
+    function setMsg(el, msg, isErr) {
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function asItemRow(title, subtitle, right, actionsHtml) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+          <div class="list__actions">${actionsHtml || ''}</div>
+        </div>
+      `;
+    }
+
+    async function loadCondos() {
+      const condos = await listCondos();
+      return Array.isArray(condos) ? condos : [];
+    }
+
+    async function renderAll() {
+      if (!state.condoId) return;
+
+      const residents = await listResidents(state.condoId);
+      $('residentsList').innerHTML = residents.length
+        ? residents.map((r) => asItemRow(
+            `${r.name} <span class="badge">${r.status || 'ativo'}</span>`,
+            `Unidade: ${r.unitLabel || '-'} • UID: ${r.uid || '-'} • Email: ${r.email || '-'}`,
+            `Criado: ${formatTs(r.createdAt)}`,
+            ''
+          )).join('')
+        : '<p class="muted">Nenhum morador cadastrado.</p>';
+
+      const vehicles = await listVehicles(state.condoId);
+      $('vehiclesList').innerHTML = vehicles.length
+        ? vehicles.map((v) => asItemRow(
+            `${v.plate} <span class="badge">${v.status || 'ativo'}</span>`,
+            `Modelo: ${v.model || '-'} • Cor: ${v.color || '-'} • Unidade: ${v.unitLabel || '-'} • OwnerUid: ${v.ownerUid || '-'}`,
+            `Criado: ${formatTs(v.createdAt)}`,
+            ''
+          )).join('')
+        : '<p class="muted">Nenhum veículo cadastrado.</p>';
+
+      const pets = await listPets(state.condoId);
+      $('petsList').innerHTML = pets.length
+        ? pets.map((p) => asItemRow(
+            `${p.name} <span class="badge">${p.species || 'outro'}</span>`,
+            `Raça: ${p.breed || '-'} • Unidade: ${p.unitLabel || '-'} • OwnerUid: ${p.ownerUid || '-'}`,
+            `Criado: ${formatTs(p.createdAt)}`,
+            ''
+          )).join('')
+        : '<p class="muted">Nenhum pet cadastrado.</p>';
+
+      const reservations = await listReservations(state.condoId, { mineOnly: false });
+      $('reservationsList').innerHTML = reservations.length
+        ? reservations.map((r) => {
+            const start = formatTs(r.startAt);
+            const end = formatTs(r.endAt);
+            return asItemRow(
+              `${r.title} <span class="badge">${r.status || 'solicitado'}</span>`,
+              `Área: ${r.area} • ${start} → ${end} • criadoPor: ${r.createdBy || '-'}`,
+              `ID: <code>${r.id}</code>`,
+              ''
+            );
+          }).join('')
+        : '<p class="muted">Nenhuma reserva.</p>';
+
+      const warnings = await listWarnings(state.condoId, { mineOnly: false });
+      $('warningsList').innerHTML = warnings.length
+        ? warnings.map((w) => asItemRow(
+            `${w.title} <span class="badge">${w.status || 'ativa'}</span>`,
+            `TargetUid: ${w.targetUid} • Unidade: ${w.unitLabel || '-'} • ${w.description}`,
+            `Emitida: ${formatTs(w.issuedAt)}`,
+            ''
+          )).join('')
+        : '<p class="muted">Nenhuma advertência.</p>';
+
+      const fines = await listFines(state.condoId, { mineOnly: false });
+      $('finesList').innerHTML = fines.length
+        ? fines.map((f) => asItemRow(
+            `${f.title} <span class="badge">${f.status || 'aberta'}</span>`,
+            `TargetUid: ${f.targetUid} • Unidade: ${f.unitLabel || '-'} • Valor: ${(Number(f.amountCents||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`,
+            `Emitida: ${formatTs(f.issuedAt)}`,
+            ''
+          )).join('')
+        : '<p class="muted">Nenhuma multa.</p>';
+    }
+
+    function bindForms() {
+      $('residentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('residentMsg'), 'Salvando...');
+        try {
+          await createResident(state.condoId, {
+            name: $('residentName').value,
+            unitLabel: $('residentUnitLabel').value,
+            uid: $('residentUid').value,
+            phone: $('residentPhone').value,
+            email: $('residentEmail').value,
+            status: $('residentStatus').value,
+          });
+          e.target.reset();
+          setMsg($('residentMsg'), 'Morador cadastrado.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('residentMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('vehicleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('vehicleMsg'), 'Salvando...');
+        try {
+          await createVehicle(state.condoId, {
+            plate: $('vehiclePlate').value,
+            model: $('vehicleModel').value,
+            color: $('vehicleColor').value,
+            unitLabel: $('vehicleUnitLabel').value,
+            ownerUid: $('vehicleOwnerUid').value,
+            status: $('vehicleStatus').value,
+          });
+          e.target.reset();
+          setMsg($('vehicleMsg'), 'Veículo cadastrado.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('vehicleMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('petForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('petMsg'), 'Salvando...');
+        try {
+          await createPet(state.condoId, {
+            name: $('petName').value,
+            species: $('petSpecies').value,
+            breed: $('petBreed').value,
+            unitLabel: $('petUnitLabel').value,
+            ownerUid: $('petOwnerUid').value,
+            notes: $('petNotes').value,
+          });
+          e.target.reset();
+          setMsg($('petMsg'), 'Pet cadastrado.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('petMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('reservationDecisionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('reservationMsg'), 'Aplicando...');
+        try {
+          const decision = $('reservationDecision').value;
+          const status = decision === 'cancelado' ? 'cancelado' : null;
+          await updateReservationAsAdmin(state.condoId, $('reservationId').value, {
+            decision: decision === 'cancelado' ? undefined : decision,
+            status,
+            decisionNote: $('reservationDecisionNote').value,
+          });
+          setMsg($('reservationMsg'), 'Atualizado.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('reservationMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('warningForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('warningMsg'), 'Salvando...');
+        try {
+          await createWarning(state.condoId, {
+            targetUid: $('warningTargetUid').value,
+            unitLabel: $('warningUnitLabel').value,
+            status: $('warningStatus').value,
+            title: $('warningTitle').value,
+            description: $('warningDescription').value,
+          });
+          e.target.reset();
+          setMsg($('warningMsg'), 'Advertência cadastrada.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('warningMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('fineForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setMsg($('fineMsg'), 'Salvando...');
+        try {
+          await createFine(state.condoId, {
+            targetUid: $('fineTargetUid').value,
+            unitLabel: $('fineUnitLabel').value,
+            title: $('fineTitle').value,
+            description: $('fineDescription').value,
+            amountCents: $('fineAmountCents').value,
+            dueDate: $('fineDueDate').value,
+            status: $('fineStatus').value,
+            paid: $('finePaid').value === '1',
+          });
+          e.target.reset();
+          setMsg($('fineMsg'), 'Multa cadastrada.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('fineMsg'), err.message || String(err), true);
+        }
+      });
+    }
+
+    async function bootstrap() {
+      const { auth, db } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await loadCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          $('ctxHint').textContent = 'Você não tem memberships para nenhum condomínio.';
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+        $('ctxHint').textContent = `CondoId selecionado: ${state.condoId}`;
+
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          $('ctxHint').textContent = state.condoId ? `CondoId selecionado: ${state.condoId}` : '';
+          await renderAll();
+        });
+
+        bindForms();
+        await renderAll();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Chamados | Viva Haven</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 72px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Chamados</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Abra e acompanhe chamados de manutenção.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Meus chamados</h2>
+          <div id="ticketList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Abrir chamado</h2>
+          <form id="ticketForm" style="display:grid;gap:10px;">
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="ticketTitle" class="input" placeholder="Ex: Vazamento" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <textarea id="ticketDesc" class="input" rows="3" placeholder="Descreva o problema" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Local</label>
+                <input id="ticketLocation" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+                <select id="ticketPriority" class="input">
+                  <option value="baixa">Baixa</option>
+                  <option value="media" selected>Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Foto (opcional)</label>
+              <input id="ticketPhoto" class="input" type="file" />
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="ticketOpenBtn" class="btn" type="submit">Abrir</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Detalhe</h2>
+          <input type="hidden" id="ticketId" />
+          <div id="ticketDetail" style="font-size:12px;color:var(--muted);"></div>
+          <div id="ticketPhotos" style="display:grid;gap:10px;margin-top:10px;"></div>
+
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Adicionar foto</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <input id="addPhoto" class="input" type="file" style="flex:1;min-width:220px;" />
+              <button id="addPhotoBtn" class="btn" type="button">Enviar</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import { listTickets, createTicket, addTicketPhoto } from '/js/modules/maintenance.js';
+
+      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fmtDateTimeMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') {
+            const d = v.toDate();
+            return d.toLocaleString('pt-BR');
+          }
+          if (v instanceof Date) return v.toLocaleString('pt-BR');
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function renderTicketList(container, items, onPick) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhum chamado.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const head = document.createElement('div');
+          head.style.display = 'flex';
+          head.style.alignItems = 'center';
+          head.style.justifyContent = 'space-between';
+          head.style.gap = '10px';
+
+          const left = document.createElement('div');
+          const subtitle = [it.status ? ('status: ' + it.status) : null, it.priority ? ('prio: ' + it.priority) : null].filter(Boolean).join(' • ');
+          left.innerHTML =
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>';
+
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'btn btn--ghost';
+          pickBtn.textContent = 'Abrir';
+          pickBtn.addEventListener('click', () => onPick(it));
+
+          head.appendChild(left);
+          head.appendChild(pickBtn);
+          row.appendChild(head);
+          container.appendChild(row);
+        });
+      }
+
+      function renderPhotos(container, photos) {
+        container.innerHTML = '';
+        if (!photos || photos.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem fotos.</p>';
+          return;
+        }
+
+        photos.forEach((p) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.padding = '12px';
+          const url = p && p.url ? String(p.url) : '';
+          const name = p && p.name ? String(p.name) : 'foto';
+          card.innerHTML =
+            '<div style="font-weight:800;margin-bottom:8px;">' + name + '</div>' +
+            (url ? ('<a class="btn" target="_blank" href="' + url + '">Abrir</a>') : '<div style="font-size:12px;color:var(--muted);">Sem URL</div>');
+          container.appendChild(card);
+        });
+      }
+
+      async function refreshTickets() {
+        const cId = currentCondoId();
+        const listEl = $('ticketList');
+
+        $('ticketId').value = '';
+        $('ticketDetail').textContent = '';
+        $('ticketPhotos').innerHTML = '';
+
+        if (!cId) {
+          renderTicketList(listEl, [], () => {});
+          return;
+        }
+
+        const items = await listTickets(cId, { mineOnly: true });
+        renderTicketList(listEl, items, async (it) => {
+          $('ticketId').value = it.id;
+
+          $('ticketDetail').innerHTML =
+            '<div><strong>Status:</strong> ' + (it.status || '') + '</div>' +
+            '<div><strong>Prioridade:</strong> ' + (it.priority || '') + '</div>' +
+            (it.location ? '<div><strong>Local:</strong> ' + it.location + '</div>' : '') +
+            (it.slaHours ? '<div><strong>SLA:</strong> ' + it.slaHours + 'h</div>' : '') +
+            (it.updatedAt ? '<div><strong>Atualizado:</strong> ' + fmtDateTimeMaybe(it.updatedAt) + '</div>' : '');
+
+          renderPhotos($('ticketPhotos'), Array.isArray(it.photos) ? it.photos : []);
+          setStatus('Chamado selecionado.');
+        });
+      }
+
+      // Logout
+      const logoutBtn = $('logoutBtn');
+      logoutBtn.addEventListener('click', async () => {
+        await withBusy(logoutBtn, async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refreshTickets();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        await withBusy(null, refreshTickets);
+      });
+
+      // Abrir chamado
+      $('ticketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          return;
+        }
+
+        const title = $('ticketTitle').value;
+        const description = $('ticketDesc').value;
+        const location = $('ticketLocation').value;
+        const priority = $('ticketPriority').value;
+        const photo = $('ticketPhoto').files && $('ticketPhoto').files[0] ? $('ticketPhoto').files[0] : null;
+
+        await withBusy($('ticketOpenBtn'), async () => {
+          await createTicket(cId, { title, description, location, priority, photos: photo ? [photo] : [] });
+          $('ticketTitle').value = '';
+          $('ticketDesc').value = '';
+          $('ticketLocation').value = '';
+          $('ticketPriority').value = 'media';
+          $('ticketPhoto').value = '';
+          await refreshTickets();
+          setStatus('Chamado aberto.');
+        });
+      });
+
+      // Adicionar foto
+      $('addPhotoBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        const file = $('addPhoto').files && $('addPhoto').files[0] ? $('addPhoto').files[0] : null;
+        if (!cId || !tId) {
+          setStatus('Selecione um chamado.');
+          return;
+        }
+        if (!file) {
+          setStatus('Selecione uma foto.');
+          return;
+        }
+
+        await withBusy($('addPhotoBtn'), async () => {
+          await addTicketPhoto(cId, tId, file);
+          $('addPhoto').value = '';
+          await refreshTickets();
+          setStatus('Foto enviada.');
+        });
+      });
+
+      // Init
+      const condos = await listCondos();
+      fillCondoSelect(condos);
+      await withBusy(null, refreshTickets);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1120" />
   <title>Meu Perfil - App do Morador</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://unpkg.com/feather-icons"></script>
   <style>
@@ -449,178 +454,193 @@
   </style>
 </head>
 <body>
-  <div class="appContainer">
-    <!-- Header -->
-    <header class="profileHeader">
-      <div class="themeIcon" id="themeToggle">
-        <i data-feather="moon"></i>
-      </div>
-      
-      <div class="profileAvatar">
-        <span class="avatarInitials">JM</span>
-        <!-- <img src="assets/avatar.jpg" class="avatarImage" alt="João" style="display:none"> -->
-      </div>
-      <h1 class="profileName">João Morador</h1>
-      <div class="profileUnit">
-        <i data-feather="map-pin" style="width:12px; height:12px"></i>
-        Bloco A • 301
-      </div>
+  <div id="appRoot"></div>
 
-      <div class="profileStats">
-        <div class="statItem">
-          <span class="statValue">3</span>
-          <span class="statLabel">Chamados</span>
+  <template id="perfilContent">
+    <div class="appContainer">
+      <!-- Header -->
+      <header class="profileHeader">
+        <div class="themeIcon" id="themeToggle">
+          <i data-feather="moon"></i>
         </div>
-        <div class="statItem">
-          <span class="statValue">2</span>
-          <span class="statLabel">Entregas</span>
+
+        <div class="profileAvatar">
+          <span class="avatarInitials">JM</span>
+          <!-- <img src="assets/avatar.jpg" class="avatarImage" alt="João" style="display:none"> -->
         </div>
-        <div class="statItem">
-          <span class="statValue">R$ 0</span>
-          <span class="statLabel">Débitos</span>
+        <h1 class="profileName">João Morador</h1>
+        <div class="profileUnit">
+          <i data-feather="map-pin" style="width:12px; height:12px"></i>
+          Bloco A • 301
         </div>
-      </div>
-    </header>
 
-    <!-- Quick Actions Grid -->
-    <section class="quickActions">
-      <div class="sectionTitle">
-        Acesso Rápido
-        <i data-feather="grid" style="width:16px; opacity:0.5"></i>
-      </div>
-      
-      <div class="actionGrid">
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="phone-call"></i></div>
-          <span class="actionLabel">Chamados</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="package"></i></div>
-          <span class="actionLabel">Entregas</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="calendar"></i></div>
-          <span class="actionLabel">Reservas</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="file-text"></i></div>
-          <span class="actionLabel">Boletos</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="bell"></i></div>
-          <span class="actionLabel">Avisos</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="key"></i></div>
-          <span class="actionLabel">Acesso</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="pie-chart"></i></div>
-          <span class="actionLabel">Contas</span>
-        </a>
-        <a href="#" class="actionItem">
-          <div class="actionIcon"><i data-feather="message-circle"></i></div>
-          <span class="actionLabel">Chat</span>
-        </a>
-      </div>
+        <div class="profileStats">
+          <div class="statItem">
+            <span class="statValue">3</span>
+            <span class="statLabel">Chamados</span>
+          </div>
+          <div class="statItem">
+            <span class="statValue">2</span>
+            <span class="statLabel">Entregas</span>
+          </div>
+          <div class="statItem">
+            <span class="statValue">R$ 0</span>
+            <span class="statLabel">Débitos</span>
+          </div>
+        </div>
+      </header>
 
-      <!-- Feature Cards Stack -->
-      <div class="sectionTitle">
-        Destaques
-        <i data-feather="star" style="width:16px; opacity:0.5"></i>
-      </div>
-      
-      <div class="featureCards">
-        <a href="#" class="featureCard">
-          <div class="featureCard__icon"><i data-feather="tool"></i></div>
-          <div class="featureCard__content">
-            <h3 class="featureCard__title">Manutenções</h3>
-            <p class="featureCard__desc">Solicitação #402 em andamento</p>
-          </div>
-          <div class="featureCard__badge">1</div>
-        </a>
+      <!-- Quick Actions Grid -->
+      <section class="quickActions">
+        <div class="sectionTitle">
+          Acesso Rápido
+          <i data-feather="grid" style="width:16px; opacity:0.5"></i>
+        </div>
 
-        <a href="#" class="featureCard">
-          <div class="featureCard__icon"><i data-feather="box"></i></div>
-          <div class="featureCard__content">
-            <h3 class="featureCard__title">Chegou Encomenda</h3>
-            <p class="featureCard__desc">2 pacotes na portaria</p>
-          </div>
-          <div class="featureCard__badge">2</div>
-        </a>
+        <div class="actionGrid">
+          <a href="/app/chamados.html" class="actionItem">
+            <div class="actionIcon"><i data-feather="phone-call"></i></div>
+            <span class="actionLabel">Chamados</span>
+          </a>
+          <a href="#" class="actionItem">
+            <div class="actionIcon"><i data-feather="package"></i></div>
+            <span class="actionLabel">Entregas</span>
+          </a>
+          <a href="/app/reservas.html" class="actionItem">
+            <div class="actionIcon"><i data-feather="calendar"></i></div>
+            <span class="actionLabel">Reservas</span>
+          </a>
+          <a href="/app/boletos.html" class="actionItem">
+            <div class="actionIcon"><i data-feather="file-text"></i></div>
+            <span class="actionLabel">Boletos</span>
+          </a>
+          <a href="#" class="actionItem">
+            <div class="actionIcon"><i data-feather="bell"></i></div>
+            <span class="actionLabel">Avisos</span>
+          </a>
+          <a href="#" class="actionItem">
+            <div class="actionIcon"><i data-feather="key"></i></div>
+            <span class="actionLabel">Acesso</span>
+          </a>
+          <a href="/app/minhas-multas.html" class="actionItem">
+            <div class="actionIcon"><i data-feather="pie-chart"></i></div>
+            <span class="actionLabel">Multas</span>
+          </a>
+          <a href="#" class="actionItem">
+            <div class="actionIcon"><i data-feather="message-circle"></i></div>
+            <span class="actionLabel">Chat</span>
+          </a>
+        </div>
 
-        <a href="#" class="featureCard">
-          <div class="featureCard__icon"><i data-feather="bar-chart-2"></i></div>
-          <div class="featureCard__content">
-            <h3 class="featureCard__title">Prestação de Contas</h3>
-            <p class="featureCard__desc">Relatório mensal disponível</p>
-          </div>
-          <i data-feather="chevron-right" style="color:var(--text-3)"></i>
-        </a>
-      </div>
+        <!-- Feature Cards Stack -->
+        <div class="sectionTitle">
+          Destaques
+          <i data-feather="star" style="width:16px; opacity:0.5"></i>
+        </div>
 
-      <!-- Settings Menu -->
-      <div class="sectionTitle">Meus Dados</div>
-      <div class="menuList">
-        <a href="#" class="menuItem">
-          <div class="menuItem__left">
-            <div class="menuItem__icon"><i data-feather="user"></i></div>
-            <span class="menuItem__label">Perfil Completo</span>
-          </div>
-          <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
-        </a>
-        <a href="#" class="menuItem">
-          <div class="menuItem__left">
-            <div class="menuItem__icon"><i data-feather="home"></i></div>
-            <span class="menuItem__label">Unidades</span>
-          </div>
-          <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
-        </a>
-        <a href="#" class="menuItem">
-          <div class="menuItem__left">
-            <div class="menuItem__icon"><i data-feather="shield"></i></div>
-            <span class="menuItem__label">Segurança</span>
-          </div>
-          <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
-        </a>
-        <a href="#" class="menuItem">
-          <div class="menuItem__left">
-            <div class="menuItem__icon"><i data-feather="help-circle"></i></div>
-            <span class="menuItem__label">Ajuda</span>
-          </div>
-          <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
-        </a>
-      </div>
-    </section>
+        <div class="featureCards">
+          <a href="#" class="featureCard">
+            <div class="featureCard__icon"><i data-feather="tool"></i></div>
+            <div class="featureCard__content">
+              <h3 class="featureCard__title">Manutenções</h3>
+              <p class="featureCard__desc">Solicitação #402 em andamento</p>
+            </div>
+            <div class="featureCard__badge">1</div>
+          </a>
 
-    <!-- Floating Navbar -->
-    <nav class="bottomNav">
-      <a href="#" class="navItem navItem--active">
-        <div class="navItem__icon"><i data-feather="home"></i></div>
-        <div class="navIndicator"></div>
-      </a>
-      <a href="#" class="navItem">
-        <div class="navItem__icon"><i data-feather="pie-chart"></i></div>
-        <div class="navIndicator"></div>
-      </a>
-      <a href="#" class="navItem">
-        <div class="navItem__icon"><i data-feather="bell"></i></div>
-        <div class="notifDot"></div>
-        <div class="navIndicator"></div>
-      </a>
-      <a href="#" class="navItem">
-        <div class="navItem__icon"><i data-feather="message-square"></i></div>
-        <div class="navIndicator"></div>
-      </a>
-      <a href="#" class="navItem">
-        <div class="navItem__icon"><i data-feather="menu"></i></div>
-        <div class="navIndicator"></div>
-      </a>
-    </nav>
-  </div>
+          <a href="#" class="featureCard">
+            <div class="featureCard__icon"><i data-feather="box"></i></div>
+            <div class="featureCard__content">
+              <h3 class="featureCard__title">Chegou Encomenda</h3>
+              <p class="featureCard__desc">2 pacotes na portaria</p>
+            </div>
+            <div class="featureCard__badge">2</div>
+          </a>
+
+          <a href="#" class="featureCard">
+            <div class="featureCard__icon"><i data-feather="bar-chart-2"></i></div>
+            <div class="featureCard__content">
+              <h3 class="featureCard__title">Prestação de Contas</h3>
+              <p class="featureCard__desc">Relatório mensal disponível</p>
+            </div>
+            <i data-feather="chevron-right" style="color:var(--text-3)"></i>
+          </a>
+        </div>
+
+        <!-- Settings Menu -->
+        <div class="sectionTitle">Meus Dados</div>
+        <div class="menuList">
+          <a href="#" class="menuItem">
+            <div class="menuItem__left">
+              <div class="menuItem__icon"><i data-feather="user"></i></div>
+              <span class="menuItem__label">Perfil Completo</span>
+            </div>
+            <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
+          </a>
+          <a href="#" class="menuItem">
+            <div class="menuItem__left">
+              <div class="menuItem__icon"><i data-feather="home"></i></div>
+              <span class="menuItem__label">Unidades</span>
+            </div>
+            <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
+          </a>
+          <a href="#" class="menuItem">
+            <div class="menuItem__left">
+              <div class="menuItem__icon"><i data-feather="shield"></i></div>
+              <span class="menuItem__label">Segurança</span>
+            </div>
+            <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
+          </a>
+          <a href="#" class="menuItem">
+            <div class="menuItem__left">
+              <div class="menuItem__icon"><i data-feather="help-circle"></i></div>
+              <span class="menuItem__label">Ajuda</span>
+            </div>
+            <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
+          </a>
+
+          <a href="#" class="menuItem" id="logoutBtn">
+            <div class="menuItem__left">
+              <div class="menuItem__icon"><i data-feather="log-out"></i></div>
+              <span class="menuItem__label">Sair</span>
+            </div>
+            <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
+          </a>
+        </div>
+      </section>
+    </div>
+  </template>
+  <script src="js/app-shell.js" defer></script>
+
+  <script type="module">
+    import { protect } from '/js/route-guard.js';
+    await protect(['/perfil.html'], ['MORADOR']);
+  </script>
 
   <script>
-    // Initialize Feather Icons
+    // Monta o conteúdo dentro do App Shell
+    window.addEventListener('DOMContentLoaded', function () {
+      if (window.RouteGuard) {
+        window.RouteGuard.protect(['/perfil.html'], ['MORADOR']);
+      }
+
+      var tpl = document.getElementById('perfilContent');
+      if (!tpl) return;
+
+      window.mountShell({
+        rootSelector: '#appRoot',
+        title: '',
+        activeTab: 'menu',
+        contentHtml: tpl.innerHTML,
+      });
+
+      // Feather precisa rodar após o shell montar o HTML
+      if (window.feather && typeof window.feather.replace === 'function') {
+        window.feather.replace();
+      }
+    });
+
+    // Initialize Feather Icons (fallback caso algo mude)
     feather.replace();
 
     // Interaction scripts
@@ -658,5 +678,36 @@
       });
     });
   </script>
+
+  <script type="module">
+    import { logoutUser } from '/js/auth.js';
+
+    window.addEventListener('DOMContentLoaded', function () {
+      // O conteúdo é montado pelo shell; então o botão existe após o mount.
+      var btn = document.getElementById('logoutBtn');
+      if (!btn) return;
+      btn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        try {
+          btn.setAttribute('aria-busy', 'true');
+          await logoutUser();
+        } finally {
+          window.location.href = '/login.html';
+        }
+      });
+    });
+  </script>
+
+  <script>
+    (function () {
+      try {
+        if (!('serviceWorker' in navigator)) return;
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      } catch (e) {}
+    })();
+  </script>
+  <script src="js/a2hs.js" defer></script>
 </body>
 </html>

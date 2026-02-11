@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Obras | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Obras e Reformas (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Obras em áreas comuns e solicitações de reforma em unidades.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <select id="ctxCondo" class="input" style="width:100%;">
+              <option value="">Selecione um condomínio…</option>
+            </select>
+          </div>
+          <div>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Obras (áreas comuns)</h2>
+
+          <div id="projectList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="projectForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="projectId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="projectTitle" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <textarea id="projectDesc" class="input" rows="3" required></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Área</label>
+                <input id="projectArea" class="input" placeholder="Ex: Portaria" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="projectStatus" class="input">
+                  <option value="planejado">Planejado</option>
+                  <option value="em_execucao">Em execução</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Orçamento (centavos)</label>
+                <input id="projectBudget" class="input" type="number" min="0" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Início</label>
+                <input id="projectStart" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fim</label>
+                <input id="projectEnd" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contratada</label>
+                <input id="projectContractor" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: 1fr auto;align-items:end;">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo</label>
+                <input id="projectFile" class="input" type="file" />
+              </div>
+              <button id="projectAddFileBtn" class="btn" type="button">Enviar anexo</button>
+            </div>
+
+            <div id="projectAttachments" style="display:grid;gap:10px;"></div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="projectSaveBtn" class="btn" type="submit">Salvar</button>
+              <button id="projectClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="projectDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Solicitações de reforma (unidades)</h2>
+
+          <div id="reformList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="reformForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="reformId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="reformTitle" class="input" disabled />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+              <textarea id="reformDesc" class="input" rows="3" disabled></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="reformStatus" class="input">
+                  <option value="solicitado">Solicitado</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                  <option value="em_execucao">Em execução</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contratada</label>
+                <input id="reformContractor" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contato</label>
+                <input id="reformContact" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Decisão/observação</label>
+              <textarea id="reformDecisionNote" class="input" rows="2" placeholder="Motivo da reprovação / condições / observações"></textarea>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="reformApproveBtn" class="btn" type="button">Aprovar</button>
+              <button id="reformRejectBtn" class="btn btn--ghost" type="button">Reprovar</button>
+              <button id="reformSaveBtn" class="btn btn--ghost" type="submit">Salvar status</button>
+            </div>
+
+            <div id="reformAttachments" style="display:grid;gap:10px;"></div>
+          </form>
+        </article>
+      </section>
+    </main>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { listCondos } from '/js/modules/governance.js';
+      import {
+        listProjects,
+        createProject,
+        updateProject,
+        deleteProject,
+        addProjectAttachment,
+        listUnitReforms,
+        updateUnitReformAsAdmin,
+      } from '/js/modules/works.js';
+
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondo = $('ctxCondo');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+      }
+
+      function fillCondoSelect(condos) {
+        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
+        condos.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name || c.id;
+          ctxCondo.appendChild(opt);
+        });
+      }
+
+      function renderLinks(container, attachments) {
+        container.innerHTML = '';
+        const list = Array.isArray(attachments) ? attachments : [];
+        if (list.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+          return;
+        }
+        list.forEach((a) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.padding = '12px';
+          const name = a && a.name ? String(a.name) : 'anexo';
+          const url = a && a.url ? String(a.url) : '';
+          card.innerHTML =
+            '<div style="font-weight:800;margin-bottom:8px;">' + name + '</div>' +
+            (url ? '<a class="btn" target="_blank" href="' + url + '">Abrir</a>' : '<div style="font-size:12px;color:var(--muted);">Sem URL</div>');
+          container.appendChild(card);
+        });
+      }
+
+      function renderProjectList(items) {
+        const el = $('projectList');
+        el.innerHTML = '';
+        if (!items || items.length === 0) {
+          el.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma obra.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const subtitle = [it.status ? ('status: ' + it.status) : null, it.area ? ('área: ' + it.area) : null].filter(Boolean).join(' • ');
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+            '<div>' +
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '</div>' +
+            '<button class="btn btn--ghost" type="button">Editar</button>' +
+            '</div>';
+
+          row.querySelector('button').addEventListener('click', () => {
+            $('projectId').value = it.id;
+            $('projectTitle').value = it.title || '';
+            $('projectDesc').value = it.description || '';
+            $('projectArea').value = it.area || '';
+            $('projectStatus').value = it.status || 'planejado';
+            $('projectBudget').value = typeof it.budgetCents === 'number' ? String(it.budgetCents) : '';
+            $('projectStart').value = it.startAt && typeof it.startAt.toDate === 'function' ? it.startAt.toDate().toISOString().slice(0, 10) : '';
+            $('projectEnd').value = it.endAt && typeof it.endAt.toDate === 'function' ? it.endAt.toDate().toISOString().slice(0, 10) : '';
+            $('projectContractor').value = it.contractor || '';
+            renderLinks($('projectAttachments'), it.attachments);
+            setStatus('Obra selecionada.');
+          });
+
+          el.appendChild(row);
+        });
+      }
+
+      function renderReformList(items) {
+        const el = $('reformList');
+        el.innerHTML = '';
+        if (!items || items.length === 0) {
+          el.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma solicitação.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const subtitle = [it.status ? ('status: ' + it.status) : null, it.unitLabel ? ('unidade: ' + it.unitLabel) : null].filter(Boolean).join(' • ');
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+            '<div>' +
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '</div>' +
+            '<button class="btn btn--ghost" type="button">Abrir</button>' +
+            '</div>';
+
+          row.querySelector('button').addEventListener('click', () => {
+            $('reformId').value = it.id;
+            $('reformTitle').value = it.title || '';
+            $('reformDesc').value = it.description || '';
+            $('reformStatus').value = it.status || 'solicitado';
+            $('reformContractor').value = it.contractor || '';
+            $('reformContact').value = it.contact || '';
+            $('reformDecisionNote').value = it.decisionNote || '';
+            renderLinks($('reformAttachments'), it.attachments);
+            setStatus('Solicitação selecionada.');
+          });
+
+          el.appendChild(row);
+        });
+      }
+
+      async function refreshAll() {
+        const cId = currentCondoId();
+        renderProjectList([]);
+        renderReformList([]);
+        $('projectAttachments').innerHTML = '';
+        $('reformAttachments').innerHTML = '';
+        if (!cId) return;
+
+        const [projects, reforms] = await Promise.all([
+          listProjects(cId),
+          listUnitReforms(cId, {}),
+        ]);
+
+        renderProjectList(projects);
+        renderReformList(reforms);
+      }
+
+      function clearProjectForm() {
+        $('projectId').value = '';
+        $('projectTitle').value = '';
+        $('projectDesc').value = '';
+        $('projectArea').value = '';
+        $('projectStatus').value = 'planejado';
+        $('projectBudget').value = '';
+        $('projectStart').value = '';
+        $('projectEnd').value = '';
+        $('projectContractor').value = '';
+        $('projectFile').value = '';
+        $('projectAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+      }
+
+      // Logout
+      $('logoutBtn').addEventListener('click', async () => {
+        await withBusy($('logoutBtn'), async () => {
+          await logoutUser();
+          window.location.href = '/login.html';
+        });
+      });
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await withBusy($('refreshBtn'), async () => {
+          await refreshAll();
+          setStatus('Atualizado.');
+        });
+      });
+
+      ctxCondo.addEventListener('change', async () => {
+        await withBusy(null, refreshAll);
+      });
+
+      $('projectClearBtn').addEventListener('click', () => {
+        clearProjectForm();
+        setStatus('Form limpo.');
+      });
+
+      $('projectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          return;
+        }
+
+        const id = $('projectId').value;
+        const payload = {
+          title: $('projectTitle').value,
+          description: $('projectDesc').value,
+          area: $('projectArea').value,
+          status: $('projectStatus').value,
+          budgetCents: $('projectBudget').value ? Number($('projectBudget').value) : null,
+          startDate: $('projectStart').value,
+          endDate: $('projectEnd').value,
+          contractor: $('projectContractor').value,
+        };
+
+        await withBusy($('projectSaveBtn'), async () => {
+          if (id) await updateProject(cId, id, payload);
+          else await createProject(cId, payload);
+          await refreshAll();
+          setStatus('Salvo.');
+        });
+      });
+
+      $('projectDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const id = $('projectId').value;
+        if (!cId || !id) {
+          setStatus('Selecione uma obra.');
+          return;
+        }
+        await withBusy($('projectDeleteBtn'), async () => {
+          await deleteProject(cId, id);
+          clearProjectForm();
+          await refreshAll();
+          setStatus('Excluído.');
+        });
+      });
+
+      $('projectAddFileBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const id = $('projectId').value;
+        const file = $('projectFile').files && $('projectFile').files[0] ? $('projectFile').files[0] : null;
+        if (!cId || !id) {
+          setStatus('Selecione uma obra.');
+          return;
+        }
+        if (!file) {
+          setStatus('Selecione um arquivo.');
+          return;
+        }
+        await withBusy($('projectAddFileBtn'), async () => {
+          await addProjectAttachment(cId, id, file);
+          $('projectFile').value = '';
+          await refreshAll();
+          setStatus('Anexo enviado.');
+        });
+      });
+
+      // Reform actions
+      $('reformApproveBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const id = $('reformId').value;
+        if (!cId || !id) {
+          setStatus('Selecione uma solicitação.');
+          return;
+        }
+        const note = $('reformDecisionNote').value;
+        await withBusy($('reformApproveBtn'), async () => {
+          await updateUnitReformAsAdmin(cId, id, { decision: 'aprovar', note });
+          await refreshAll();
+          setStatus('Aprovado.');
+        });
+      });
+
+      $('reformRejectBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const id = $('reformId').value;
+        if (!cId || !id) {
+          setStatus('Selecione uma solicitação.');
+          return;
+        }
+        const note = $('reformDecisionNote').value;
+        await withBusy($('reformRejectBtn'), async () => {
+          await updateUnitReformAsAdmin(cId, id, { decision: 'reprovar', note });
+          await refreshAll();
+          setStatus('Reprovado.');
+        });
+      });
+
+      $('reformForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        const id = $('reformId').value;
+        if (!cId || !id) {
+          setStatus('Selecione uma solicitação.');
+          return;
+        }
+        const payload = {
+          status: $('reformStatus').value,
+          decisionNote: $('reformDecisionNote').value,
+          contractor: $('reformContractor').value,
+          contact: $('reformContact').value,
+        };
+
+        await withBusy($('reformSaveBtn'), async () => {
+          await updateUnitReformAsAdmin(cId, id, payload);
+          await refreshAll();
+          setStatus('Atualizado.');
+        });
+      });
+
+      // Init
+      const condos = await listCondos();
+      fillCondoSelect(condos);
+      clearProjectForm();
+      $('reformAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+    </script>
+  </body>
+</html>

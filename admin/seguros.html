@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Seguros & Riscos</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Seguros & Riscos</h1>
+    </div>
+    <div class="topbar__right">
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Condomínio</span>
+          <select id="condoSelect" class="input"></select>
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="ctxHint" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Seguros</h2>
+      <p class="muted" style="margin-top:-8px;">Alerta “vencendo” é calculado na tela (até 30 dias antes do fim).</p>
+
+      <form id="insuranceForm" class="grid grid--3">
+        <input type="hidden" id="insuranceId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="insuranceTitle" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>Seguradora</span>
+          <input id="insuranceProvider" class="input" />
+        </label>
+
+        <label class="field">
+          <span>Nº Apólice</span>
+          <input id="insurancePolicy" class="input" />
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="insuranceStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="encerrado">encerrado</option>
+            <option value="cancelado">cancelado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Início (opcional)</span>
+          <input id="insuranceStart" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Fim (opcional)</span>
+          <input id="insuranceEnd" class="input" type="date" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="insuranceNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="insuranceClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="insuranceDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="insuranceMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="insurancesList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Riscos</h2>
+      <p class="muted" style="margin-top:-8px;">Alerta “prazo” é calculado na tela (até 30 dias antes do vencimento).</p>
+
+      <form id="riskForm" class="grid grid--3">
+        <input type="hidden" id="riskId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="riskTitle" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>Categoria</span>
+          <input id="riskCategory" class="input" placeholder="Ex.: incêndio, elétrico" />
+        </label>
+
+        <label class="field">
+          <span>Severidade</span>
+          <select id="riskSeverity" class="input">
+            <option value="baixa">baixa</option>
+            <option value="media" selected>media</option>
+            <option value="alta">alta</option>
+            <option value="critica">critica</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="riskStatus" class="input">
+            <option value="aberto">aberto</option>
+            <option value="mitigado">mitigado</option>
+            <option value="encerrado">encerrado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Vencimento (opcional)</span>
+          <input id="riskDue" class="input" type="date" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Mitigação (opcional)</span>
+          <textarea id="riskMitigation" class="input" rows="2"></textarea>
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="riskNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="riskClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="riskDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="riskMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="risksList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase-init.js';
+    import { protect } from '/js/route-guard.js';
+    import { listCondos } from '/js/modules/governance.js';
+
+    import {
+      listInsurances,
+      createInsurance,
+      updateInsurance,
+      deleteInsurance,
+      listRisks,
+      createRisk,
+      updateRisk,
+      deleteRisk,
+    } from '/js/modules/contracts.js';
+
+    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+      insurances: [],
+      risks: [],
+    };
+
+    function setMsg(el, msg, isErr) {
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function tsToDate(ts) {
+      if (!ts) return null;
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate();
+        const d = new Date(ts);
+        return Number.isNaN(d.getTime()) ? null : d;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function toDateInputValue(ts) {
+      const d = tsToDate(ts);
+      if (!d) return '';
+      try {
+        return d.toISOString().slice(0, 10);
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function daysUntil(dateObj) {
+      if (!dateObj) return null;
+      const today = new Date();
+      const a = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const b = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      const diff = (b.getTime() - a.getTime()) / 86400000;
+      if (!Number.isFinite(diff)) return null;
+      return Math.round(diff);
+    }
+
+    function dueSoonBadge(endAtTs, status, label) {
+      const st = String(status || '').toLowerCase();
+      if (st === 'encerrado' || st === 'cancelado') return '';
+      const d = tsToDate(endAtTs);
+      const delta = daysUntil(d);
+      if (delta == null) return '';
+      if (delta < 0) return '';
+      if (delta > 30) return '';
+      const prefix = label || 'Vencendo';
+      return `<span class="badge badge--alt">${prefix} (${delta}d)</span>`;
+    }
+
+    function asItemRow(title, subtitle, right, actionsHtml) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+          <div class="list__actions">${actionsHtml || ''}</div>
+        </div>
+      `;
+    }
+
+    function clearInsuranceForm() {
+      $('insuranceId').value = '';
+      $('insuranceTitle').value = '';
+      $('insuranceProvider').value = '';
+      $('insurancePolicy').value = '';
+      $('insuranceStatus').value = 'ativo';
+      $('insuranceStart').value = '';
+      $('insuranceEnd').value = '';
+      $('insuranceNotes').value = '';
+      setMsg($('insuranceMsg'), '');
+    }
+
+    function fillInsuranceForm(i) {
+      $('insuranceId').value = i.id;
+      $('insuranceTitle').value = i.title || '';
+      $('insuranceProvider').value = i.provider || '';
+      $('insurancePolicy').value = i.policyNumber || '';
+      $('insuranceStatus').value = i.status || 'ativo';
+      $('insuranceStart').value = toDateInputValue(i.startAt);
+      $('insuranceEnd').value = toDateInputValue(i.endAt);
+      $('insuranceNotes').value = i.notes || '';
+      setMsg($('insuranceMsg'), 'Editando seguro.');
+    }
+
+    function clearRiskForm() {
+      $('riskId').value = '';
+      $('riskTitle').value = '';
+      $('riskCategory').value = '';
+      $('riskSeverity').value = 'media';
+      $('riskStatus').value = 'aberto';
+      $('riskDue').value = '';
+      $('riskMitigation').value = '';
+      $('riskNotes').value = '';
+      setMsg($('riskMsg'), '');
+    }
+
+    function fillRiskForm(r) {
+      $('riskId').value = r.id;
+      $('riskTitle').value = r.title || '';
+      $('riskCategory').value = r.category || '';
+      $('riskSeverity').value = r.severity || 'media';
+      $('riskStatus').value = r.status || 'aberto';
+      $('riskDue').value = toDateInputValue(r.dueAt);
+      $('riskMitigation').value = r.mitigation || '';
+      $('riskNotes').value = r.notes || '';
+      setMsg($('riskMsg'), 'Editando risco.');
+    }
+
+    async function renderAll() {
+      if (!state.condoId) return;
+
+      try {
+        setMsg($('ctxHint'), 'Carregando...');
+        state.insurances = await listInsurances(state.condoId);
+        state.risks = await listRisks(state.condoId);
+
+        $('insurancesList').innerHTML = state.insurances.length
+          ? state.insurances.map((i) => {
+              const badge = dueSoonBadge(i.endAt, i.status, 'Vencendo');
+              const dates = `${toDateInputValue(i.startAt) || '-'} → ${toDateInputValue(i.endAt) || '-'}`;
+              const right = `${badge} <span class="badge">${i.status || 'ativo'}</span>`;
+              const sub = `Seguradora: ${i.provider || '-'} • Apólice: ${i.policyNumber || '-'} • Período: ${dates}${i.notes ? ` • ${i.notes}` : ''}`;
+              return asItemRow(
+                `${(i.title || '(sem título)')}`,
+                sub,
+                right,
+                `<button class="btn btn--ghost" type="button" data-action="insurance-edit" data-id="${i.id}">Editar</button>
+                 <button class="btn btn--ghost" type="button" data-action="insurance-del" data-id="${i.id}">Excluir</button>`
+              );
+            }).join('')
+          : '<p class="muted">Nenhum seguro cadastrado.</p>';
+
+        $('risksList').innerHTML = state.risks.length
+          ? state.risks.map((r) => {
+              const badge = dueSoonBadge(r.dueAt, r.status, 'Prazo');
+              const right = `${badge} <span class="badge">${r.status || 'aberto'}</span>`;
+              const due = toDateInputValue(r.dueAt) || '-';
+              const sub = `Categoria: ${r.category || '-'} • Severidade: ${r.severity || 'media'} • Vencimento: ${due}${r.mitigation ? ` • Mitigação: ${r.mitigation}` : ''}${r.notes ? ` • ${r.notes}` : ''}`;
+              return asItemRow(
+                `${(r.title || '(sem título)')}`,
+                sub,
+                right,
+                `<button class="btn btn--ghost" type="button" data-action="risk-edit" data-id="${r.id}">Editar</button>
+                 <button class="btn btn--ghost" type="button" data-action="risk-del" data-id="${r.id}">Excluir</button>`
+              );
+            }).join('')
+          : '<p class="muted">Nenhum risco cadastrado.</p>';
+
+        setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
+      } catch (err) {
+        setMsg($('ctxHint'), err.message || String(err), true);
+      }
+    }
+
+    function bindActions() {
+      $('refreshBtn').addEventListener('click', async () => {
+        await renderAll();
+      });
+
+      $('insuranceClearBtn').addEventListener('click', () => clearInsuranceForm());
+      $('riskClearBtn').addEventListener('click', () => clearRiskForm());
+
+      $('insuranceDeleteBtn').addEventListener('click', async () => {
+        const id = String($('insuranceId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este seguro?')) return;
+        try {
+          await deleteInsurance(state.condoId, id);
+          clearInsuranceForm();
+          setMsg($('insuranceMsg'), 'Seguro excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('insuranceMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('riskDeleteBtn').addEventListener('click', async () => {
+        const id = String($('riskId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este risco?')) return;
+        try {
+          await deleteRisk(state.condoId, id);
+          clearRiskForm();
+          setMsg($('riskMsg'), 'Risco excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('riskMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('insurancesList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'insurance-edit') {
+          const i = state.insurances.find((x) => x && x.id === id);
+          if (i) fillInsuranceForm(i);
+          return;
+        }
+
+        if (action === 'insurance-del') {
+          if (!confirm('Excluir este seguro?')) return;
+          try {
+            await deleteInsurance(state.condoId, id);
+            if ($('insuranceId').value === id) clearInsuranceForm();
+            setMsg($('insuranceMsg'), 'Seguro excluído.');
+            await renderAll();
+          } catch (err) {
+            setMsg($('insuranceMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('risksList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'risk-edit') {
+          const r = state.risks.find((x) => x && x.id === id);
+          if (r) fillRiskForm(r);
+          return;
+        }
+
+        if (action === 'risk-del') {
+          if (!confirm('Excluir este risco?')) return;
+          try {
+            await deleteRisk(state.condoId, id);
+            if ($('riskId').value === id) clearRiskForm();
+            setMsg($('riskMsg'), 'Risco excluído.');
+            await renderAll();
+          } catch (err) {
+            setMsg($('riskMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('insuranceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('insuranceId').value || '');
+          const payload = {
+            title: $('insuranceTitle').value,
+            provider: $('insuranceProvider').value,
+            policyNumber: $('insurancePolicy').value,
+            status: $('insuranceStatus').value,
+            startDate: $('insuranceStart').value,
+            endDate: $('insuranceEnd').value,
+            notes: $('insuranceNotes').value,
+          };
+
+          if (id) {
+            await updateInsurance(state.condoId, id, payload);
+            setMsg($('insuranceMsg'), 'Seguro atualizado.');
+          } else {
+            await createInsurance(state.condoId, payload);
+            setMsg($('insuranceMsg'), 'Seguro cadastrado.');
+          }
+
+          clearInsuranceForm();
+          await renderAll();
+        } catch (err) {
+          setMsg($('insuranceMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('riskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('riskId').value || '');
+          const payload = {
+            title: $('riskTitle').value,
+            category: $('riskCategory').value,
+            severity: $('riskSeverity').value,
+            status: $('riskStatus').value,
+            dueDate: $('riskDue').value,
+            mitigation: $('riskMitigation').value,
+            notes: $('riskNotes').value,
+          };
+
+          if (id) {
+            await updateRisk(state.condoId, id, payload);
+            setMsg($('riskMsg'), 'Risco atualizado.');
+          } else {
+            await createRisk(state.condoId, payload);
+            setMsg($('riskMsg'), 'Risco cadastrado.');
+          }
+
+          clearRiskForm();
+          await renderAll();
+        } catch (err) {
+          setMsg($('riskMsg'), err.message || String(err), true);
+        }
+      });
+    }
+
+    async function bootstrap() {
+      const { auth } = await initFirebase();
+
+      $('logoutBtn').addEventListener('click', async () => {
+        await auth.signOut();
+        location.href = '/login.html';
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        state.user = user || null;
+        if (!user) return;
+        $('userBadge').textContent = user.email || user.uid;
+
+        state.condos = await listCondos();
+        const select = $('condoSelect');
+        select.innerHTML = '';
+
+        if (!state.condos.length) {
+          select.innerHTML = '<option value="">(sem condomínios)</option>';
+          setMsg($('ctxHint'), 'Você não tem memberships para nenhum condomínio.', true);
+          return;
+        }
+
+        for (const c of state.condos) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        }
+
+        state.condoId = state.condos[0].id;
+        select.value = state.condoId;
+        setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
+
+        select.addEventListener('change', async () => {
+          state.condoId = select.value || null;
+          clearInsuranceForm();
+          clearRiskForm();
+          await renderAll();
+        });
+
+        bindActions();
+        clearInsuranceForm();
+        clearRiskForm();
+        await renderAll();
+      });
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
