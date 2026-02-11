@@ -29,11 +29,20 @@
 
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/icons-sprite.js" defer></script>
+
+    <noscript>
+      <style>
+        body { overflow: auto !important; }
+        #loader { display: none !important; }
+      </style>
+    </noscript>
 
     <script>
       // Evita flash de tema ao carregar
       (function () {
         try {
+          document.documentElement.classList.add('js');
           var saved = localStorage.getItem('condoflow-theme');
           if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
         } catch (e) {}
@@ -187,7 +196,7 @@
                 </div>
               </div>
               <div class="glassCard__footer">
-                <p class="finePrint">* Exemplo ilustrativo do produto.</p>
+                <p class="finePrint">* Dados ilustrativos para demonstração das funcionalidades do app.</p>
               </div>
             </div>
           </div>
@@ -196,40 +205,48 @@
 
       <section class="section section--alt" id="para-quem">
         <div class="container">
-          <div class="section__header" data-animate>
-            <h2 class="section__title">Para quem é</h2>
-            <p class="section__subtitle">Experiência orientada por perfil, com permissões e auditoria.</p>
-          </div>
+          <div class="paraQuem">
+            <div class="paraQuem__media" data-animate>
+              <img class="paraQuem__image" src="assets/para-quem.png" alt="Tela do CondoFlow com perfis de acesso" loading="lazy" />
+            </div>
 
-          <div class="grid grid--4" data-animate>
-            <article class="card">
-              <div class="card__icon" aria-hidden="true">
-                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#chart"></use></svg>
+            <div class="paraQuem__content">
+              <div class="section__header" data-animate>
+                <h2 class="section__title">Para quem é</h2>
+                <p class="section__subtitle">Experiência orientada por perfil, com permissões e auditoria.</p>
               </div>
-              <h3 class="card__title">Gestor</h3>
-              <p class="card__text">Rotina operacional, indicadores e padronização para eficiência.</p>
-            </article>
-            <article class="card">
-              <div class="card__icon" aria-hidden="true">
-                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#shield"></use></svg>
+
+              <div class="grid grid--4 paraQuem__grid" data-animate>
+                <article class="card">
+                  <div class="card__icon" aria-hidden="true">
+                    <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#chart"></use></svg>
+                  </div>
+                  <h3 class="card__title">Gestor</h3>
+                  <p class="card__text">Rotina operacional, indicadores e padronização para eficiência.</p>
+                </article>
+                <article class="card">
+                  <div class="card__icon" aria-hidden="true">
+                    <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#shield"></use></svg>
+                  </div>
+                  <h3 class="card__title">Síndico</h3>
+                  <p class="card__text">Transparência, prestação de contas e decisões com rastreabilidade.</p>
+                </article>
+                <article class="card">
+                  <div class="card__icon" aria-hidden="true">
+                    <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
+                  </div>
+                  <h3 class="card__title">Administradora</h3>
+                  <p class="card__text">Escala, controles e modelos prontos para reduzir retrabalho.</p>
+                </article>
+                <article class="card">
+                  <div class="card__icon" aria-hidden="true">
+                    <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#phone"></use></svg>
+                  </div>
+                  <h3 class="card__title">Morador</h3>
+                  <p class="card__text">Autoatendimento: 2ª via, reservas, chamados e comunicados.</p>
+                </article>
               </div>
-              <h3 class="card__title">Síndico</h3>
-              <p class="card__text">Transparência, prestação de contas e decisões com rastreabilidade.</p>
-            </article>
-            <article class="card">
-              <div class="card__icon" aria-hidden="true">
-                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
-              </div>
-              <h3 class="card__title">Administradora</h3>
-              <p class="card__text">Escala, controles e modelos prontos para reduzir retrabalho.</p>
-            </article>
-            <article class="card">
-              <div class="card__icon" aria-hidden="true">
-                <svg class="icon icon--md" aria-hidden="true"><use href="assets/icons.svg#phone"></use></svg>
-              </div>
-              <h3 class="card__title">Morador</h3>
-              <p class="card__text">Autoatendimento: 2ª via, reservas, chamados e comunicados.</p>
-            </article>
+            </div>
           </div>
         </div>
       </section>
@@ -844,6 +861,49 @@
     </button>
 
     <div class="toastWrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      (function () {
+        function qs(sel) {
+          return document.querySelector(sel);
+        }
+
+        function hideLoader() {
+          var loader = qs('#loader');
+          if (!loader) return;
+
+          loader.classList.add('is-hidden');
+          document.body.classList.remove('is-loading');
+
+          window.setTimeout(function () {
+            loader.setAttribute('hidden', '');
+          }, 380);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+          // Se o app.js não tiver inicializado o loader em alguns segundos,
+          // remove o overlay para o site não ficar travado.
+          window.setTimeout(function () {
+            if (window.__cfLoaderInit) return;
+
+            var bar = qs('#loaderBar');
+            var pct = qs('#loaderPercent');
+            if (bar) bar.style.width = '100%';
+            if (pct) pct.textContent = '100%';
+            hideLoader();
+          }, 3000);
+
+          // Failsafe adicional: se o loader ainda estiver em 0% após alguns segundos,
+          // libera o site mesmo que o app.js tenha falhado após iniciar.
+          window.setTimeout(function () {
+            var pct = qs('#loaderPercent');
+            if (pct && String(pct.textContent || '').trim() === '0%') {
+              hideLoader();
+            }
+          }, 6000);
+        });
+      })();
+    </script>
 
     <script src="js/app.js" defer></script>
   </body>

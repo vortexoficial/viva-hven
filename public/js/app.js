@@ -4,13 +4,17 @@
   const qs = (sel, root = document) => root.querySelector(sel);
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const normalizeText = (value) =>
-    String(value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+  const normalizeText = (value) => {
+    let text = String(value || '').toLowerCase();
+
+    // Evita regex \p{...} (Unicode property escapes), que pode quebrar em alguns browsers.
+    // NFD separa acentos em marcas combinantes (U+0300..U+036F), removidas via regex simples.
+    if (typeof text.normalize === 'function') {
+      text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    return text.replace(/\s+/g, ' ').trim();
+  };
 
   const modulesData = [
     {
@@ -491,33 +495,58 @@
 
     if (!loader || !bar || !percentEl) return;
 
+    // Marcador para fallback no HTML saber que o loader foi inicializado.
+    window.__cfLoaderInit = true;
+
     document.body.classList.add('is-loading');
 
-    let p = 0;
-    const phrases = [
-      'Preparando sua experiência…',
-      'Carregando módulos e navegação…',
-      'Ajustando o layout responsivo…',
-      'Quase lá…',
-    ];
+    // Fade-in sutil
+    window.requestAnimationFrame(() => {
+      loader.classList.add('is-visible');
+    });
 
+    const MIN_MS = 2000;
+    const MAX_MS = 8000;
+    const startTs = performance.now();
+    let pageLoaded = document.readyState === 'complete';
+
+    let finished = false;
+
+    let p = 0;
+    
+    // Frase fixa com efeito de fade via CSS
+    if (textEl) {
+      textEl.textContent = "Deixando sua gestão mais leve…";
+      // Pequeno delay para iniciar o fade-in junto com a barra
+      setTimeout(() => {
+        textEl.classList.add('is-visible');
+      }, 100);
+    }
+    
     const tick = () => {
       // Sobe rápido no começo e desacelera
       const step = p < 55 ? 6 : p < 80 ? 3 : 1;
       p = Math.min(92, p + step);
       bar.style.width = `${p}%`;
       percentEl.textContent = `${p}%`;
-      if (textEl) textEl.textContent = phrases[Math.min(phrases.length - 1, Math.floor(p / 25))];
     };
 
     const timer = window.setInterval(tick, 120);
 
     const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.__cfLoaderFinished = true;
       window.clearInterval(timer);
+      
+      // Remove a classe para disparar o fade-out do texto antes do loader fechar (opcional, ou deixa junto)
+      // Ajuste: Vamos deixar o fade do loader cuidar disso, ou forçar fade-out do texto no final:
+      if (textEl) textEl.classList.remove('is-visible');
+
       p = 100;
       bar.style.width = '100%';
       percentEl.textContent = '100%';
-      if (textEl) textEl.textContent = 'Pronto!';
+      // Removed 'Pronto!' change to keep the phrase visible until fade out
 
       window.setTimeout(() => {
         loader.classList.add('is-hidden');
@@ -529,8 +558,31 @@
       }, 260);
     };
 
-    if (document.readyState === 'complete') finish();
-    else window.addEventListener('load', finish, { once: true });
+    const tryFinish = () => {
+      const elapsed = performance.now() - startTs;
+      if (pageLoaded && elapsed >= MIN_MS) finish();
+    };
+
+    // Garante no mínimo 2s e também aguarda o load real.
+    window.setTimeout(tryFinish, MIN_MS);
+
+    // Failsafe: nunca deixa o loader travado indefinidamente.
+    window.setTimeout(() => {
+      if (!finished) finish();
+    }, MAX_MS);
+
+    if (!pageLoaded) {
+      window.addEventListener(
+        'load',
+        () => {
+          pageLoaded = true;
+          tryFinish();
+        },
+        { once: true }
+      );
+    } else {
+      tryFinish();
+    }
   }
 
   function initScrollProgress() {
@@ -610,6 +662,13 @@
   function initIntersectionAnimations() {
     const targets = qsa('[data-animate]');
     if (!targets.length) return;
+
+    // Fallback: em browsers antigos (ou WebViews) sem IntersectionObserver,
+    // não podemos deixar o conteúdo invisível.
+    if (!('IntersectionObserver' in window)) {
+      targets.forEach((el) => el.classList.add('in-view'));
+      return;
+    }
 
     const obs = new IntersectionObserver(
       (entries) => {

@@ -58,3 +58,16 @@ Health-check:
 - Formulário com validação no front-end e envio simulado com toast
 
 > Observação: este projeto é um **site estático** servido via Express. Não há backend de negócio do aplicativo.
+
+## Publicar no GitHub Pages
+
+Este repositório está pronto para publicar automaticamente a pasta `public` no GitHub Pages via GitHub Actions.
+
+1. Crie um repositório no GitHub (público, se quiser compartilhar o link).
+2. Faça push da branch `main`.
+3. No GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+4. Aguarde o workflow finalizar.
+
+A URL ficará no formato:
+
+- `https://<seu-usuario>.github.io/<nome-do-repo>/`
