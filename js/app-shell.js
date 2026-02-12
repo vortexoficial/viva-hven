@@ -105,12 +105,17 @@
     var homeHref = '/app/home.html';
     var perfilHref = '/perfil.html';
 
+    var chamadosHref = '/app/chamados.html';
+    var avisosHref = '/app/avisos.html';
+    // Ainda não existe tela de chat no MVP.
+    var chatHref = '#';
+
     return (
       '<nav class="bottomNav" aria-label="Navegação">' +
       item('home', homeHref, 'home', false) +
-      item('chamados', '#', 'tool', false) +
-      item('avisos', '#', 'bell', true) +
-      item('chat', '#', 'chat', false) +
+      item('chamados', chamadosHref, 'tool', false) +
+      item('avisos', avisosHref, 'bell', true) +
+      item('chat', chatHref, 'chat', false) +
       item('menu', perfilHref, 'menu', false) +
       '</nav>'
     );
@@ -134,6 +139,24 @@
       '<div class="vhShell__content">' + contentHtml + '</div>' +
       bottomNavHtml +
       '</div>';
+
+    // Links placeholder (href="#") devem responder a clique.
+    // Evita botões "mortos" no shell e mantém UX simples.
+    try {
+      if (!root.getAttribute('data-vh-shell-bound')) {
+        root.setAttribute('data-vh-shell-bound', '1');
+        root.addEventListener('click', function (e) {
+          var a = e.target && e.target.closest ? e.target.closest('a') : null;
+          if (!a) return;
+          var href = a.getAttribute('href');
+          if (href !== '#') return;
+          e.preventDefault();
+          try {
+            window.alert('Funcionalidade em desenvolvimento.');
+          } catch (err) {}
+        });
+      }
+    } catch (e) {}
 
     // Mantém o comportamento de tema existente; não altera a chave.
     try {

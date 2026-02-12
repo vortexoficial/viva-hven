@@ -136,6 +136,9 @@ function normalizeStatus(value) {
 
 async function uploadTicketPhoto(storage, condoId, ticketId, file) {
   if (!file) return null;
+  if (!storage) {
+    throw new Error('Upload de fotos está indisponível no momento (Storage desativado).');
+  }
   const cId = cleanString(condoId);
   const tId = cleanString(ticketId);
   if (!cId) throw new Error('condoId inválido.');

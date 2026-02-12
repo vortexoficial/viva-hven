@@ -129,6 +129,9 @@ function normalizeReformStatus(value) {
 
 async function uploadAttachment(storage, path, file) {
   if (!file) return null;
+  if (!storage) {
+    throw new Error('Upload de anexos está indisponível no momento (Storage desativado).');
+  }
   const fileName = Date.now() + '_' + safeFileName(file.name);
   const fullPath = path.replace(/\/+$/, '') + '/' + fileName;
 

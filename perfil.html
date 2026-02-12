@@ -514,7 +514,7 @@
             <div class="actionIcon"><i data-feather="file-text"></i></div>
             <span class="actionLabel">Boletos</span>
           </a>
-          <a href="#" class="actionItem">
+          <a href="/app/avisos.html" class="actionItem">
             <div class="actionIcon"><i data-feather="bell"></i></div>
             <span class="actionLabel">Avisos</span>
           </a>
@@ -539,7 +539,7 @@
         </div>
 
         <div class="featureCards">
-          <a href="#" class="featureCard">
+          <a href="/app/chamados.html" class="featureCard">
             <div class="featureCard__icon"><i data-feather="tool"></i></div>
             <div class="featureCard__content">
               <h3 class="featureCard__title">Manutenções</h3>
@@ -557,7 +557,7 @@
             <div class="featureCard__badge">2</div>
           </a>
 
-          <a href="#" class="featureCard">
+          <a href="/app/boletos.html" class="featureCard">
             <div class="featureCard__icon"><i data-feather="bar-chart-2"></i></div>
             <div class="featureCard__content">
               <h3 class="featureCard__title">Prestação de Contas</h3>
@@ -599,7 +599,7 @@
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
 
-          <a href="#" class="menuItem" id="logoutBtn">
+          <a href="/login.html" class="menuItem" id="logoutBtn">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="log-out"></i></div>
               <span class="menuItem__label">Sair</span>
@@ -618,7 +618,7 @@
   </script>
 
   <script>
-    // Monta o conteúdo dentro do App Shell
+    // Monta o conteúdo dentro do App Shell + handlers após o mount.
     window.addEventListener('DOMContentLoaded', function () {
       if (window.RouteGuard) {
         window.RouteGuard.protect(['/perfil.html'], ['MORADOR']);
@@ -635,47 +635,57 @@
       });
 
       // Feather precisa rodar após o shell montar o HTML
-      if (window.feather && typeof window.feather.replace === 'function') {
-        window.feather.replace();
-      }
-    });
+      try {
+        if (window.feather && typeof window.feather.replace === 'function') {
+          window.feather.replace();
+        }
+      } catch (e) {}
 
-    // Initialize Feather Icons (fallback caso algo mude)
-    feather.replace();
+      // Theme toggle (precisa rodar após o mount)
+      try {
+        var html = document.documentElement;
+        var themeParams = {
+          dark: { icon: 'sun', next: 'light' },
+          light: { icon: 'moon', next: 'dark' },
+        };
 
-    // Interaction scripts
-    const html = document.documentElement;
-    const themeParams = {
-      dark: { icon: 'sun', next: 'light' },
-      light: { icon: 'moon', next: 'dark' }
-    };
+        function setTheme(theme) {
+          html.setAttribute('data-theme', theme);
+          localStorage.setItem('condoflow-theme', theme);
 
-    // Load saved theme
-    const saved = localStorage.getItem('condoflow-theme') || 'light';
-    setTheme(saved);
+          var toggle = document.getElementById('themeToggle');
+          if (toggle) {
+            toggle.innerHTML = '<i data-feather="' + themeParams[theme].icon + '"></i>';
+            if (window.feather && typeof window.feather.replace === 'function') window.feather.replace();
+          }
+        }
 
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      const current = html.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      setTheme(next);
-    });
+        var saved = localStorage.getItem('condoflow-theme') || 'light';
+        if (saved !== 'dark' && saved !== 'light') saved = 'light';
+        setTheme(saved);
 
-    function setTheme(theme) {
-      html.setAttribute('data-theme', theme);
-      localStorage.setItem('condoflow-theme', theme);
-      
-      const toggle = document.getElementById('themeToggle');
-      toggle.innerHTML = `<i data-feather="${themeParams[theme].icon}"></i>`;
-      feather.replace(); // Re-render icon
-    }
+        var themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+          themeToggle.addEventListener('click', function () {
+            var current = html.getAttribute('data-theme');
+            var next = current === 'dark' ? 'light' : 'dark';
+            setTheme(next);
+          });
+        }
+      } catch (e) {}
 
-    // Active Tab Logic
-    document.querySelectorAll('.navItem').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.navItem').forEach(n => n.classList.remove('navItem--active'));
-        item.classList.add('navItem--active');
-      });
+      // Todos links placeholder devem ter ação.
+      try {
+        document.querySelectorAll('a[href="#"]').forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            e.preventDefault();
+            try { e.stopPropagation(); } catch (err) {}
+            try {
+              window.alert('Funcionalidade em desenvolvimento.');
+            } catch (err) {}
+          });
+        });
+      } catch (e) {}
     });
   </script>
 

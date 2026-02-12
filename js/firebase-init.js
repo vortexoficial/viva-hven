@@ -25,7 +25,12 @@ export async function initFirebase() {
 
   var auth = getAuth(app);
   var db = getFirestore(app);
-  var storage = getStorage(app);
+  var storage = null;
+  try {
+    storage = getStorage(app);
+  } catch (e) {
+    storage = null;
+  }
 
   return { app: app, auth: auth, db: db, storage: storage };
 }

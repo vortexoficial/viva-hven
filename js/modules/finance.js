@@ -317,6 +317,9 @@ export async function listDelinquents(condoId, asOfDate) {
 
 async function uploadToStorage(storage, path, file) {
   if (!file) return null;
+  if (!storage) {
+    throw new Error('Upload de arquivos está indisponível no momento (Storage desativado).');
+  }
   const p = cleanString(path);
   if (!p) throw new Error('Path inválido para upload.');
 
