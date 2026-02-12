@@ -1,0 +1,300 @@
+/* css/pages/login.css */
+
+/* Layout específico da página de login */
+.loginPage {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 960px) {
+  .loginPage {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Left Side: Brand/Aesthetic */
+.loginHero {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.2), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(34, 211, 238, 0.15), transparent 40%),
+    var(--bg-alt);
+  padding: 40px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+@media (min-width: 960px) {
+  .loginHero { display: flex; }
+}
+
+.loginHero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.loginHero__grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.loginHero__content {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.loginHero__title {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  color: var(--text);
+}
+
+.loginHero__feature {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.loginHero__featTitle {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.loginHero__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  color: var(--brand-b);
+  border: 1px solid var(--border);
+  flex-shrink: 0; /* Impede colapso */
+}
+
+/* Força tamanho do ícone SVG dentro do container quadrado */
+.loginHero__icon svg,
+.loginHero__icon .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Theme Toggle Btn */
+.themeBtn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 50;
+}
+.themeBtn:hover { background: var(--surface-2); border-color: var(--border-2); }
+.themeBtn svg, .themeBtn .icon { width: 22px; height: 22px; }
+
+
+/* Right Side: Form */
+.loginFormWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  background: var(--bg);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+}
+
+.loginHeader {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.loginLogo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  display: block;
+}
+
+.loginTitle {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.loginSubtitle {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
+}
+
+/* Profile Switcher */
+.profileSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.switchBtn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.switchBtn.active {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Form Fields */
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.inputLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.inputField {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.inputField:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent);
+}
+
+.forgotLink {
+  display: block;
+  text-align: right;
+  font-size: 13px;
+  color: var(--brand);
+  text-decoration: none;
+  margin-top: 8px;
+  font-weight: 500;
+}
+.forgotLink:hover { text-decoration: underline; }
+
+.submitBtn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.submitBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.4);
+}
+.submitBtn:active { transform: translateY(0); }
+.submitBtn[disabled] { opacity: 0.7; cursor: not-allowed; }
+
+.sso {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.sso__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.sso__btn:hover { border-color: var(--border-2); background: var(--surface-2); }
+.sso__btn svg, .sso__btn .icon { width: 18px; height: 18px; }
+
+/* Animações */
+[data-anim] {
+  opacity: 0;
+  animation: fadeUp 0.5s ease forwards;
+}
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
