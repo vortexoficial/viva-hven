@@ -1,6 +1,6 @@
 /* Viva Haven PWA Service Worker */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `vh-static-${VERSION}`;
 const HTML_CACHE = `vh-html-${VERSION}`;
 const RUNTIME_CACHE = `vh-runtime-${VERSION}`;
@@ -87,22 +87,25 @@ function isAssetRequest(request) {
 }
 
 async function networkFirst(request) {
-  const cache = await caches.open(HTML_CACHE);
-
   try {
     // Se navigation preload estiver habilitado
     const preload = request.mode === 'navigate' ? await eventPreloadResponseSafe() : null;
     if (preload) {
-      if (preload && preload.ok) cache.put(request, preload.clone());
+      if (preload && preload.ok) {
+        const cache = await caches.open(HTML_CACHE);
+        cache.put(request, preload.clone());
+      }
       return preload;
     }
 
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     if (response && response.ok) {
+      const cache = await caches.open(HTML_CACHE);
       cache.put(request, response.clone());
     }
     return response;
   } catch (e) {
+    const cache = await caches.open(HTML_CACHE);
     const cached = await cache.match(request);
     return cached || caches.match(OFFLINE_URL);
   }
@@ -168,9 +171,9 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
     const path = url.pathname.toLowerCase();
 
-    // Shell assets: cache-first (mais rápido, offline-friendly)
+    // Shell assets: stale-while-revalidate para evitar ficar preso em versão antiga
     if (path.startsWith('/css/') || path.startsWith('/js/') || path.startsWith('/assets/') || path.startsWith('/icons/')) {
-      event.respondWith(cacheFirst(request));
+      event.respondWith(staleWhileRevalidate(request));
       return;
     }
 

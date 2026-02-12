@@ -647,8 +647,6 @@
   </script>
 
   <script type="module">
-    import { toast } from '/js/ui.js';
-
     // Monta o conteúdo dentro do App Shell + handlers após o mount.
     window.addEventListener('DOMContentLoaded', function () {
       var tpl = document.getElementById('perfilContent');
@@ -732,38 +730,6 @@
         }
       } catch (e) {}
 
-      // Todos links placeholder devem ter ação.
-      try {
-        document.querySelectorAll('a[data-vh-placeholder="1"]').forEach(function (a) {
-          a.addEventListener('click', function (e) {
-            e.preventDefault();
-            try {
-              e.stopPropagation();
-            } catch (err) {}
-
-            var label = '';
-            try {
-              label = (a.getAttribute('data-vh-action') || '').trim();
-            } catch (err) {}
-            var msg = 'Funcionalidade em desenvolvimento.';
-            if (label === 'entregas') msg = 'Entregas: em desenvolvimento.';
-            if (label === 'acesso') msg = 'Acesso: em desenvolvimento.';
-            if (label === 'chat') msg = 'Chat: em desenvolvimento.';
-            if (label === 'perfil-completo') msg = 'Perfil completo: em desenvolvimento.';
-            if (label === 'unidades') msg = 'Unidades: em desenvolvimento.';
-            if (label === 'seguranca') msg = 'Segurança: em desenvolvimento.';
-            if (label === 'ajuda') msg = 'Ajuda: em desenvolvimento.';
-
-            try {
-              toast(msg);
-            } catch (err) {
-              try {
-                window.alert(msg);
-              } catch (err2) {}
-            }
-          });
-        });
-      } catch (e) {}
     });
   </script>
 
