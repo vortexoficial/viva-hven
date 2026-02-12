@@ -466,28 +466,28 @@
         </div>
 
         <div class="profileAvatar">
-          <span class="avatarInitials">JM</span>
+          <span class="avatarInitials" id="profileInitials">--</span>
           <!-- <img src="assets/avatar.jpg" class="avatarImage" alt="João" style="display:none"> -->
         </div>
-        <h1 class="profileName">João Morador</h1>
-        <div class="profileUnit">
+        <h1 class="profileName" id="profileName">Carregando…</h1>
+        <div class="profileUnit" id="profileUnit">
           <i data-feather="map-pin" style="width:12px; height:12px"></i>
-          Bloco A • 301
+          <span id="profileUnitText">—</span>
         </div>
 
         <div class="profileStats">
-          <div class="statItem">
-            <span class="statValue">3</span>
+          <a class="statItem" href="/app/chamados.html" aria-label="Ir para Chamados" style="text-decoration:none;">
+            <span class="statValue" id="statChamados">3</span>
             <span class="statLabel">Chamados</span>
-          </div>
-          <div class="statItem">
-            <span class="statValue">2</span>
+          </a>
+          <a class="statItem" href="#" aria-label="Ver Entregas" data-vh-action="entregas" style="text-decoration:none;">
+            <span class="statValue" id="statEntregas">2</span>
             <span class="statLabel">Entregas</span>
-          </div>
-          <div class="statItem">
-            <span class="statValue">R$ 0</span>
+          </a>
+          <a class="statItem" href="/app/boletos.html" aria-label="Ir para Boletos" style="text-decoration:none;">
+            <span class="statValue" id="statDebitos">R$ 0</span>
             <span class="statLabel">Débitos</span>
-          </div>
+          </a>
         </div>
       </header>
 
@@ -503,7 +503,7 @@
             <div class="actionIcon"><i data-feather="phone-call"></i></div>
             <span class="actionLabel">Chamados</span>
           </a>
-          <a href="#" class="actionItem">
+          <a href="#" class="actionItem" data-vh-action="entregas">
             <div class="actionIcon"><i data-feather="package"></i></div>
             <span class="actionLabel">Entregas</span>
           </a>
@@ -519,7 +519,7 @@
             <div class="actionIcon"><i data-feather="bell"></i></div>
             <span class="actionLabel">Avisos</span>
           </a>
-          <a href="#" class="actionItem">
+          <a href="#" class="actionItem" data-vh-action="acesso">
             <div class="actionIcon"><i data-feather="key"></i></div>
             <span class="actionLabel">Acesso</span>
           </a>
@@ -527,7 +527,7 @@
             <div class="actionIcon"><i data-feather="pie-chart"></i></div>
             <span class="actionLabel">Multas</span>
           </a>
-          <a href="#" class="actionItem">
+          <a href="#" class="actionItem" data-vh-action="chat">
             <div class="actionIcon"><i data-feather="message-circle"></i></div>
             <span class="actionLabel">Chat</span>
           </a>
@@ -549,7 +549,7 @@
             <div class="featureCard__badge">1</div>
           </a>
 
-          <a href="#" class="featureCard">
+          <a href="#" class="featureCard" data-vh-action="entregas">
             <div class="featureCard__icon"><i data-feather="box"></i></div>
             <div class="featureCard__content">
               <h3 class="featureCard__title">Chegou Encomenda</h3>
@@ -599,28 +599,28 @@
         <!-- Settings Menu -->
         <div class="sectionTitle">Meus Dados</div>
         <div class="menuList">
-          <a href="#" class="menuItem">
+          <a href="#" class="menuItem" data-vh-action="perfil-completo">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="user"></i></div>
               <span class="menuItem__label">Perfil Completo</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem">
+          <a href="#" class="menuItem" data-vh-action="unidades">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="home"></i></div>
               <span class="menuItem__label">Unidades</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem">
+          <a href="#" class="menuItem" data-vh-action="seguranca">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="shield"></i></div>
               <span class="menuItem__label">Segurança</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem">
+          <a href="#" class="menuItem" data-vh-action="ajuda">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="help-circle"></i></div>
               <span class="menuItem__label">Ajuda</span>
@@ -646,7 +646,9 @@
     await protect(['/perfil.html']);
   </script>
 
-  <script>
+  <script type="module">
+    import { toast } from '/js/ui.js';
+
     // Monta o conteúdo dentro do App Shell + handlers após o mount.
     window.addEventListener('DOMContentLoaded', function () {
       var tpl = document.getElementById('perfilContent');
@@ -663,6 +665,37 @@
       try {
         if (window.feather && typeof window.feather.replace === 'function') {
           window.feather.replace();
+        }
+      } catch (e) {}
+
+      // Atualiza estatísticas (se existirem em localStorage)
+      try {
+        function setText(id, v) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          el.textContent = String(v);
+        }
+
+        function getNum(key) {
+          try {
+            var raw = localStorage.getItem(key);
+            if (raw == null || raw === '') return null;
+            var n = Number(raw);
+            if (!Number.isFinite(n)) return null;
+            return Math.max(0, Math.floor(n));
+          } catch (e) {
+            return null;
+          }
+        }
+
+        var chamados = getNum('vh_stat_chamados');
+        var entregas = getNum('vh_stat_entregas');
+        var debitosCents = getNum('vh_stat_debitos_cents');
+        if (chamados != null) setText('statChamados', chamados);
+        if (entregas != null) setText('statEntregas', entregas);
+        if (debitosCents != null) {
+          var brl = (debitosCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          setText('statDebitos', brl);
         }
       } catch (e) {}
 
@@ -704,10 +737,30 @@
         document.querySelectorAll('a[href="#"]').forEach(function (a) {
           a.addEventListener('click', function (e) {
             e.preventDefault();
-            try { e.stopPropagation(); } catch (err) {}
             try {
-              window.alert('Funcionalidade em desenvolvimento.');
+              e.stopPropagation();
             } catch (err) {}
+
+            var label = '';
+            try {
+              label = (a.getAttribute('data-vh-action') || '').trim();
+            } catch (err) {}
+            var msg = 'Funcionalidade em desenvolvimento.';
+            if (label === 'entregas') msg = 'Entregas: em desenvolvimento.';
+            if (label === 'acesso') msg = 'Acesso: em desenvolvimento.';
+            if (label === 'chat') msg = 'Chat: em desenvolvimento.';
+            if (label === 'perfil-completo') msg = 'Perfil completo: em desenvolvimento.';
+            if (label === 'unidades') msg = 'Unidades: em desenvolvimento.';
+            if (label === 'seguranca') msg = 'Segurança: em desenvolvimento.';
+            if (label === 'ajuda') msg = 'Ajuda: em desenvolvimento.';
+
+            try {
+              toast(msg);
+            } catch (err) {
+              try {
+                window.alert(msg);
+              } catch (err2) {}
+            }
           });
         });
       } catch (e) {}
@@ -725,11 +778,109 @@
         e.preventDefault();
         try {
           btn.setAttribute('aria-busy', 'true');
-          await logoutUser();
+          // Suporta DEMO (localhost) e Firebase
+          try {
+            var host = String(window.location.hostname || '').toLowerCase();
+            var isLocal = host === 'localhost' || host === '127.0.0.1';
+            var demo = isLocal && localStorage.getItem('vh_demo_mode') === '1' && window.AuthMock;
+            if (demo && typeof window.AuthMock.logout === 'function') {
+              window.AuthMock.logout();
+              localStorage.removeItem('vh_demo_mode');
+            } else {
+              await logoutUser();
+            }
+          } catch (e2) {
+            await logoutUser();
+          }
         } finally {
           window.location.href = '/login.html';
         }
       });
+    });
+  </script>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+    function clean(v) {
+      return String(v || '').trim();
+    }
+
+    function initialsFrom(text) {
+      var t = clean(text);
+      if (!t) return '--';
+      var parts = t.split(/\s+/).filter(Boolean);
+      if (!parts.length) return '--';
+      var a = parts[0] ? parts[0][0] : '';
+      var b = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0].length > 1 ? parts[0][1] : '');
+      return (a + b).toUpperCase();
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value;
+    }
+
+    function isDemoMode() {
+      try {
+        var host = String(window.location.hostname || '').toLowerCase();
+        var isLocal = host === 'localhost' || host === '127.0.0.1';
+        return isLocal && localStorage.getItem('vh_demo_mode') === '1' && window.AuthMock && typeof window.AuthMock.getSession === 'function';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async function () {
+      try {
+        // Conteúdo é montado pelo shell; IDs existem após o mount.
+        if (isDemoMode()) {
+          var s = window.AuthMock.getSession();
+          var label = s && s.identifier ? clean(s.identifier) : 'demo@localhost';
+          var role = s && s.role ? clean(s.role).toUpperCase() : 'DEMO';
+          var name = role === 'MORADOR' ? 'Morador (DEMO)' : ('Admin (' + role + ')');
+          setText('profileName', name);
+          setText('profileInitials', initialsFrom(name));
+          setText('profileUnitText', label);
+          return;
+        }
+
+        var fb = await initFirebase();
+        var auth = fb.auth;
+        var db = fb.db;
+        var user = auth && auth.currentUser ? auth.currentUser : null;
+        if (!user) return;
+
+        var displayName = clean(user.displayName);
+        var email = clean(user.email);
+        var name = displayName || email || 'Usuário';
+
+        // Tenta enriquecer com users/{uid}
+        try {
+          var snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) {
+            var d = snap.data() || {};
+            if (clean(d.name)) name = clean(d.name);
+            // opcional: bloco/unidade se existirem
+            var block = clean(d.block || d.bloco);
+            var unit = clean(d.unit || d.unidade);
+            if (block || unit) {
+              setText('profileUnitText', [block ? ('Bloco ' + block) : null, unit ? unit : null].filter(Boolean).join(' • '));
+            } else {
+              setText('profileUnitText', '—');
+            }
+          }
+        } catch (e) {
+          // ignora
+        }
+
+        setText('profileName', name);
+        setText('profileInitials', initialsFrom(name));
+      } catch (e) {
+        // fallback silencioso
+      }
     });
   </script>
 

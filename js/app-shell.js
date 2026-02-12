@@ -66,6 +66,18 @@
     opts = opts || {};
     var active = String(opts.active || 'home');
 
+    function getUnread(key, fallback) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (raw == null || raw === '') return fallback;
+        var n = Number(raw);
+        if (!Number.isFinite(n)) return fallback;
+        return Math.max(0, Math.floor(n));
+      } catch (e) {
+        return fallback;
+      }
+    }
+
     function item(tab, href, iconName, hasDot) {
       var cls = 'navItem' + (active === tab ? ' navItem--active' : '');
       return (
@@ -84,11 +96,15 @@
     var avisosHref = '/app/avisos.html';
     var boletosHref = '/app/boletos.html';
 
+    // Notificações (MVP): dot em Avisos quando existir unread > 0.
+    var unreadAvisos = getUnread('vh_unread_avisos', 1);
+    var avisosHasDot = unreadAvisos > 0;
+
     return (
       '<nav class="bottomNav" aria-label="Navegação">' +
       item('home', homeHref, 'home', false) +
       item('chamados', chamadosHref, 'tool', false) +
-      item('avisos', avisosHref, 'bell', true) +
+      item('avisos', avisosHref, 'bell', avisosHasDot) +
       item('boletos', boletosHref, 'chat', false) +
       item('menu', perfilHref, 'menu', false) +
       '</nav>'

@@ -64,6 +64,11 @@
 
     await protect(['/app/']);
 
+    // Notificações (MVP): ao abrir a tela de avisos, limpa o dot.
+    try {
+      localStorage.setItem('vh_unread_avisos', '0');
+    } catch (e) {}
+
     const $ = (id) => document.getElementById(id);
 
     const state = {

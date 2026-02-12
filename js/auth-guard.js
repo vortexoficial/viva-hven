@@ -104,6 +104,15 @@ function isProtectedPath(pathname, paths) {
 }
 
 export function redirectToLogin() {
+  // Preserva a rota atual para redirecionar após login.
+  // UX only: a segurança real continua nas rules + guards.
+  try {
+    const p = currentPathname();
+    if (p && !String(p).toLowerCase().endsWith('/login.html')) {
+      const next = String(window.location.pathname || '/') + String(window.location.search || '') + String(window.location.hash || '');
+      sessionStorage.setItem('vh_post_login_redirect', next);
+    }
+  } catch (e) {}
   try {
     if (window.location.pathname.toLowerCase().endsWith('/login.html')) return;
     window.location.href = '/login.html';

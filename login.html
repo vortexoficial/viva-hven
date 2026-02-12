@@ -201,7 +201,40 @@
             password: value('password'),
           });
 
-          if (String(role || '').toUpperCase() === 'MORADOR') window.location.href = '/app/home.html';
+          const r = String(role || '').toUpperCase();
+
+          // Se o usuário veio de uma rota protegida, tenta voltar para ela.
+          // Com checagem simples por área (admin/app) para evitar redirects incorretos.
+          let next = '';
+          try {
+            next = String(sessionStorage.getItem('vh_post_login_redirect') || '').trim();
+            sessionStorage.removeItem('vh_post_login_redirect');
+          } catch (e) {}
+
+          function isSafeNext(path) {
+            const p = String(path || '').trim();
+            if (!p) return false;
+            if (!p.startsWith('/')) return false;
+            if (p.startsWith('//')) return false;
+            if (p.toLowerCase().includes('/login.html') || p.toLowerCase().includes('/register.html')) return false;
+            return true;
+          }
+
+          function allowedByRole(path) {
+            const p = String(path || '').toLowerCase();
+            const isAdminPath = p.startsWith('/admin/');
+            const isAppPath = p.startsWith('/app/') || p === '/perfil.html';
+            if (r === 'MORADOR') return isAppPath && !isAdminPath;
+            return isAdminPath || isAppPath; // admins podem navegar também no app (UX)
+          }
+
+          if (isSafeNext(next) && allowedByRole(next)) {
+            window.location.href = next;
+            return;
+          }
+
+          // Default
+          if (r === 'MORADOR') window.location.href = '/perfil.html';
           else window.location.href = '/admin/dashboard.html';
         } catch (e) {
           alert(e && e.message ? e.message : 'Falha ao entrar.');
