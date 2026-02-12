@@ -14,10 +14,19 @@
   }
 
   function setUseHref(useEl, value) {
-    useEl.setAttribute('href', value);
-    useEl.setAttribute('xlink:href', value);
     try {
-      useEl.setAttributeNS(XLINK_NS, 'xlink:href', value);
+      var currentHref = useEl.getAttribute('href');
+      if (currentHref !== value) useEl.setAttribute('href', value);
+    } catch {}
+
+    try {
+      var currentXlink = useEl.getAttribute('xlink:href');
+      if (currentXlink !== value) useEl.setAttribute('xlink:href', value);
+    } catch {}
+
+    try {
+      var currentNs = useEl.getAttributeNS(XLINK_NS, 'href');
+      if (currentNs !== value) useEl.setAttributeNS(XLINK_NS, 'xlink:href', value);
     } catch {}
   }
 
@@ -36,7 +45,11 @@
     // Já interno
     if (String(href).trim().startsWith('#')) {
       const id = extractSymbolId(href);
-      if (id) setUseHref(useEl, `#${id}`);
+      if (!id) return;
+      const desired = `#${id}`;
+      // idempotente: não re-setar se já estiver ok
+      if (getUseHref(useEl) === desired) return;
+      setUseHref(useEl, desired);
       return;
     }
 
