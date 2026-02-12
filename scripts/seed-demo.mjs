@@ -87,6 +87,14 @@ async function main() {
   });
 
   const accounts = [
+    {
+      key: 'admin',
+      email: 'admin.teste@exemplo.com',
+      name: 'Admin Master',
+      userRole: 'ADMIN',
+      membershipScope: 'both',
+      membershipRole: 'admin',
+    },
     { key: 'morador', email: 'morador.teste@exemplo.com', name: 'Morador Teste', userRole: 'MORADOR', membershipScope: 'condo', membershipRole: 'morador' },
     { key: 'gestor', email: 'gestor.teste@exemplo.com', name: 'Gestor Teste', userRole: 'GESTOR', membershipScope: 'condo', membershipRole: 'gestor' },
     { key: 'sindico', email: 'sindico.teste@exemplo.com', name: 'Síndico Teste', userRole: 'SINDICO', membershipScope: 'condo', membershipRole: 'sindico' },
@@ -110,7 +118,31 @@ async function main() {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    if (acc.membershipScope === 'condo') {
+    if (acc.membershipScope === 'both') {
+      const condoMid = condoMembershipId(user.uid, condoId);
+      await upsertDoc(`memberships/${condoMid}`, {
+        uid: user.uid,
+        scope: 'condo',
+        condoId,
+        orgId,
+        role: normalizeRoleLower(acc.membershipRole),
+        status: 'active',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      const orgMid = orgMembershipId(user.uid, orgId);
+      await upsertDoc(`memberships/${orgMid}`, {
+        uid: user.uid,
+        scope: 'org',
+        orgId,
+        condoId: null,
+        role: normalizeRoleLower(acc.membershipRole),
+        status: 'active',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else if (acc.membershipScope === 'condo') {
       const membershipId = condoMembershipId(user.uid, condoId);
       await upsertDoc(`memberships/${membershipId}`, {
         uid: user.uid,
