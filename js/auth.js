@@ -45,18 +45,8 @@ async function getUserProfileByUid(db, uid) {
   return snap.data() || null;
 }
 
-async function findEmailByCpf(db, cpf) {
-  var cpfNormalized = normalizeCpf(cpf);
-  if (!cpfNormalized) return null;
-
-  var q = query(collection(db, 'users'), where('cpfNormalized', '==', cpfNormalized), limit(1));
-  var qs = await getDocs(q);
-  if (qs.empty) return null;
-
-  var data = qs.docs[0].data() || {};
-  var email = String(data.email || '').trim();
-  return email || null;
-}
+// Login por CPF exigiria uma rotina server-side (para evitar enumeração e respeitar rules).
+// No modo online/produção, mantemos apenas login por e-mail.
 
 export async function registerUser(payload) {
   payload = payload || {};
@@ -113,14 +103,12 @@ export async function loginUser(payload) {
 
   var firebase = await initFirebase();
   var auth = firebase.auth;
-  var db = firebase.db;
+
+  if (!looksLikeEmail(identifier)) {
+    throw new Error('Login por CPF indisponível. Use e-mail.');
+  }
 
   var email = identifier;
-  if (!looksLikeEmail(identifier)) {
-    var found = await findEmailByCpf(db, identifier);
-    if (!found) throw new Error('CPF não encontrado.');
-    email = found;
-  }
 
   var cred = await signInWithEmailAndPassword(auth, email, password);
   var user = cred.user;
@@ -139,17 +127,12 @@ export async function requestPasswordReset(identifier) {
 
   var firebase = await initFirebase();
   var auth = firebase.auth;
-  var db = firebase.db;
+
+  if (!looksLikeEmail(raw)) {
+    throw new Error('Recuperação por CPF indisponível. Use e-mail.');
+  }
 
   var email = raw;
-  if (!looksLikeEmail(raw)) {
-    var found = await findEmailByCpf(db, raw);
-    if (!found) {
-      // Não revela existência de conta
-      return { ok: true };
-    }
-    email = found;
-  }
 
   try {
     await sendPasswordResetEmail(auth, email);

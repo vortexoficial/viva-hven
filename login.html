@@ -392,8 +392,8 @@
 
           <form id="loginForm" class="stagger-3" data-anim>
             <div class="formGroup">
-              <label class="inputLabel" for="email">E-mail corporativo ou CPF</label>
-              <input type="text" id="email" class="inputField" placeholder="ex: sindico@condominio.com" />
+              <label class="inputLabel" for="email">E-mail</label>
+              <input type="text" id="email" class="inputField" placeholder="ex: usuario@dominio.com" />
             </div>
 
             <div class="formGroup">
@@ -469,11 +469,11 @@
         
         const emailInput = document.getElementById('email');
         if (type === 'morador') {
-          emailInput.placeholder = "ex: 000.000.000-00 (CPF)";
-          emailInput.previousElementSibling.textContent = "CPF ou E-mail";
+          emailInput.placeholder = "ex: morador@condominio.com";
+          emailInput.previousElementSibling.textContent = "E-mail";
         } else {
           emailInput.placeholder = "ex: sindico@condominio.com";
-          emailInput.previousElementSibling.textContent = "E-mail corporativo";
+          emailInput.previousElementSibling.textContent = "E-mail";
         }
 
         try {

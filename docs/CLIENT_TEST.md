@@ -57,6 +57,20 @@ Crie estas contas no ambiente de teste (ou use nomes semelhantes). As senhas aba
   - Senha: `Senha@123`
   - Role em `/users/{uid}`: `MORADOR`
 
+## Seed automático de contas (recomendado)
+
+Para criar rapidamente uma conta de cada perfil (MORADOR, GESTOR, SINDICO, CARTEIRA, ADMINISTRADORA) + dados base (`organizations`, `condos` e `memberships`), use o script:
+
+1) Crie uma Service Account no Google Cloud e baixe a chave JSON.
+2) No PowerShell, na raiz do projeto:
+
+- `npm i`
+- `$env:GOOGLE_APPLICATION_CREDENTIALS="C:\caminho\para\service-account.json"`
+- `$env:FIREBASE_PROJECT_ID="vivahaven-2906a"`
+- `npm run seed`
+
+O script cria as contas com a senha padrão `Senha@123` (ou `SEED_PASSWORD` se você definir).
+
 ## Configuração mínima no Firestore (para liberar acesso)
 
 ### 1) Condomínio

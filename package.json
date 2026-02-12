@@ -1,0 +1,11 @@
+{
+  "name": "app-gestao-condominial-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node scripts/seed-demo.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2"
+  }
+}
