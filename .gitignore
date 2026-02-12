@@ -14,8 +14,8 @@ pnpm-debug.log*
 .env
 .env.*
 
-# firebase local config (não commitar)
-js/firebase-config.js
+# firebase web config
+# Observação: o firebaseConfig (apiKey, projectId etc.) não é segredo e precisa estar disponível no deploy.
 
 # OS
 .DS_Store
