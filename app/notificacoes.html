@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0b1120" />
-    <title>Painel do Morador | Viva Haven</title>
+    <title>Notificações | App do Morador</title>
 
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -12,21 +12,12 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
     <script type="module" src="/js/core-init.js"></script>
-
-    <script>
-      (function () {
-        try {
-          var saved = localStorage.getItem('condoflow-theme');
-          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        } catch (e) {}
-      })();
-    </script>
   </head>
 
   <body>
     <header class="topbar">
       <div class="topbar__left">
-        <h1 class="h1">Painel do Morador</h1>
+        <h1 class="h1">Central de Notificações</h1>
       </div>
       <div class="topbar__right">
         <span data-vh-context-anchor="1"></span>
@@ -37,55 +28,20 @@
 
     <main class="container">
       <section class="card">
-        <div class="vhHomeHero">
-          <div>
-            <p class="vhHomeEyebrow">Resumo rápido</p>
-            <h2 class="vhHomeTitle" id="helloTitle">Olá!</h2>
-            <p class="vhHomeSub" id="ctxCondoName">Selecione um condomínio para começar.</p>
-          </div>
-          <div class="vhHomeActions">
-            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar condomínio</button>
-            <button id="refreshBtn" class="btn" type="button">Atualizar painel</button>
+        <div class="vhSectionHead">
+          <h2 class="h2">Condomínio ativo</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
-      </section>
-
-      <section class="grid grid--3">
-        <article class="card vhKpiCard">
-          <p class="vhKpiLabel">Não lidas</p>
-          <p class="vhKpiValue" id="kpiUnread">0</p>
-          <p class="vhKpiHint">Avisos e enquetes pendentes</p>
-        </article>
-        <article class="card vhKpiCard">
-          <p class="vhKpiLabel">Chamados abertos</p>
-          <p class="vhKpiValue" id="kpiTickets">0</p>
-          <p class="vhKpiHint">Acompanhamento em andamento</p>
-        </article>
-        <article class="card vhKpiCard">
-          <p class="vhKpiLabel">Atualização</p>
-          <p class="vhKpiValue" id="kpiUpdated">--:--</p>
-          <p class="vhKpiHint">Última sincronização do painel</p>
-        </article>
+        <p id="ctxCondoName" class="muted">—</p>
       </section>
 
       <section class="card">
         <div class="vhSectionHead">
-          <h2 class="h2">Ações rápidas</h2>
-        </div>
-        <div class="vhQuickGrid">
-          <a class="btn btn--ghost" href="/app/notificacoes.html">Notificações</a>
-          <a class="btn btn--ghost" href="/app/avisos.html">Avisos</a>
-          <a class="btn btn--ghost" href="/app/chamados.html">Chamados</a>
-          <a class="btn btn--ghost" href="/app/reservas.html">Reservas</a>
-          <a class="btn btn--ghost" href="/app/boletos.html">Boletos</a>
-          <a class="btn btn--ghost" href="/perfil.html">Meu perfil</a>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="vhSectionHead">
-          <h2 class="h2">Notificações recentes</h2>
-          <a class="btn btn--ghost" href="/app/notificacoes.html">Abrir central</a>
+          <h2 class="h2">Feed</h2>
+          <span id="summary" class="badge">0 itens</span>
         </div>
         <div id="feedList" class="list"></div>
       </section>
@@ -98,7 +54,7 @@
       import { logoutUser } from '/js/auth.js';
       import { initFirebase } from '/js/firebase-init.js';
       import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
-      import { getNotificationSummary, markNotificationItemRead } from '/js/modules/notifications.js';
+      import { listNotificationFeed, markNotificationItemRead } from '/js/modules/notifications.js';
 
       await protect(['/app/']);
 
@@ -106,7 +62,6 @@
 
       const state = {
         condoId: null,
-        user: null,
         feed: [],
       };
 
@@ -117,26 +72,14 @@
         el.style.color = isErr ? 'var(--danger)' : 'var(--muted)';
       }
 
-      function formatTimeNow() {
-        return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      }
-
-      function setCondoName(ev) {
-        try {
-          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
-          const picked = condos.find((c) => c && c.id === state.condoId);
-          $('ctxCondoName').textContent = picked && picked.name ? picked.name : (state.condoId || 'Selecione um condomínio para começar.');
-        } catch (e) {
-          $('ctxCondoName').textContent = state.condoId || 'Selecione um condomínio para começar.';
-        }
-      }
-
       function renderFeed() {
         const root = $('feedList');
         if (!root) return;
 
+        $('summary').textContent = `${state.feed.length} item(ns)`;
+
         if (!state.feed.length) {
-          root.innerHTML = '<div class="emptyState"><p class="emptyState__title">Tudo em dia</p><p class="emptyState__sub">Sem notificações pendentes no momento.</p></div>';
+          root.innerHTML = '<div class="emptyState"><p class="emptyState__title">Sem notificações</p><p class="emptyState__sub">Você está com tudo atualizado.</p></div>';
           return;
         }
 
@@ -144,13 +87,14 @@
           .map((item) => {
             const readBadge = item.read
               ? '<span class="badge">Lida</span>'
-              : `<button class="btn btn--ghost" type="button" data-read="${item.kind}:${item.id}">Marcar como lida</button>`;
+              : `<button class="btn btn--ghost" type="button" data-read="${item.kind}:${item.id}">Marcar lida</button>`;
 
             return `
               <div class="list__item">
                 <div>
                   <div class="list__title">${item.title}</div>
                   <div class="list__sub">${item.preview || ''}</div>
+                  <div class="list__sub" style="margin-top:4px;">${item.meta || ''}</div>
                 </div>
                 <div class="list__meta" style="display:grid;gap:8px;justify-items:end;">
                   <a class="btn btn--ghost" href="${item.actionHref}">Abrir</a>
@@ -183,25 +127,16 @@
       async function refreshAll() {
         if (!state.condoId) {
           state.feed = [];
-          $('kpiUnread').textContent = '0';
-          $('kpiTickets').textContent = '0';
-          $('kpiUpdated').textContent = '--:--';
           renderFeed();
-          setStatus('Selecione um condomínio para carregar o painel.', true);
+          setStatus('Selecione um condomínio para carregar as notificações.', true);
           return;
         }
 
-        setStatus('Carregando painel...');
+        setStatus('Carregando notificações...');
         try {
-          const summary = await getNotificationSummary(state.condoId);
-          state.feed = summary.feed || [];
-
-          $('kpiUnread').textContent = String(summary.unread || 0);
-          $('kpiTickets').textContent = String((summary.byKind && summary.byKind.ticket) || 0);
-          $('kpiUpdated').textContent = formatTimeNow();
-
+          state.feed = await listNotificationFeed(state.condoId, { limit: 50 });
           renderFeed();
-          setStatus('Painel atualizado.');
+          setStatus('Notificações atualizadas.');
         } catch (e) {
           setStatus(e && e.message ? e.message : String(e), true);
         }
@@ -223,18 +158,19 @@
 
         watchAuthAndContext((ev) => {
           const user = ev && ev.user ? ev.user : null;
-          state.user = user || null;
-
-          if (user) {
-            $('userBadge').textContent = user.email || user.uid;
-            const firstName = String(user.displayName || user.email || 'morador').split(' ')[0];
-            $('helloTitle').textContent = `Olá, ${firstName}`;
-          }
+          if (user) $('userBadge').textContent = user.email || user.uid;
 
           const ctx = ev && ev.context ? ev.context : getActiveContext();
           state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
 
-          setCondoName(ev);
+          try {
+            const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+            const picked = condos.find((c) => c && c.id === state.condoId);
+            $('ctxCondoName').textContent = picked && picked.name ? picked.name : (state.condoId || '—');
+          } catch (e) {
+            $('ctxCondoName').textContent = state.condoId || '—';
+          }
+
           refreshAll().catch(() => {});
         });
 
@@ -244,17 +180,6 @@
       }
 
       bootstrap();
-    </script>
-
-    <script>
-      (function () {
-        try {
-          if (!('serviceWorker' in navigator)) return;
-          window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/sw.js').catch(function () {});
-          });
-        } catch (e) {}
-      })();
     </script>
   </body>
 </html>

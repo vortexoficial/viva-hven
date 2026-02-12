@@ -298,3 +298,78 @@
 .banner--danger { border-left: 4px solid var(--danger); }
 .banner__title { font-weight: 900; margin: 0; }
 .banner__msg { margin: 2px 0 0; font-size: var(--fs-12); color: var(--muted); }
+
+/* Home do morador */
+.vhHomeHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.vhHomeEyebrow {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
+  font-weight: 800;
+}
+.vhHomeTitle {
+  margin: 6px 0;
+  font-size: var(--fs-24);
+  font-weight: 900;
+}
+.vhHomeSub {
+  margin: 0;
+  color: var(--muted);
+}
+.vhHomeActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vhKpiCard {
+  min-height: 132px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+.vhKpiLabel {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
+  font-weight: 800;
+}
+.vhKpiValue {
+  margin: 0;
+  font-size: var(--fs-32);
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.vhKpiHint {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+.vhSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.vhQuickGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 760px) {
+  .vhQuickGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

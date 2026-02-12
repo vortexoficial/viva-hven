@@ -4,6 +4,7 @@
 const LINKS = [
   { href: '/app/home.html', label: 'Home' },
   { href: '/app/chamados.html', label: 'Chamados' },
+  { href: '/app/notificacoes.html', label: 'Notificações' },
   { href: '/app/avisos.html', label: 'Avisos' },
   { href: '/app/boletos.html', label: 'Boletos' },
   { href: '/app/reservas.html', label: 'Reservas' },

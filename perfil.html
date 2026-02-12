@@ -480,7 +480,7 @@
             <span class="statValue" id="statChamados">3</span>
             <span class="statLabel">Chamados</span>
           </a>
-          <a class="statItem" href="#" aria-label="Ver Entregas" data-vh-action="entregas" style="text-decoration:none;">
+          <a class="statItem" href="/app/notificacoes.html" aria-label="Ver Entregas" data-vh-action="entregas" style="text-decoration:none;">
             <span class="statValue" id="statEntregas">2</span>
             <span class="statLabel">Entregas</span>
           </a>
@@ -503,7 +503,7 @@
             <div class="actionIcon"><i data-feather="phone-call"></i></div>
             <span class="actionLabel">Chamados</span>
           </a>
-          <a href="#" class="actionItem" data-vh-action="entregas">
+          <a href="/app/notificacoes.html" class="actionItem" data-vh-action="entregas">
             <div class="actionIcon"><i data-feather="package"></i></div>
             <span class="actionLabel">Entregas</span>
           </a>
@@ -519,7 +519,7 @@
             <div class="actionIcon"><i data-feather="bell"></i></div>
             <span class="actionLabel">Avisos</span>
           </a>
-          <a href="#" class="actionItem" data-vh-action="acesso">
+          <a href="/app/reservas.html" class="actionItem" data-vh-action="acesso">
             <div class="actionIcon"><i data-feather="key"></i></div>
             <span class="actionLabel">Acesso</span>
           </a>
@@ -527,7 +527,7 @@
             <div class="actionIcon"><i data-feather="pie-chart"></i></div>
             <span class="actionLabel">Multas</span>
           </a>
-          <a href="#" class="actionItem" data-vh-action="chat">
+          <a href="/app/avisos.html" class="actionItem" data-vh-action="chat">
             <div class="actionIcon"><i data-feather="message-circle"></i></div>
             <span class="actionLabel">Chat</span>
           </a>
@@ -549,7 +549,7 @@
             <div class="featureCard__badge">1</div>
           </a>
 
-          <a href="#" class="featureCard" data-vh-action="entregas">
+          <a href="/app/notificacoes.html" class="featureCard" data-vh-action="entregas">
             <div class="featureCard__icon"><i data-feather="box"></i></div>
             <div class="featureCard__content">
               <h3 class="featureCard__title">Chegou Encomenda</h3>
@@ -599,28 +599,28 @@
         <!-- Settings Menu -->
         <div class="sectionTitle">Meus Dados</div>
         <div class="menuList">
-          <a href="#" class="menuItem" data-vh-action="perfil-completo">
+          <a href="/perfil.html" class="menuItem" data-vh-action="perfil-completo">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="user"></i></div>
               <span class="menuItem__label">Perfil Completo</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem" data-vh-action="unidades">
+          <a href="/app/home.html" class="menuItem" data-vh-action="unidades">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="home"></i></div>
               <span class="menuItem__label">Unidades</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem" data-vh-action="seguranca">
+          <a href="/app/chamados.html" class="menuItem" data-vh-action="seguranca">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="shield"></i></div>
               <span class="menuItem__label">Segurança</span>
             </div>
             <div class="menuItem__right"><i data-feather="chevron-right"></i></div>
           </a>
-          <a href="#" class="menuItem" data-vh-action="ajuda">
+          <a href="/index.html#faq" class="menuItem" data-vh-action="ajuda">
             <div class="menuItem__left">
               <div class="menuItem__icon"><i data-feather="help-circle"></i></div>
               <span class="menuItem__label">Ajuda</span>
@@ -734,7 +734,7 @@
 
       // Todos links placeholder devem ter ação.
       try {
-        document.querySelectorAll('a[href="#"]').forEach(function (a) {
+        document.querySelectorAll('a[data-vh-placeholder="1"]').forEach(function (a) {
           a.addEventListener('click', function (e) {
             e.preventDefault();
             try {

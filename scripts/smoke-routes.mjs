@@ -6,6 +6,7 @@ const tests = [
   { route: '/register.html', key: 'Criar conta' },
   { route: '/perfil.html', key: 'Perfil' },
   { route: '/app/home.html', key: 'Home' },
+  { route: '/app/notificacoes.html', key: 'Central de Notificações' },
   { route: '/app/avisos.html', key: 'Avisos' },
   { route: '/app/boletos.html', key: 'Boletos' },
   { route: '/app/chamados.html', key: 'Chamados' },
