@@ -307,6 +307,36 @@
   gap: 16px;
   flex-wrap: wrap;
 }
+.vhHomeTop {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--brand-b) 24%, var(--border));
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--brand-a) 16%, transparent) 0%, transparent 56%),
+    radial-gradient(100% 100% at 100% 0%, color-mix(in srgb, var(--brand-b) 14%, transparent) 0%, transparent 58%),
+    var(--surface);
+}
+.vhHomeTop::after {
+  content: '';
+  position: absolute;
+  inset: auto -20% -50% auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-b) 10%, transparent);
+  filter: blur(30px);
+  pointer-events: none;
+}
+.vhHomeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.vhHomeMeta .badge {
+  padding: 6px 10px;
+  font-size: var(--fs-12);
+}
 .vhHomeEyebrow {
   margin: 0;
   font-size: var(--fs-12);
@@ -321,11 +351,15 @@
 .vhHomeSub {
   margin: 0;
   color: var(--muted);
+  max-width: 62ch;
 }
 .vhHomeActions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.vhHomeActions .btn {
+  min-height: 40px;
 }
 
 .vhKpiCard {
@@ -399,5 +433,10 @@
 
   .vhHomePage .card {
     padding: 16px;
+  }
+
+  .vhHomeTop::after {
+    width: 220px;
+    height: 220px;
   }
 }
