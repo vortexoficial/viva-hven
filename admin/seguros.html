@@ -79,6 +79,16 @@
           <input id="insuranceEnd" class="input" type="date" />
         </label>
 
+        <label class="field">
+          <span>Renovação (opcional)</span>
+          <input id="insuranceRenewal" class="input" type="date" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>URL da apólice (opcional)</span>
+          <input id="insuranceUrl" class="input" type="url" placeholder="https://..." />
+        </label>
+
         <label class="field" style="grid-column:1/-1;">
           <span>Observações</span>
           <textarea id="insuranceNotes" class="input" rows="2"></textarea>
@@ -160,10 +170,76 @@
       <h3 class="h3">Lista</h3>
       <div id="risksList" class="list"></div>
     </section>
+
+    <section class="card">
+      <h2 class="h2">Sinistros</h2>
+      <p class="muted" style="margin-top:-8px;">Cadastre sinistros e laudos por URL (sem Storage). Você pode vincular à apólice.</p>
+
+      <div class="grid grid--3" style="margin-bottom:10px;">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Filtrar por apólice</span>
+          <select id="incidentFilterPolicy" class="input"></select>
+        </label>
+      </div>
+
+      <form id="incidentForm" class="grid grid--3">
+        <input type="hidden" id="incidentId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="incidentTitle" class="input" required />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Apólice (opcional)</span>
+          <select id="incidentPolicyId" class="input"></select>
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="incidentStatus" class="input">
+            <option value="aberto">aberto</option>
+            <option value="em_andamento">em_andamento</option>
+            <option value="encerrado">encerrado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Data (opcional)</span>
+          <input id="incidentDate" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Valor (R$) (opcional)</span>
+          <input id="incidentAmount" class="input" placeholder="Ex.: 1200,00" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Laudo / Relatório (URL) (opcional)</span>
+          <input id="incidentLaudoUrl" class="input" type="url" placeholder="https://..." />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="incidentNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="incidentClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="incidentDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="incidentMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="incidentsList" class="list"></div>
+    </section>
   </main>
 
   <script type="module">
-    import { protect } from '/js/route-guard.js';
+    import { setupAdminPage } from '/js/admin-access.js';
     import { logoutUser } from '/js/auth.js';
     import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
 
@@ -176,9 +252,18 @@
       createRisk,
       updateRisk,
       deleteRisk,
+      listIncidents,
+      createIncident,
+      updateIncident,
+      deleteIncident,
     } from '/js/modules/contracts.js';
 
-    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+    const env = await setupAdminPage({
+      rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+      logoutBtnId: null,
+      userBadgeId: 'userBadge',
+    });
+    if (!env || env.ok !== true) return;
 
     const $ = (id) => document.getElementById(id);
 
@@ -188,6 +273,8 @@
       user: null,
       insurances: [],
       risks: [],
+      incidents: [],
+      incidentFilterPolicyId: '',
     };
 
     function setActiveCondoName(text) {
@@ -276,6 +363,8 @@
       $('insuranceStatus').value = 'ativo';
       $('insuranceStart').value = '';
       $('insuranceEnd').value = '';
+      $('insuranceRenewal').value = '';
+      $('insuranceUrl').value = '';
       $('insuranceNotes').value = '';
       setMsg($('insuranceMsg'), '');
     }
@@ -288,8 +377,73 @@
       $('insuranceStatus').value = i.status || 'ativo';
       $('insuranceStart').value = toDateInputValue(i.startAt);
       $('insuranceEnd').value = toDateInputValue(i.endAt);
+      $('insuranceRenewal').value = toDateInputValue(i.renewalAt);
+      $('insuranceUrl').value = i.policyUrl || '';
       $('insuranceNotes').value = i.notes || '';
       setMsg($('insuranceMsg'), 'Editando seguro.');
+    }
+
+    function clearIncidentForm() {
+      $('incidentId').value = '';
+      $('incidentTitle').value = '';
+      $('incidentPolicyId').value = '';
+      $('incidentStatus').value = 'aberto';
+      $('incidentDate').value = '';
+      $('incidentAmount').value = '';
+      $('incidentLaudoUrl').value = '';
+      $('incidentNotes').value = '';
+      setMsg($('incidentMsg'), '');
+    }
+
+    function fillIncidentForm(i) {
+      $('incidentId').value = i.id;
+      $('incidentTitle').value = i.title || '';
+      $('incidentPolicyId').value = i.policyId || '';
+      $('incidentStatus').value = i.status || 'aberto';
+      $('incidentDate').value = toDateInputValue(i.date);
+      $('incidentAmount').value = i.amountCents != null && Number.isFinite(Number(i.amountCents)) ? String((Number(i.amountCents) / 100).toFixed(2)).replace('.', ',') : '';
+      $('incidentLaudoUrl').value = i.laudoUrl || '';
+      $('incidentNotes').value = i.notes || '';
+      setMsg($('incidentMsg'), 'Editando sinistro.');
+    }
+
+    function insuranceTitleById(id) {
+      const pid = String(id || '');
+      if (!pid) return '-';
+      const p = state.insurances.find((x) => x && x.id === pid);
+      return p && p.title ? p.title : pid;
+    }
+
+    function renderIncidentPolicyOptions() {
+      const sel = $('incidentPolicyId');
+      const filterSel = $('incidentFilterPolicy');
+
+      sel.innerHTML = '';
+      filterSel.innerHTML = '';
+
+      const opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = '(sem vínculo)';
+      sel.appendChild(opt0);
+
+      const optAll = document.createElement('option');
+      optAll.value = '';
+      optAll.textContent = '(todas)';
+      filterSel.appendChild(optAll);
+
+      for (const p of state.insurances) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.title || p.id;
+        sel.appendChild(opt.cloneNode(true));
+
+        const optF = document.createElement('option');
+        optF.value = p.id;
+        optF.textContent = p.title || p.id;
+        filterSel.appendChild(optF);
+      }
+
+      filterSel.value = String(state.incidentFilterPolicyId || '');
     }
 
     function clearRiskForm() {
@@ -323,13 +477,17 @@
         setMsg($('ctxHint'), 'Carregando...');
         state.insurances = await listInsurances(state.condoId);
         state.risks = await listRisks(state.condoId);
+        renderIncidentPolicyOptions();
+        state.incidents = await listIncidents(state.condoId, { policyId: state.incidentFilterPolicyId || '' });
 
         $('insurancesList').innerHTML = state.insurances.length
           ? state.insurances.map((i) => {
               const badge = dueSoonBadge(i.endAt, i.status, 'Vencendo');
               const dates = `${toDateInputValue(i.startAt) || '-'} → ${toDateInputValue(i.endAt) || '-'}`;
+              const renewal = toDateInputValue(i.renewalAt) ? ` • Renovação: ${toDateInputValue(i.renewalAt)}` : '';
+              const url = i.policyUrl ? ` • <a href="${i.policyUrl}" target="_blank" rel="noopener">Apólice</a>` : '';
               const right = `${badge} <span class="badge">${i.status || 'ativo'}</span>`;
-              const sub = `Seguradora: ${i.provider || '-'} • Apólice: ${i.policyNumber || '-'} • Período: ${dates}${i.notes ? ` • ${i.notes}` : ''}`;
+              const sub = `Seguradora: ${i.provider || '-'} • Nº: ${i.policyNumber || '-'} • Período: ${dates}${renewal}${url}${i.notes ? ` • ${i.notes}` : ''}`;
               return asItemRow(
                 `${(i.title || '(sem título)')}`,
                 sub,
@@ -356,6 +514,24 @@
             }).join('')
           : '<p class="muted">Nenhum risco cadastrado.</p>';
 
+        $('incidentsList').innerHTML = state.incidents.length
+          ? state.incidents.map((it) => {
+              const pol = it.policyId ? insuranceTitleById(it.policyId) : '-';
+              const date = toDateInputValue(it.date) || '-';
+              const amount = it.amountCents != null && Number.isFinite(Number(it.amountCents)) ? `R$ ${(Number(it.amountCents) / 100).toFixed(2).replace('.', ',')}` : '';
+              const laudo = it.laudoUrl ? `<a href="${it.laudoUrl}" target="_blank" rel="noopener">Laudo</a>` : '';
+              const right = `<span class="badge">${it.status || 'aberto'}</span>`;
+              const sub = `Apólice: ${pol} • Data: ${date}${amount ? ` • ${amount}` : ''}${it.notes ? ` • ${it.notes}` : ''}`;
+              return asItemRow(
+                `${it.title || '(sem título)'}`,
+                sub,
+                laudo,
+                `<button class="btn btn--ghost" type="button" data-action="incident-edit" data-id="${it.id}">Editar</button>
+                 <button class="btn btn--ghost" type="button" data-action="incident-del" data-id="${it.id}">Excluir</button>`
+              );
+            }).join('')
+          : '<p class="muted">Nenhum sinistro cadastrado.</p>';
+
         setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
       } catch (err) {
         setMsg($('ctxHint'), err.message || String(err), true);
@@ -369,6 +545,12 @@
 
       $('insuranceClearBtn').addEventListener('click', () => clearInsuranceForm());
       $('riskClearBtn').addEventListener('click', () => clearRiskForm());
+      $('incidentClearBtn').addEventListener('click', () => clearIncidentForm());
+
+      $('incidentFilterPolicy').addEventListener('change', async (e) => {
+        state.incidentFilterPolicyId = String(e.target.value || '');
+        await renderAll();
+      });
 
       $('insuranceDeleteBtn').addEventListener('click', async () => {
         const id = String($('insuranceId').value || '');
@@ -395,6 +577,20 @@
           await renderAll();
         } catch (err) {
           setMsg($('riskMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('incidentDeleteBtn').addEventListener('click', async () => {
+        const id = String($('incidentId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este sinistro?')) return;
+        try {
+          await deleteIncident(state.condoId, id);
+          clearIncidentForm();
+          setMsg($('incidentMsg'), 'Sinistro excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('incidentMsg'), err.message || String(err), true);
         }
       });
 
@@ -448,6 +644,31 @@
         }
       });
 
+      $('incidentsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'incident-edit') {
+          const it = state.incidents.find((x) => x && x.id === id);
+          if (it) fillIncidentForm(it);
+          return;
+        }
+
+        if (action === 'incident-del') {
+          if (!confirm('Excluir este sinistro?')) return;
+          try {
+            await deleteIncident(state.condoId, id);
+            if ($('incidentId').value === id) clearIncidentForm();
+            setMsg($('incidentMsg'), 'Sinistro excluído.');
+            await renderAll();
+          } catch (err) {
+            setMsg($('incidentMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
       $('insuranceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         try {
@@ -460,6 +681,8 @@
             status: $('insuranceStatus').value,
             startDate: $('insuranceStart').value,
             endDate: $('insuranceEnd').value,
+            renewalDate: $('insuranceRenewal').value,
+            policyUrl: $('insuranceUrl').value,
             notes: $('insuranceNotes').value,
           };
 
@@ -507,6 +730,36 @@
           setMsg($('riskMsg'), err.message || String(err), true);
         }
       });
+
+      $('incidentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('incidentId').value || '');
+          const payload = {
+            title: $('incidentTitle').value,
+            policyId: $('incidentPolicyId').value,
+            status: $('incidentStatus').value,
+            date: $('incidentDate').value,
+            amount: $('incidentAmount').value,
+            laudoUrl: $('incidentLaudoUrl').value,
+            notes: $('incidentNotes').value,
+          };
+
+          if (id) {
+            await updateIncident(state.condoId, id, payload);
+            setMsg($('incidentMsg'), 'Sinistro atualizado.');
+          } else {
+            await createIncident(state.condoId, payload);
+            setMsg($('incidentMsg'), 'Sinistro cadastrado.');
+          }
+
+          clearIncidentForm();
+          await renderAll();
+        } catch (err) {
+          setMsg($('incidentMsg'), err.message || String(err), true);
+        }
+      });
     }
 
     async function bootstrap() {
@@ -524,6 +777,7 @@
       bindActions();
       clearInsuranceForm();
       clearRiskForm();
+      clearIncidentForm();
 
       watchAuthAndContext((ev) => {
         const user = ev && ev.user ? ev.user : null;
@@ -548,6 +802,7 @@
 
         clearInsuranceForm();
         clearRiskForm();
+        clearIncidentForm();
         renderAll().catch(() => {});
       });
 

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Viva Haven — Componentes</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__brand">
+      <strong>Viva Haven</strong>
+      <span class="muted" style="font-weight: 800;">/ components</span>
+    </div>
+    <div class="topbar__actions">
+      <button class="btn" id="btnToastInfo" type="button">Toast</button>
+      <button class="btn" id="btnConfirm" type="button">Confirm</button>
+      <button class="btn" id="btnLoading" type="button">Loading</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="container">
+      <div class="grid" style="gap: 18px;">
+        <section class="card">
+          <h1 class="h1">Componentes (catálogo interno)</h1>
+          <p class="muted" style="margin-top: 6px;">Página para validar tokens, componentes e estados sem depender do Firebase.</p>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Badges</h2>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px;">
+            <span class="badge">Padrão</span>
+            <span class="badge badge--alt">Destaque</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Botões</h2>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px;">
+            <button class="btn" type="button">Default</button>
+            <button class="btn btn--primary" type="button">Primary</button>
+            <button class="btn btn--ghost" type="button">Ghost</button>
+            <button class="btn btn--danger" type="button">Danger</button>
+            <button class="btn" type="button" disabled>Disabled</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Campos</h2>
+          <div class="grid" style="margin-top: 12px;">
+            <label class="field">
+              <span>Nome</span>
+              <input class="input" placeholder="Ex: Maria" />
+              <small class="helper-text">Helper text</small>
+            </label>
+            <label class="field">
+              <span>E-mail (inválido)</span>
+              <input class="input is-invalid" value="email@" />
+              <small class="error-text">E-mail inválido.</small>
+            </label>
+            <label class="field">
+              <span>Tipo</span>
+              <select class="select">
+                <option>Morador</option>
+                <option>Síndico</option>
+                <option>Gestor</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Descrição</span>
+              <textarea class="textarea" placeholder="Texto longo…"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Banner</h2>
+          <div class="banner banner--info" style="margin-top: 12px;">
+            <div>
+              <p class="banner__title">Informação</p>
+              <p class="banner__msg">Exemplo de mensagem curta para orientar o usuário.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Tabela</h2>
+          <div class="tableWrap" style="margin-top: 12px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Status</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Taxa condominial</td>
+                  <td><span class="badge">Pendente</span></td>
+                  <td>R$ 320,00</td>
+                </tr>
+                <tr>
+                  <td>Fundo reserva</td>
+                  <td><span class="badge badge--alt">OK</span></td>
+                  <td>R$ 50,00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">Empty + Skeleton</h2>
+          <div class="grid" style="margin-top: 12px;">
+            <div class="emptyState">
+              <p class="emptyState__title">Nada por aqui</p>
+              <p class="emptyState__sub">Quando não houver dados, use este padrão.</p>
+            </div>
+            <div style="display:grid; gap:10px;">
+              <div class="skeleton" style="height: 14px; width: 60%;"></div>
+              <div class="skeleton" style="height: 12px; width: 92%;"></div>
+              <div class="skeleton" style="height: 12px; width: 78%;"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="h2">No Storage (URLs apenas)</h2>
+          <div class="grid" style="margin-top: 12px;">
+            <div class="banner banner--warning">
+              <div>
+                <p class="banner__title">Anexos</p>
+                <p class="banner__msg">Este sistema não usa Firebase Storage. Cadastre apenas links (Drive, OneDrive, etc.).</p>
+              </div>
+            </div>
+            <label class="field">
+              <span>URL do anexo</span>
+              <input class="input" placeholder="https://..." />
+              <small class="helper-text">Dica: garanta que o link esteja público/compartilhável.</small>
+            </label>
+            <label class="field">
+              <span>Upload (desativado)</span>
+              <input class="input" type="file" disabled />
+              <small class="helper-text">Upload de arquivo está desativado por política.</small>
+            </label>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { toast, confirmDialog, setLoading } from '/js/ui.js';
+
+    const $ = (id) => document.getElementById(id);
+
+    $('btnToastInfo').addEventListener('click', () => {
+      toast('Toast de exemplo (info).', { type: 'info' });
+      toast('Operação concluída.', { type: 'success', title: 'Sucesso' });
+      toast('Verifique os dados.', { type: 'warning', title: 'Atenção' });
+      toast('Falha ao salvar.', { type: 'error', title: 'Erro' });
+    });
+
+    $('btnConfirm').addEventListener('click', async () => {
+      const ok = await confirmDialog('Deseja confirmar esta ação?');
+      toast(ok ? 'Confirmado.' : 'Cancelado.', { type: ok ? 'success' : 'warning' });
+    });
+
+    $('btnLoading').addEventListener('click', async () => {
+      setLoading(true, 'Simulando carregamento…');
+      await new Promise((r) => setTimeout(r, 900));
+      setLoading(false);
+      toast('Loading encerrado.', { type: 'success' });
+    });
+  </script>
+</body>
+</html>

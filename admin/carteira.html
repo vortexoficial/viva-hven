@@ -34,7 +34,7 @@
           <span id="msg" class="muted"></span>
         </div>
       </div>
-      <p class="muted" style="margin-top:10px;">Comparativo por condomínio: inadimplência (cotas vencidas), tickets em aberto e gastos do mês.</p>
+      <p class="muted" style="margin-top:10px;">Comparativo por condomínio: inadimplência (cotas vencidas), tickets em aberto, gastos do mês, gasto por unidade (quando disponível) e planos de manutenção vencidos.</p>
     </section>
 
     <section class="card">
@@ -56,6 +56,14 @@
           <span>Gastos (mês)</span>
           <div id="sumExpenses" class="badge"></div>
         </div>
+        <div class="field">
+          <span>Gasto/unidade (mês)</span>
+          <div id="sumExpensesPerUnit" class="badge"></div>
+        </div>
+        <div class="field">
+          <span>Manutenções atrasadas</span>
+          <div id="sumOverdueMaintenance" class="badge"></div>
+        </div>
         <div class="field" style="grid-column:1/-1;">
           <span>Mês de referência</span>
           <div id="sumMonth" class="badge"></div>
@@ -71,11 +79,17 @@
 
   <script type="module">
     import { initFirebase } from '/js/firebase-init.js';
-    import { protect } from '/js/route-guard.js';
+    import { setupAdminPage } from '/js/admin-access.js';
 
     import { getOrgPortfolio, getMyProfile, listVisibleCondos } from '/js/modules/portfolio.js';
 
-    await protect(['/admin/'], ['CARTEIRA', 'ADMINISTRADORA']);
+    const env = await setupAdminPage({
+      condoRequired: false,
+      rolesAny: ['CARTEIRA', 'GESTOR_CARTEIRA', 'ADMINISTRADORA', 'ADMIN'],
+      logoutBtnId: null,
+      userBadgeId: 'userBadge',
+    });
+    if (!env || env.ok !== true) return;
 
     const $ = (id) => document.getElementById(id);
 
@@ -117,6 +131,8 @@
       return '';
     }
 
+    // `setupAdminPage` já validou acesso e tenta manter `vh_active_org` coerente.
+
     function render() {
       const p = state.portfolio;
       if (!p) {
@@ -131,6 +147,8 @@
       $('sumDelinquency').textContent = `${fmt(t.delinquentCents || 0)} • ${t.delinquentCount || 0} cobranças`;
       $('sumTickets').textContent = String(t.openTicketsCount || 0);
       $('sumExpenses').textContent = fmt(t.monthExpensesCents || 0);
+      $('sumExpensesPerUnit').textContent = t.monthExpensesPerUnitCents != null ? fmt(t.monthExpensesPerUnitCents) : '-';
+      $('sumOverdueMaintenance').textContent = String(t.overdueMaintenancePlansCount || 0);
       $('sumMonth').textContent = String(p.monthRef || '-');
 
       const items = Array.isArray(p.items) ? p.items : [];
@@ -141,10 +159,12 @@
                 <span class="badge">Tickets: ${x.openTicketsCount || 0}</span>
                 <span class="badge">Inad.: ${fmt(x.delinquentCents || 0)}</span>
                 <span class="badge">Gastos mês: ${fmt(x.monthExpensesCents || 0)}</span>
+                <span class="badge">Gasto/un: ${x.monthExpensesPerUnitCents != null ? fmt(x.monthExpensesPerUnitCents) : '-'}</span>
+                <span class="badge">Manut. atras.: ${x.overdueMaintenancePlansCount || 0}</span>
               </div>
             `;
 
-            const sub = `Inadimplência: ${x.delinquentCount || 0} cobranças vencidas • CondoId: ${x.condoId}`;
+            const sub = `Inadimplência: ${x.delinquentCount || 0} cobranças vencidas • Unidades: ${x.unitsCount != null ? x.unitsCount : '-'} • CondoId: ${x.condoId}`;
             return asItemRow(x.condoName || x.condoId, sub, right);
           }).join('')
         : '<p class="muted">Nenhum condomínio encontrado para esta org.</p>';

@@ -237,7 +237,7 @@
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { protect } from '/js/route-guard.js';
+      import { setupAdminPage } from '/js/admin-access.js';
       import { logoutUser } from '/js/auth.js';
       import { watchAuthAndContext, getActiveContext, openSelector, getAvailableCondos, refreshAvailableCondos } from '/js/active-context.js';
       import {
@@ -258,7 +258,12 @@
         deleteMandate,
       } from '/js/modules/governance.js';
 
-      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+      const env = await setupAdminPage({
+        rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+        logoutBtnId: null,
+        userBadgeId: 'userBadge',
+      });
+      if (!env || env.ok !== true) return;
 
       const $ = (id) => document.getElementById(id);
 

@@ -129,7 +129,7 @@
       const root = $('annList');
       if (!root) return;
 
-      const items = await listAnnouncements(state.condoId, { publishedOnly: true });
+      const items = await listAnnouncements(state.condoId, { publishedOnly: true, channel: 'app' });
       if (!items.length) {
         root.innerHTML = '<p class="muted">Nenhum aviso publicado.</p>';
         return;

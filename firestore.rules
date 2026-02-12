@@ -306,6 +306,12 @@ service cloud.firestore {
     match /orgs/{orgId} {
       allow get, list: if hasOrgPerm(orgId, 'portfolio.view');
       allow create, update, delete: if hasOrgPerm(orgId, 'portfolio.manage');
+
+      // Templates de comunicação por carteira (org)
+      match /commsTemplates/{templateId} {
+        allow get, list: if hasOrgPerm(orgId, 'portfolio.view');
+        allow create, update, delete: if hasOrgPerm(orgId, 'portfolio.manage');
+      }
     }
 
     match /organizations/{orgId} {
@@ -669,6 +675,32 @@ service cloud.firestore {
       match /employees/{employeeId} {
         allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
         allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+
+        // Subcoleções do funcionário (cadastro administrativo)
+        match /shifts/{shiftId} {
+          allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+        }
+
+        match /leaves/{leaveId} {
+          allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+        }
+
+        match /trainings/{trainingId} {
+          allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+        }
+
+        match /epiChecks/{checkId} {
+          allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+        }
+
+        match /occurrences/{occurrenceId} {
+          allow get, list: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'people.manage') || canManageCondo(condoId);
+        }
       }
 
       // People (cadastro unificado) — solicitado
@@ -762,10 +794,37 @@ service cloud.firestore {
       match /announcements/{announcementId} {
         allow get, list: if canReadComms(condoId);
         allow create, update, delete: if canManageComms(condoId);
+
+        // Intenção de envio por canal (email/whatsapp) — MVP (não dispara de verdade)
+        match /deliveries/{deliveryId} {
+          allow get, list: if canManageComms(condoId);
+
+          function validDeliveryShape() {
+            return (request.resource.data.condoId == condoId) &&
+                   (request.resource.data.announcementId == announcementId) &&
+                   (request.resource.data.channel in ['email', 'whatsapp']) &&
+                   (request.resource.data.status in ['pendente', 'enviado', 'erro']);
+          }
+
+          allow create: if canManageComms(condoId) &&
+                        validDeliveryShape() &&
+                        request.resource.data.createdBy == uid() &&
+                        request.resource.data.createdAt == request.time;
+
+          // Update apenas por gestão (ex.: marcar como enviado/erro)
+          allow update: if canManageComms(condoId);
+          allow delete: if canManageComms(condoId);
+        }
       }
 
       // Alias "notices" (solicitado)
       match /notices/{noticeId} {
+        allow get, list: if canReadComms(condoId);
+        allow create, update, delete: if canManageComms(condoId);
+      }
+
+      // Templates de comunicação por condomínio
+      match /commsTemplates/{templateId} {
         allow get, list: if canReadComms(condoId);
         allow create, update, delete: if canManageComms(condoId);
       }
@@ -859,6 +918,22 @@ service cloud.firestore {
         // MVP: cadastro administrativo
         allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
         allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+
+        // Subcoleções do contrato
+        match /adjustments/{adjustmentId} {
+          allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        }
+
+        match /evaluations/{evaluationId} {
+          allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        }
+
+        match /services/{serviceId} {
+          allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+          allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        }
       }
 
       match /insurances/{insuranceId} {
@@ -867,8 +942,26 @@ service cloud.firestore {
         allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
       }
 
+      // Nome novo (compat): apólices
+      match /insurancePolicies/{policyId} {
+        allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+      }
+
       match /risks/{riskId} {
         // MVP: cadastro administrativo
+        allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+      }
+
+      // Nome novo (compat): mapa de riscos
+      match /riskMap/{riskId} {
+        allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+        allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
+      }
+
+      // Sinistros
+      match /incidents/{incidentId} {
         allow get, list: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
         allow create, update, delete: if hasCondoPerm(condoId, 'docs.manage') || canManageCondo(condoId);
       }

@@ -16,38 +16,8 @@
   }
 
   function ensureShellStyles() {
-    if (document.getElementById('vh-app-shell-style')) return;
-
-    var style = document.createElement('style');
-    style.id = 'vh-app-shell-style';
-    style.textContent =
-      '.vhShell{min-height:100vh;}' +
-      '.vhShell__content{min-height:100vh;padding-bottom:110px;}' +
-      '.vhTopBar{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 85%, transparent);' +
-      'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}' +
-      '.vhTopBar__inner{max-width:430px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:12px;}' +
-      '.vhTopBar__title{margin:0;font-size:14px;font-weight:800;letter-spacing:-0.2px;color:var(--text);}' +
-      '.vhTopBar__spacer{flex:1;}' +
-      '.vhTopBar__actions{display:flex;align-items:center;gap:10px;}' +
-      '.vhIconBtn{width:40px;height:40px;border-radius:14px;border:1px solid var(--border);background:var(--surface);' +
-      'display:grid;place-items:center;cursor:pointer;}' +
-      '.vhIconBtn svg{width:18px;height:18px;stroke:var(--text-2);}' +
-      '.vhIconBtn:active{transform:scale(0.96);}' +
-      '.vhShell .bottomNav{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:382px;' +
-      'background:rgba(var(--surface-rgb, 255,255,255), 0.10);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
-      'border:1px solid var(--border);border-radius:24px;display:flex;justify-content:space-between;padding:12px 24px;box-shadow:0 12px 40px rgba(0,0,0,0.12);z-index:1000;}' +
-      '.vhShell .navItem{display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;width:44px;height:44px;border-radius:14px;' +
-      'transition:all 0.2s ease;position:relative;}' +
-      '.vhShell .navItem__icon{color:var(--text-2);display:flex;}' +
-      '.vhShell .navItem__icon svg{width:24px;height:24px;stroke-width:2;}' +
-      '.vhShell .navItem--active{background:color-mix(in srgb, var(--brand-b) 12%, transparent);}' +
-      '.vhShell .navItem--active .navItem__icon{color:var(--brand-b);transform:scale(1.08);}' +
-      '.vhShell .navIndicator{position:absolute;bottom:-8px;width:4px;height:4px;background:var(--brand-b);border-radius:50%;opacity:0;transform:translateY(4px);transition:all 0.2s ease;}' +
-      '.vhShell .navItem--active .navIndicator{opacity:1;transform:translateY(0);}' +
-      '.vhShell .notifDot{position:absolute;top:10px;right:10px;width:8px;height:8px;background:#FF5252;border-radius:50%;border:2px solid var(--surface);}' +
-      '@media (max-width:430px){.vhTopBar__inner{padding-left:16px;padding-right:16px;}}';
-
-    document.head.appendChild(style);
+    // CSS movido para /css/layout.css
+    return;
   }
 
   function iconSvg(name) {
@@ -107,21 +77,19 @@
       );
     }
 
-    // Rotas atuais do projeto (sem backend)
+    // Rotas atuais do projeto (multi-page)
     var homeHref = '/app/home.html';
     var perfilHref = '/perfil.html';
-
     var chamadosHref = '/app/chamados.html';
     var avisosHref = '/app/avisos.html';
-    // Ainda não existe tela de chat no MVP.
-    var chatHref = '#';
+    var boletosHref = '/app/boletos.html';
 
     return (
       '<nav class="bottomNav" aria-label="Navegação">' +
       item('home', homeHref, 'home', false) +
       item('chamados', chamadosHref, 'tool', false) +
       item('avisos', avisosHref, 'bell', true) +
-      item('chat', chatHref, 'chat', false) +
+      item('boletos', boletosHref, 'chat', false) +
       item('menu', perfilHref, 'menu', false) +
       '</nav>'
     );
@@ -146,23 +114,7 @@
       bottomNavHtml +
       '</div>';
 
-    // Links placeholder (href="#") devem responder a clique.
-    // Evita botões "mortos" no shell e mantém UX simples.
-    try {
-      if (!root.getAttribute('data-vh-shell-bound')) {
-        root.setAttribute('data-vh-shell-bound', '1');
-        root.addEventListener('click', function (e) {
-          var a = e.target && e.target.closest ? e.target.closest('a') : null;
-          if (!a) return;
-          var href = a.getAttribute('href');
-          if (href !== '#') return;
-          e.preventDefault();
-          try {
-            window.alert('Funcionalidade em desenvolvimento.');
-          } catch (err) {}
-        });
-      }
-    } catch (e) {}
+    // Sem placeholders no shell: rotas devem existir.
 
     // Mantém o comportamento de tema existente; não altera a chave.
     try {

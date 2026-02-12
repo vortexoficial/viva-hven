@@ -1,140 +1,17 @@
-/* Viva Haven | styles.css (vanilla, mobile-first) */
+/* Viva Haven — styles.css (entrypoint)
+  Mantido como caminho único referenciado pelas páginas (/css/styles.css).
+  O design system real está em tokens/base/components/layout.
+  O CSS antigo permanece em camada "legacy" para não quebrar telas.
+*/
 
-:root {
-  --font-sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
-    "Segoe UI Emoji";
+@layer legacy, tokens, base, components, layout;
 
-  --bg: #0b1120;
-  --bg-alt: #111827;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-2: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-2: rgba(255, 255, 255, 0.12);
+@import url('/css/tokens.css') layer(tokens);
+@import url('/css/base.css') layer(base);
+@import url('/css/components.css') layer(components);
+@import url('/css/layout.css') layer(layout);
 
-  --text: rgba(255, 255, 255, 0.95);
-  --muted: rgba(255, 255, 255, 0.65);
-  --faint: rgba(255, 255, 255, 0.45);
-
-  --brand-a: #7c3aed;
-  --brand-b: #22d3ee;
-  --brand: linear-gradient(135deg, var(--brand-a), var(--brand-b));
-
-  --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.2);
-
-  --radius: 20px;
-  --radius-sm: 14px;
-
-  --container: 1120px;
-  --pad: 24px;
-  --section-spacing: 96px;
-
-  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-
-  --focus: 0 0 0 3px rgba(34, 211, 238, 0.35);
-}
-
-:root[data-theme="dark"] {
-  /* Mantém o tema padrão (escuro); tokens já são dark-first */
-}
-
-/* Tema claro opcional (toggle) */
-:root:not([data-theme="dark"]) {
-  --bg: #ffffff;
-  --bg-alt: #f3f4f6;
-  --surface: #ffffff;
-  --surface-2: #f9fafb;
-  --border: #e5e7eb;
-  --border-2: #d1d5db;
-
-  --text: #111827;
-  --muted: #4b5563;
-  --faint: #9ca3af;
-
-  --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.04);
-}
-
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at 15% 0%, rgba(124, 58, 237, 0.15), transparent 40%),
-    radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 40%),
-    var(--bg);
-  background-attachment: fixed;
-  color: var(--text);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font: inherit; color: inherit; }
-
-img { display: block; max-width: 100%; }
-
-.icon {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  flex: none;
-  color: inherit;
-}
-.icon--sm { width: 16px; height: 16px; }
-.icon--md { width: 24px; height: 24px; }
-
-.container {
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: 0 var(--pad);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.finePrint {
-  margin: 0;
-  color: var(--faint);
-  font-size: 12px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 16px;
-  border-radius: 12px; /* Changed from 999px to 12px (rounded rect) */
-  background: var(--surface);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--muted);
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  text-align: center;
-  text-wrap: balance; /* Improves line break */
-  max-width: fit-content;
-  line-height: 1.5;
-  margin: 0 0 16px; /* Reset default p margin */
-}
-.badge--alt {
-  background: rgba(124, 58, 237, 0.14);
-  border-color: rgba(124, 58, 237, 0.22);
-}
+@layer legacy {
 
 /* Scroll progress */
 .scrollProgress {
@@ -1443,3 +1320,5 @@ body.is-menu-open { overflow: hidden; }
   html { scroll-behavior: auto; }
   * { transition: none !important; animation: none !important; }
 }
+
+} /* end @layer legacy */

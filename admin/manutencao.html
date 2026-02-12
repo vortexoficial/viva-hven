@@ -105,7 +105,7 @@
               </div>
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contrato (contractId)</label>
-                <input id="assetContractId" class="input" placeholder="Opcional" />
+                <input id="assetContractId" class="input" placeholder="Opcional" list="contractsDatalist" />
               </div>
             </div>
 
@@ -431,11 +431,11 @@
               <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
                 <div>
                   <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fornecedor (supplierId)</label>
-                  <input id="woSupplierId" class="input" placeholder="Opcional" />
+                  <input id="woSupplierId" class="input" placeholder="Opcional" list="suppliersDatalist" />
                 </div>
                 <div>
                   <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contrato (contractId)</label>
-                  <input id="woContractId" class="input" placeholder="Opcional" />
+                  <input id="woContractId" class="input" placeholder="Opcional" list="contractsDatalist" />
                 </div>
                 <div>
                   <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Custo (R$)</label>
@@ -486,15 +486,19 @@
             </div>
             <div id="historyList" style="display:grid;gap:10px;"></div>
           </article>
+
+          <datalist id="suppliersDatalist"></datalist>
+          <datalist id="contractsDatalist"></datalist>
       </section>
     </main>
 
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { protect } from '/js/route-guard.js';
+      import { setupAdminPage } from '/js/admin-access.js';
       import { logoutUser } from '/js/auth.js';
       import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+      import { listSuppliers, listContracts } from '/js/modules/contracts.js';
       import {
         listAssets,
         createAsset,
@@ -520,7 +524,12 @@
         listAssetHistory,
       } from '/js/modules/maintenance.js';
 
-      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+      const env = await setupAdminPage({
+        rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+        logoutBtnId: null,
+        userBadgeId: 'userBadge',
+      });
+      if (!env || env.ok !== true) return;
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
@@ -528,6 +537,8 @@
 
       const state = {
         condoId: '',
+        suppliers: [],
+        contracts: [],
       };
 
       function setStatus(msg) {
@@ -704,6 +715,41 @@
         });
       }
 
+      function renderSupplierContractDatalists() {
+        const supDl = $('suppliersDatalist');
+        const conDl = $('contractsDatalist');
+        if (supDl) supDl.innerHTML = '';
+        if (conDl) conDl.innerHTML = '';
+
+        (state.suppliers || []).forEach((s) => {
+          if (!supDl || !s) return;
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name || s.id;
+          supDl.appendChild(opt);
+        });
+
+        (state.contracts || []).forEach((c) => {
+          if (!conDl || !c) return;
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.title || c.id;
+          conDl.appendChild(opt);
+        });
+      }
+
+      async function refreshSupplierContractLookups() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const [suppliers, contracts] = await Promise.all([
+          listSuppliers(cId),
+          listContracts(cId),
+        ]);
+        state.suppliers = suppliers || [];
+        state.contracts = contracts || [];
+        renderSupplierContractDatalists();
+      }
+
       async function refreshAll() {
         const cId = currentCondoId();
         if (!cId) {
@@ -714,6 +760,8 @@
           renderList($('historyList'), [], () => {}, 'Selecione um condomínio.');
           return;
         }
+
+        await refreshSupplierContractLookups();
 
         const assets = await listAssets(cId);
         fillAssetSelect($('planAssetId'), assets, true);

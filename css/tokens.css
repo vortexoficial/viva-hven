@@ -1,0 +1,103 @@
+/* Viva Haven — Design Tokens (premium, Apple-inspired)
+   Fonte de verdade para cores, tipografia, espaçamentos e estados.
+   Tema: dark-first com toggle via [data-theme="dark"].
+*/
+
+:root {
+  /* Typography */
+  --font-sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+
+  /* Type scale */
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-32: 32px;
+
+  /* Radius (spec) */
+  --radius-input: 12px;
+  --radius-base: 14px;
+  --radius-card: 16px;
+  --radius-modal: 18px;
+
+  /* Legacy aliases (compat com estilos existentes) */
+  --radius: var(--radius-card);
+  --radius-sm: var(--radius-base);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Layout */
+  --container: 1120px;
+  --container-wide: 1200px;
+  --pad: 24px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+
+  /* Brand */
+  --brand-a: #7c3aed;
+  --brand-b: #22d3ee;
+  --brand: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+
+  /* Base surfaces (dark-first) */
+  --bg: #0b1120;
+  --bg-alt: #111827;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.09);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --text: rgba(255, 255, 255, 0.96);
+  --muted: rgba(255, 255, 255, 0.68);
+  --faint: rgba(255, 255, 255, 0.46);
+
+  /* States */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+
+  /* Shadows (suaves) */
+  --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.18);
+
+  /* Focus */
+  --focus: 0 0 0 3px rgba(34, 211, 238, 0.35);
+}
+
+:root[data-theme="dark"] {
+  /* Mantém o tema padrão (dark-first). */
+}
+
+/* Light mode (quando NÃO está com data-theme="dark") */
+:root:not([data-theme="dark"]) {
+  --bg: #ffffff;
+  --bg-alt: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --border: #e5e7eb;
+  --border-2: #d1d5db;
+
+  --text: #111827;
+  --muted: #4b5563;
+  --faint: #9ca3af;
+
+  --shadow: 0 18px 60px rgba(0, 0, 0, 0.10);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.06);
+
+  --focus: 0 0 0 3px rgba(124, 58, 237, 0.24);
+}

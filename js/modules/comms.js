@@ -14,6 +14,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   query,
@@ -57,20 +58,35 @@ function toDateOnly(value) {
 async function writeAuditLog(db, payload) {
   payload = payload || {};
 
-  const orgId = cleanString(payload.orgId);
-  if (!orgId) throw new Error('orgId é obrigatório para auditLogs.');
+  const condoId = cleanString(payload.condoId);
+  if (!condoId) throw new Error('condoId é obrigatório para auditLogs.');
+
+  const orgId = cleanString(payload.orgId) || (await getOrgIdForCondo(db, condoId));
+  if (!orgId) throw new Error('Condomínio sem orgId.');
+
+  const actorUid = cleanString(payload.actorUid);
+  const action = cleanString(payload.action);
+  const entityType = cleanString(payload.entityType);
+  const entityId = cleanString(payload.entityId);
+
+  if (!actorUid) throw new Error('actorUid é obrigatório para auditLogs.');
+  if (!action) throw new Error('action é obrigatório para auditLogs.');
+  if (!entityType) throw new Error('entityType é obrigatório para auditLogs.');
+  if (!entityId) throw new Error('entityId é obrigatório para auditLogs.');
 
   const docData = {
     orgId,
-    condoId: payload.condoId ? cleanString(payload.condoId) : null,
-    actorUid: cleanString(payload.actorUid),
-    action: cleanString(payload.action),
+    condoId,
+    actorUid,
+    action,
+    entityType,
+    entityId,
     targetPath: cleanString(payload.targetPath),
     createdAt: serverTimestamp(),
     metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
   };
 
-  await addDoc(collection(db, 'auditLogs'), docData);
+  await addDoc(collection(db, 'condos', condoId, 'auditLogs'), docData);
 }
 
 async function getOrgIdForCondo(db, condoId) {
@@ -106,6 +122,268 @@ function normalizeReceiptKind(value) {
   if (['aviso', 'avisos', 'anuncio', 'anuncios', 'comunicado', 'comunicados'].includes(v)) return 'announcement';
   if (['enquete', 'enquetes'].includes(v)) return 'poll';
   return 'announcement';
+}
+
+function normalizeChannel(value) {
+  const v = cleanString(value).toLowerCase();
+  if (['app', 'inapp', 'in-app', 'in_app'].includes(v)) return 'app';
+  if (['email', 'e-mail', 'e_mail'].includes(v)) return 'email';
+  if (['whatsapp', 'wpp', 'wa'].includes(v)) return 'whatsapp';
+  return '';
+}
+
+function normalizeChannels(input) {
+  const raw = Array.isArray(input) ? input : (typeof input === 'string' ? [input] : []);
+  const norm = raw.map(normalizeChannel).filter(Boolean);
+  const unique = [];
+  const seen = new Set();
+  for (const c of norm) {
+    if (seen.has(c)) continue;
+    seen.add(c);
+    unique.push(c);
+  }
+  return unique;
+}
+
+function normalizeDeliveryStatus(value) {
+  const v = cleanString(value).toLowerCase();
+  if (['pendente', 'enviado', 'erro'].includes(v)) return v;
+  if (['pending', 'sent', 'error'].includes(v)) {
+    if (v === 'pending') return 'pendente';
+    if (v === 'sent') return 'enviado';
+    return 'erro';
+  }
+  return 'pendente';
+}
+
+function normalizeTemplateScope(value) {
+  const v = cleanString(value).toLowerCase();
+  if (['condo', 'condominio', 'condomínio'].includes(v)) return 'condo';
+  if (['org', 'carteira', 'portfolio'].includes(v)) return 'org';
+  return 'condo';
+}
+
+// ===== Templates =====
+export async function listCondoCommsTemplates(condoId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  const qs = await getDocs(collection(db, 'condos', cId, 'commsTemplates'));
+  const items = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+  items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+  return items;
+}
+
+export async function listOrgCommsTemplatesForCondo(condoId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  if (!orgId) return [];
+
+  const qs = await getDocs(collection(db, 'orgs', orgId, 'commsTemplates'));
+  const items = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+  items.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+  return items;
+}
+
+export async function createCondoCommsTemplate(condoId, data) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  data = data || {};
+  const name = cleanString(data.name);
+  const title = cleanString(data.title);
+  const body = cleanString(data.body);
+  const channelsDefault = normalizeChannels(data.channelsDefault);
+  if (!name) throw new Error('Nome do template é obrigatório.');
+  if (!title) throw new Error('Título do template é obrigatório.');
+  if (!body) throw new Error('Conteúdo do template é obrigatório.');
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  if (!orgId) throw new Error('Condomínio sem orgId.');
+
+  const docData = {
+    orgId,
+    condoId: cId,
+    scope: 'condo',
+    name,
+    title,
+    body,
+    channelsDefault,
+    createdBy: user.uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  const ref = await addDoc(collection(db, 'condos', cId, 'commsTemplates'), docData);
+
+  await writeAuditLog(db, {
+    orgId,
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.create',
+    entityType: 'commsTemplate',
+    entityId: ref.id,
+    targetPath: `condos/${cId}/commsTemplates/${ref.id}`,
+    metadata: { scope: 'condo' },
+  });
+
+  return { id: ref.id, ...docData };
+}
+
+export async function updateCondoCommsTemplate(condoId, templateId, data) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const tId = cleanString(templateId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!tId) throw new Error('templateId inválido.');
+
+  data = data || {};
+  const patch = { updatedAt: serverTimestamp() };
+  if (Object.prototype.hasOwnProperty.call(data, 'name')) patch.name = cleanString(data.name);
+  if (Object.prototype.hasOwnProperty.call(data, 'title')) patch.title = cleanString(data.title);
+  if (Object.prototype.hasOwnProperty.call(data, 'body')) patch.body = cleanString(data.body);
+  if (Object.prototype.hasOwnProperty.call(data, 'channelsDefault')) patch.channelsDefault = normalizeChannels(data.channelsDefault);
+
+  await updateDoc(doc(db, 'condos', cId, 'commsTemplates', tId), patch);
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  await writeAuditLog(db, {
+    orgId: orgId || 'unknown',
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.update',
+    entityType: 'commsTemplate',
+    entityId: tId,
+    targetPath: `condos/${cId}/commsTemplates/${tId}`,
+    metadata: { patch: data || {}, scope: 'condo' },
+  });
+}
+
+export async function deleteCondoCommsTemplate(condoId, templateId) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const tId = cleanString(templateId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!tId) throw new Error('templateId inválido.');
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  await deleteDoc(doc(db, 'condos', cId, 'commsTemplates', tId));
+
+  await writeAuditLog(db, {
+    orgId: orgId || 'unknown',
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.delete',
+    entityType: 'commsTemplate',
+    entityId: tId,
+    targetPath: `condos/${cId}/commsTemplates/${tId}`,
+    metadata: { scope: 'condo' },
+  });
+}
+
+export async function createOrgCommsTemplateForCondo(condoId, data) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  data = data || {};
+  const name = cleanString(data.name);
+  const title = cleanString(data.title);
+  const body = cleanString(data.body);
+  const channelsDefault = normalizeChannels(data.channelsDefault);
+  if (!name) throw new Error('Nome do template é obrigatório.');
+  if (!title) throw new Error('Título do template é obrigatório.');
+  if (!body) throw new Error('Conteúdo do template é obrigatório.');
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  if (!orgId) throw new Error('Condomínio sem orgId.');
+
+  const docData = {
+    orgId,
+    scope: 'org',
+    name,
+    title,
+    body,
+    channelsDefault,
+    createdBy: user.uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  const ref = await addDoc(collection(db, 'orgs', orgId, 'commsTemplates'), docData);
+
+  await writeAuditLog(db, {
+    orgId,
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.create',
+    entityType: 'commsTemplate',
+    entityId: ref.id,
+    targetPath: `orgs/${orgId}/commsTemplates/${ref.id}`,
+    metadata: { scope: 'org' },
+  });
+
+  return { id: ref.id, ...docData };
+}
+
+export async function updateOrgCommsTemplateForCondo(condoId, templateId, data) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const tId = cleanString(templateId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!tId) throw new Error('templateId inválido.');
+
+  data = data || {};
+  const patch = { updatedAt: serverTimestamp() };
+  if (Object.prototype.hasOwnProperty.call(data, 'name')) patch.name = cleanString(data.name);
+  if (Object.prototype.hasOwnProperty.call(data, 'title')) patch.title = cleanString(data.title);
+  if (Object.prototype.hasOwnProperty.call(data, 'body')) patch.body = cleanString(data.body);
+  if (Object.prototype.hasOwnProperty.call(data, 'channelsDefault')) patch.channelsDefault = normalizeChannels(data.channelsDefault);
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  if (!orgId) throw new Error('Condomínio sem orgId.');
+
+  await updateDoc(doc(db, 'orgs', orgId, 'commsTemplates', tId), patch);
+
+  await writeAuditLog(db, {
+    orgId,
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.update',
+    entityType: 'commsTemplate',
+    entityId: tId,
+    targetPath: `orgs/${orgId}/commsTemplates/${tId}`,
+    metadata: { patch: data || {}, scope: 'org' },
+  });
+}
+
+export async function deleteOrgCommsTemplateForCondo(condoId, templateId) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const tId = cleanString(templateId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!tId) throw new Error('templateId inválido.');
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  if (!orgId) throw new Error('Condomínio sem orgId.');
+
+  await deleteDoc(doc(db, 'orgs', orgId, 'commsTemplates', tId));
+
+  await writeAuditLog(db, {
+    orgId,
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'commsTemplate.delete',
+    entityType: 'commsTemplate',
+    entityId: tId,
+    targetPath: `orgs/${orgId}/commsTemplates/${tId}`,
+    metadata: { scope: 'org' },
+  });
 }
 
 function makeReceiptId(uid, kind, targetId) {
@@ -149,6 +427,7 @@ export async function listAnnouncements(condoId, opts) {
   opts = opts || {};
   const publishedOnly = !!opts.publishedOnly;
   const status = cleanString(opts.status);
+  const channel = normalizeChannel(opts.channel);
 
   const col = collection(db, 'condos', cId, 'announcements');
 
@@ -162,7 +441,15 @@ export async function listAnnouncements(condoId, opts) {
   }
 
   const items = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-  items.sort((a, b) => {
+  const filtered = channel
+    ? items.filter((a) => {
+        const ch = Array.isArray(a.channels) ? a.channels.map(normalizeChannel).filter(Boolean) : [];
+        // Compat: aviso antigo sem channels conta como in-app
+        return ch.length ? ch.includes(channel) : channel === 'app';
+      })
+    : items;
+
+  filtered.sort((a, b) => {
     const ap = a.publishedAt && typeof a.publishedAt.toDate === 'function' ? a.publishedAt.toDate().getTime() : 0;
     const bp = b.publishedAt && typeof b.publishedAt.toDate === 'function' ? b.publishedAt.toDate().getTime() : 0;
     if (ap !== bp) return bp - ap;
@@ -171,7 +458,7 @@ export async function listAnnouncements(condoId, opts) {
     return bu - au;
   });
 
-  return items;
+  return filtered;
 }
 
 export async function createAnnouncement(condoId, data) {
@@ -184,6 +471,8 @@ export async function createAnnouncement(condoId, data) {
   const body = cleanString(data.body);
   const status = normalizeAnnouncementStatus(data.status || 'rascunho');
   const publishedAt = data.publishedDate ? toDateOnly(data.publishedDate) : null;
+  const channels = normalizeChannels(data.channels);
+  const template = data.template && typeof data.template === 'object' ? data.template : null;
   if (!title) throw new Error('Título é obrigatório.');
   if (!body) throw new Error('Conteúdo é obrigatório.');
 
@@ -197,6 +486,13 @@ export async function createAnnouncement(condoId, data) {
     body,
     status,
     publishedAt: publishedAt || null,
+    channels: channels.length ? channels : ['app'],
+    template: template
+      ? {
+          scope: normalizeTemplateScope(template.scope),
+          id: cleanString(template.id),
+        }
+      : null,
     createdBy: user.uid,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -209,11 +505,57 @@ export async function createAnnouncement(condoId, data) {
     condoId: cId,
     actorUid: user.uid,
     action: 'announcement.create',
+    entityType: 'announcement',
+    entityId: ref.id,
     targetPath: `condos/${cId}/announcements/${ref.id}`,
     metadata: { status },
   });
 
+  // MVP: registra intenção de envio para canais externos (não envia de verdade)
+  try {
+    await ensureAnnouncementDeliveries(db, {
+      orgId,
+      condoId: cId,
+      announcementId: ref.id,
+      actorUid: user.uid,
+      channels: docData.channels,
+    });
+  } catch (e) {}
+
   return { id: ref.id, ...docData };
+}
+
+async function ensureAnnouncementDeliveries(db, payload) {
+  payload = payload || {};
+  const cId = cleanString(payload.condoId);
+  const aId = cleanString(payload.announcementId);
+  const orgId = cleanString(payload.orgId);
+  const actorUid = cleanString(payload.actorUid);
+  const channels = normalizeChannels(payload.channels);
+  if (!cId || !aId || !actorUid) return;
+
+  const external = channels.filter((c) => c === 'email' || c === 'whatsapp');
+  for (const ch of external) {
+    const deliveryId = ch; // determinístico
+    const deliveryRef = doc(db, 'condos', cId, 'announcements', aId, 'deliveries', deliveryId);
+    const snap = await getDoc(deliveryRef);
+    if (snap.exists()) continue;
+
+    const docData = {
+      orgId: orgId || null,
+      condoId: cId,
+      announcementId: aId,
+      channel: ch,
+      status: 'pendente',
+      provider: 'mock',
+      createdBy: actorUid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      errorMessage: null,
+    };
+
+    await setDoc(deliveryRef, docData);
+  }
 }
 
 export async function updateAnnouncement(condoId, announcementId, data) {
@@ -230,15 +572,43 @@ export async function updateAnnouncement(condoId, announcementId, data) {
   if (Object.prototype.hasOwnProperty.call(data, 'body')) patch.body = cleanString(data.body);
   if (Object.prototype.hasOwnProperty.call(data, 'status')) patch.status = normalizeAnnouncementStatus(data.status);
   if (Object.prototype.hasOwnProperty.call(data, 'publishedDate')) patch.publishedAt = toDateOnly(data.publishedDate);
+  if (Object.prototype.hasOwnProperty.call(data, 'channels')) {
+    const channels = normalizeChannels(data.channels);
+    patch.channels = channels.length ? channels : ['app'];
+  }
+  if (Object.prototype.hasOwnProperty.call(data, 'template')) {
+    const t = data.template && typeof data.template === 'object' ? data.template : null;
+    patch.template = t
+      ? {
+          scope: normalizeTemplateScope(t.scope),
+          id: cleanString(t.id),
+        }
+      : null;
+  }
 
   await updateDoc(doc(db, 'condos', cId, 'announcements', aId), patch);
 
   const orgId = await getOrgIdForCondo(db, cId);
+
+  // Se adicionou canais externos, registra intenção de envio.
+  try {
+    const channels = Array.isArray(patch.channels) ? patch.channels : normalizeChannels(data.channels);
+    await ensureAnnouncementDeliveries(db, {
+      orgId: orgId || null,
+      condoId: cId,
+      announcementId: aId,
+      actorUid: user.uid,
+      channels,
+    });
+  } catch (e) {}
+
   await writeAuditLog(db, {
     orgId: orgId || 'unknown',
     condoId: cId,
     actorUid: user.uid,
     action: 'announcement.update',
+    entityType: 'announcement',
+    entityId: aId,
     targetPath: `condos/${cId}/announcements/${aId}`,
     metadata: { patch: data || {} },
   });
@@ -259,8 +629,61 @@ export async function deleteAnnouncement(condoId, announcementId) {
     condoId: cId,
     actorUid: user.uid,
     action: 'announcement.delete',
+    entityType: 'announcement',
+    entityId: aId,
     targetPath: `condos/${cId}/announcements/${aId}`,
     metadata: {},
+  });
+}
+
+// ===== Deliveries (intenção de envio por canal) =====
+export async function listAnnouncementDeliveries(condoId, announcementId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  const aId = cleanString(announcementId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!aId) throw new Error('announcementId inválido.');
+
+  const qs = await getDocs(collection(db, 'condos', cId, 'announcements', aId, 'deliveries'));
+  const items = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+  items.sort((a, b) => {
+    const at = a.createdAt && typeof a.createdAt.toDate === 'function' ? a.createdAt.toDate().getTime() : 0;
+    const bt = b.createdAt && typeof b.createdAt.toDate === 'function' ? b.createdAt.toDate().getTime() : 0;
+    return bt - at;
+  });
+  return items;
+}
+
+export async function setAnnouncementDeliveryStatus(condoId, announcementId, channel, status, errorMessage) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const aId = cleanString(announcementId);
+  const ch = normalizeChannel(channel);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!aId) throw new Error('announcementId inválido.');
+  if (!ch || ch === 'app') throw new Error('Canal inválido.');
+
+  const s = normalizeDeliveryStatus(status);
+  const msg = cleanString(errorMessage) || null;
+
+  const ref = doc(db, 'condos', cId, 'announcements', aId, 'deliveries', ch);
+  await updateDoc(ref, {
+    status: s,
+    errorMessage: s === 'erro' ? (msg || 'Erro não especificado.') : null,
+    updatedAt: serverTimestamp(),
+    updatedBy: user.uid,
+  });
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  await writeAuditLog(db, {
+    orgId: orgId || 'unknown',
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'announcement.delivery.update',
+    entityType: 'announcementDelivery',
+    entityId: `${aId}:${ch}`,
+    targetPath: `condos/${cId}/announcements/${aId}/deliveries/${ch}`,
+    metadata: { status: s },
   });
 }
 
@@ -325,6 +748,8 @@ export async function createPoll(condoId, data) {
     condoId: cId,
     actorUid: user.uid,
     action: 'poll.create',
+    entityType: 'poll',
+    entityId: ref.id,
     targetPath: `condos/${cId}/polls/${ref.id}`,
     metadata: { status, optionCount: options.length },
   });
@@ -356,6 +781,8 @@ export async function updatePoll(condoId, pollId, data) {
     condoId: cId,
     actorUid: user.uid,
     action: 'poll.update',
+    entityType: 'poll',
+    entityId: pId,
     targetPath: `condos/${cId}/polls/${pId}`,
     metadata: { patch: data || {} },
   });
@@ -376,6 +803,8 @@ export async function deletePoll(condoId, pollId) {
     condoId: cId,
     actorUid: user.uid,
     action: 'poll.delete',
+    entityType: 'poll',
+    entityId: pId,
     targetPath: `condos/${cId}/polls/${pId}`,
     metadata: {},
   });
@@ -434,6 +863,8 @@ export async function castVote(condoId, pollId, choiceId) {
     condoId: cId,
     actorUid: user.uid,
     action: 'poll.vote',
+    entityType: 'pollVote',
+    entityId: user.uid,
     targetPath: `condos/${cId}/polls/${pId}/votes/${user.uid}`,
     metadata: { choiceId: voteDoc.choiceId },
   });
@@ -471,6 +902,24 @@ export async function listMyReadReceipts(condoId) {
   return items;
 }
 
+export async function countReadReceipts(condoId, kind, targetId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  const k = normalizeReceiptKind(kind);
+  const tId = cleanString(targetId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!tId) throw new Error('targetId inválido.');
+
+  const col = collection(db, 'condos', cId, 'readReceipts');
+  const q = query(col, where('kind', '==', k), where('targetId', '==', tId));
+  const agg = await getCountFromServer(q);
+  return agg && agg.data ? Number(agg.data().count || 0) : 0;
+}
+
+export async function countAnnouncementReads(condoId, announcementId) {
+  return await countReadReceipts(condoId, 'announcement', announcementId);
+}
+
 export async function confirmRead(condoId, kind, targetId) {
   const { db, user } = await requireAuth();
   const cId = cleanString(condoId);
@@ -505,6 +954,8 @@ export async function confirmRead(condoId, kind, targetId) {
     condoId: cId,
     actorUid: user.uid,
     action: 'readReceipt.create',
+    entityType: 'readReceipt',
+    entityId: receiptId,
     targetPath: `condos/${cId}/readReceipts/${receiptId}`,
     metadata: { kind: k, targetId: tId },
   });
@@ -516,5 +967,9 @@ export const CommsTypes = {
   normalizeAnnouncementStatus,
   normalizePollStatus,
   normalizeReceiptKind,
+  normalizeChannel,
+  normalizeChannels,
+  normalizeDeliveryStatus,
+  normalizeTemplateScope,
   makeReceiptId,
 };

@@ -14,12 +14,47 @@ import {
   addDoc,
   collection,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   where,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+const CACHE_PREFIX = 'vh:';
+
+function cacheKey(key) {
+  return CACHE_PREFIX + key;
+}
+
+function readCache(key, ttlMs) {
+  try {
+    const raw = localStorage.getItem(cacheKey(key));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.savedAt !== 'number') return null;
+    if (ttlMs && Date.now() - parsed.savedAt > ttlMs) return null;
+    return parsed.value;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeCache(key, value) {
+  try {
+    localStorage.setItem(cacheKey(key), JSON.stringify({ savedAt: Date.now(), value }));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function yyyyMmDd(dateObj) {
+  const d = dateObj instanceof Date ? dateObj : new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 async function waitForUser(auth) {
   if (auth.currentUser) return auth.currentUser;
@@ -100,12 +135,44 @@ async function writeAuditLog(db, payload) {
     condoId: payload.condoId ? cleanString(payload.condoId) : null,
     actorUid: cleanString(payload.actorUid),
     action: cleanString(payload.action),
+    entityType: cleanString(payload.entityType || 'portfolio'),
+    entityId: cleanString(payload.entityId || orgId),
     targetPath: cleanString(payload.targetPath),
     createdAt: serverTimestamp(),
     metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
   };
 
   await addDoc(collection(db, 'auditLogs'), docData);
+}
+
+async function getUnitsCountForCondo(db, condoId, condoDocData) {
+  const fromDoc = condoDocData && Number.isFinite(Number(condoDocData.unitsCount)) ? Math.trunc(Number(condoDocData.unitsCount)) : null;
+  if (fromDoc != null && fromDoc >= 0) return fromDoc;
+
+  const cId = cleanString(condoId);
+  const cached = readCache(`condoUnitsCount:${cId}`, 7 * 24 * 60 * 60 * 1000);
+  if (Number.isFinite(Number(cached)) && Number(cached) >= 0) return Math.trunc(Number(cached));
+
+  const snap = await getCountFromServer(collection(db, 'condos', cId, 'units'));
+  const count = snap && snap.data && typeof snap.data === 'function' ? (snap.data().count || 0) : 0;
+  writeCache(`condoUnitsCount:${cId}`, count);
+  return count;
+}
+
+async function getOverdueMaintenancePlansCount(db, condoId, todayFloor) {
+  const cId = cleanString(condoId);
+  const dayKey = yyyyMmDd(todayFloor);
+  const cached = readCache(`condoOverdueMaintenancePlans:${cId}:${dayKey}`, 60 * 60 * 1000);
+  if (Number.isFinite(Number(cached)) && Number(cached) >= 0) return Math.trunc(Number(cached));
+
+  const q = query(
+    collection(db, 'condos', cId, 'maintenancePlans'),
+    where('nextDueAt', '<', todayFloor)
+  );
+  const snap = await getCountFromServer(q);
+  const count = snap && snap.data && typeof snap.data === 'function' ? (snap.data().count || 0) : 0;
+  writeCache(`condoOverdueMaintenancePlans:${cId}:${dayKey}`, count);
+  return count;
 }
 
 export async function getMyProfile() {
@@ -146,6 +213,15 @@ export async function getCondoMetrics(condoId, opts) {
   const today = new Date();
   const todayFloor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
+  const condoDocData = opts && opts.condoDocData && typeof opts.condoDocData === 'object' ? opts.condoDocData : null;
+
+  let unitsCount = null;
+  try {
+    unitsCount = await getUnitsCountForCondo(db, cId, condoDocData);
+  } catch (e) {
+    unitsCount = null;
+  }
+
   // Inadimplência: charges open/partial com dueAt < hoje
   const chargesSnap = await getDocs(query(
     collection(db, 'condos', cId, 'charges'),
@@ -172,7 +248,18 @@ export async function getCondoMetrics(condoId, opts) {
   const openTicketsCount = ticketsSnap.size;
 
   // Gastos: soma de expenses no mês
-  const expensesSnap = await getDocs(collection(db, 'condos', cId, 'expenses'));
+  let expensesSnap;
+  try {
+    expensesSnap = await getDocs(query(
+      collection(db, 'condos', cId, 'expenses'),
+      where('date', '>=', from),
+      where('date', '<=', to),
+      limit(2000)
+    ));
+  } catch (e) {
+    // fallback para compat
+    expensesSnap = await getDocs(collection(db, 'condos', cId, 'expenses'));
+  }
   let monthExpensesCents = 0;
   expensesSnap.docs.forEach((d) => {
     const data = d.data() || {};
@@ -182,12 +269,24 @@ export async function getCondoMetrics(condoId, opts) {
     monthExpensesCents += typeof data.amountCents === 'number' ? data.amountCents : 0;
   });
 
+  let overdueMaintenancePlansCount = 0;
+  try {
+    overdueMaintenancePlansCount = await getOverdueMaintenancePlansCount(db, cId, todayFloor);
+  } catch (e) {
+    overdueMaintenancePlansCount = 0;
+  }
+
+  const monthExpensesPerUnitCents = unitsCount && unitsCount > 0 ? Math.round(monthExpensesCents / unitsCount) : null;
+
   return {
     condoId: cId,
     delinquentCount,
     delinquentCents,
     openTicketsCount,
     monthExpensesCents,
+    unitsCount,
+    monthExpensesPerUnitCents,
+    overdueMaintenancePlansCount,
   };
 }
 
@@ -199,11 +298,24 @@ export async function getOrgPortfolio(orgId, opts) {
   opts = opts || {};
   const monthDate = opts.monthDate instanceof Date ? opts.monthDate : new Date();
 
+  const monthRef = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+  if (!opts.noCache) {
+    const cached = readCache(`orgPortfolio:${oId}:${monthRef}`, 5 * 60 * 1000);
+    if (cached && typeof cached === 'object') {
+      return {
+        ...cached,
+        format: {
+          centsToBr,
+        },
+      };
+    }
+  }
+
   const condos = await listOrgCondos(oId);
 
   const metrics = await Promise.all(
     condos.map(async (c) => {
-      const m = await getCondoMetrics(c.id, { monthDate });
+      const m = await getCondoMetrics(c.id, { monthDate, condoDocData: c });
       return {
         condoId: c.id,
         condoName: cleanString(c.name) || c.id,
@@ -219,6 +331,8 @@ export async function getOrgPortfolio(orgId, opts) {
       acc.delinquentCents += x.delinquentCents || 0;
       acc.openTicketsCount += x.openTicketsCount || 0;
       acc.monthExpensesCents += x.monthExpensesCents || 0;
+      acc.overdueMaintenancePlansCount += x.overdueMaintenancePlansCount || 0;
+      if (x.unitsCount && x.unitsCount > 0) acc.unitsCount += x.unitsCount;
       return acc;
     },
     {
@@ -228,8 +342,12 @@ export async function getOrgPortfolio(orgId, opts) {
       delinquentCents: 0,
       openTicketsCount: 0,
       monthExpensesCents: 0,
+      unitsCount: 0,
+      overdueMaintenancePlansCount: 0,
     }
   );
+
+  totals.monthExpensesPerUnitCents = totals.unitsCount && totals.unitsCount > 0 ? Math.round(totals.monthExpensesCents / totals.unitsCount) : null;
 
   // Log de visualização
   try {
@@ -238,6 +356,8 @@ export async function getOrgPortfolio(orgId, opts) {
       condoId: null,
       actorUid: user.uid,
       action: 'portfolio.view',
+      entityType: 'portfolio',
+      entityId: oId,
       targetPath: 'admin/carteira.html',
       metadata: {
         condos: totals.condosCount,
@@ -247,11 +367,17 @@ export async function getOrgPortfolio(orgId, opts) {
     // Não bloquear a tela por falha de log
   }
 
-  return {
+  const result = {
     orgId: oId,
-    monthRef: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
+    monthRef,
     totals,
     items: metrics,
+  };
+
+  if (!opts.noCache) writeCache(`orgPortfolio:${oId}:${monthRef}`, result);
+
+  return {
+    ...result,
     format: {
       centsToBr,
     },

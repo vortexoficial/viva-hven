@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • Funcionários & Terceirizados</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/core-init.js"></script>
+  <script type="module" src="/js/admin-shell.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="btn" href="/admin/dashboard.html">← Voltar</a>
+      <h1 class="h1">Funcionários & Terceirizados</h1>
+    </div>
+    <div class="topbar__right">
+      <span data-vh-context-anchor="1"></span>
+      <span id="userBadge" class="badge"></span>
+      <button id="logoutBtn" class="btn btn--ghost">Sair</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="h2">Contexto</h2>
+      <div class="grid grid--3">
+        <label class="field" style="grid-column:1/-1;">
+          <span>Condomínio</span>
+          <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
+        </label>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+          <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+          <span id="ctxHint" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Cadastro</h2>
+
+      <form id="employeeForm" class="grid grid--3">
+        <input type="hidden" id="employeeId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Nome *</span>
+          <input id="employeeName" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>Tipo</span>
+          <select id="employeeType" class="input">
+            <option value="funcionario">funcionario</option>
+            <option value="terceirizado">terceirizado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Cargo / Função</span>
+          <input id="employeePosition" class="input" />
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="employeeStatus" class="input">
+            <option value="ativo">ativo</option>
+            <option value="inativo">inativo</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>CPF</span>
+          <input id="employeeCpf" class="input" placeholder="000.000.000-00" />
+        </label>
+
+        <label class="field">
+          <span>Telefone</span>
+          <input id="employeePhone" class="input" />
+        </label>
+
+        <label class="field">
+          <span>Email</span>
+          <input id="employeeEmail" class="input" type="email" />
+        </label>
+
+        <label class="field">
+          <span>Início (opcional)</span>
+          <input id="employeeStart" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Fim (opcional)</span>
+          <input id="employeeEnd" class="input" type="date" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Fornecedor (supplierId) — somente terceirizado</span>
+          <input id="employeeSupplierId" class="input" placeholder="Opcional" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="employeeNotes" class="input" rows="2"></textarea>
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="employeeClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="employeeDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="employeeMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="employeesList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Escala</h2>
+      <p class="muted" style="margin-top:-8px;">Selecione um colaborador no cadastro para gerenciar a escala.</p>
+
+      <form id="shiftForm" class="grid grid--3">
+        <input type="hidden" id="shiftId" />
+
+        <label class="field">
+          <span>Data *</span>
+          <input id="shiftDate" class="input" type="date" required />
+        </label>
+
+        <label class="field">
+          <span>Início</span>
+          <input id="shiftStart" class="input" placeholder="08:00" />
+        </label>
+
+        <label class="field">
+          <span>Fim</span>
+          <input id="shiftEnd" class="input" placeholder="18:00" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Área (opcional)</span>
+          <input id="shiftArea" class="input" placeholder="Ex.: Portaria" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Notas</span>
+          <input id="shiftNotes" class="input" />
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="shiftClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="shiftDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="shiftMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="shiftsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Férias / afastamentos</h2>
+
+      <form id="leaveForm" class="grid grid--3">
+        <input type="hidden" id="leaveId" />
+
+        <label class="field">
+          <span>Tipo</span>
+          <select id="leaveType" class="input">
+            <option value="ferias">ferias</option>
+            <option value="afastamento">afastamento</option>
+            <option value="licenca">licenca</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Início *</span>
+          <input id="leaveStart" class="input" type="date" required />
+        </label>
+
+        <label class="field">
+          <span>Fim *</span>
+          <input id="leaveEnd" class="input" type="date" required />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observação</span>
+          <input id="leaveNotes" class="input" />
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="leaveClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="leaveDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="leaveMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="leavesList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Treinamentos</h2>
+
+      <form id="trainingForm" class="grid grid--3">
+        <input type="hidden" id="trainingId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="trainingTitle" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>Data</span>
+          <input id="trainingDate" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Validade até</span>
+          <input id="trainingValidUntil" class="input" type="date" />
+        </label>
+
+        <label class="field">
+          <span>Fornecedor/Instrutor</span>
+          <input id="trainingProvider" class="input" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Certificado (URL)</span>
+          <input id="trainingCertUrl" class="input" type="url" placeholder="https://..." />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Notas</span>
+          <input id="trainingNotes" class="input" />
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="trainingClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="trainingDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="trainingMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="trainingsList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">EPIs (checklist)</h2>
+
+      <form id="epiForm" class="grid grid--3">
+        <input type="hidden" id="epiId" />
+
+        <label class="field">
+          <span>Data *</span>
+          <input id="epiDate" class="input" type="date" required />
+        </label>
+
+        <label class="field">
+          <span>OK</span>
+          <select id="epiOk" class="input">
+            <option value="1">sim</option>
+            <option value="0">não</option>
+          </select>
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Itens (1 por linha)</span>
+          <textarea id="epiItems" class="input" rows="3" placeholder="Ex:\n- Capacete\n- Luvas\n- Botas"></textarea>
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Notas</span>
+          <input id="epiNotes" class="input" />
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="epiClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="epiDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="epiMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="episList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Ocorrências (colaborador)</h2>
+      <p class="muted" style="margin-top:-8px;">Para ocorrências gerais do condomínio use a tela de Segurança.</p>
+
+      <form id="empOccForm" class="grid grid--3">
+        <input type="hidden" id="empOccId" />
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Título *</span>
+          <input id="empOccTitle" class="input" required />
+        </label>
+
+        <label class="field">
+          <span>Severidade</span>
+          <select id="empOccSeverity" class="input">
+            <option value="baixa">baixa</option>
+            <option value="media" selected>media</option>
+            <option value="alta">alta</option>
+            <option value="critica">critica</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select id="empOccStatus" class="input">
+            <option value="aberto">aberto</option>
+            <option value="em_andamento">em_andamento</option>
+            <option value="encerrado">encerrado</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Data</span>
+          <input id="empOccDate" class="input" type="date" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Descrição</span>
+          <textarea id="empOccDesc" class="input" rows="3"></textarea>
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>Laudo/Anexo (URL)</span>
+          <input id="empOccAttachment" class="input" type="url" placeholder="https://..." />
+        </label>
+
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="empOccClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="empOccDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="empOccMsg" class="muted"></span>
+        </div>
+      </form>
+
+      <div class="divider"></div>
+      <h3 class="h3">Lista</h3>
+      <div id="empOccList" class="list"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { setupAdminPage } from '/js/admin-access.js';
+    import { logoutUser } from '/js/auth.js';
+    import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+
+    import {
+      listEmployees,
+      createEmployee,
+      updateEmployee,
+      deleteEmployee,
+      listEmployeeShifts,
+      createEmployeeShift,
+      updateEmployeeShift,
+      deleteEmployeeShift,
+      listEmployeeLeaves,
+      createEmployeeLeave,
+      updateEmployeeLeave,
+      deleteEmployeeLeave,
+      listEmployeeTrainings,
+      createEmployeeTraining,
+      updateEmployeeTraining,
+      deleteEmployeeTraining,
+      listEmployeeEpiChecks,
+      createEmployeeEpiCheck,
+      updateEmployeeEpiCheck,
+      deleteEmployeeEpiCheck,
+      listEmployeeOccurrences,
+      createEmployeeOccurrence,
+      updateEmployeeOccurrence,
+      deleteEmployeeOccurrence,
+    } from '/js/modules/employees.js';
+
+    const env = await setupAdminPage({
+      rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+      logoutBtnId: null,
+      userBadgeId: 'userBadge',
+    });
+    if (!env || env.ok !== true) return;
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      condoId: null,
+      condos: [],
+      user: null,
+      employees: [],
+      selectedEmployeeId: null,
+      shifts: [],
+      leaves: [],
+      trainings: [],
+      epis: [],
+      occurrences: [],
+    };
+
+    function setActiveCondoName(text) {
+      const el = $('ctxCondoName');
+      if (!el) return;
+      el.textContent = text ? String(text) : '—';
+    }
+
+    function setMsg(el, msg, isErr) {
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isErr);
+    }
+
+    function formatTs(ts) {
+      if (!ts) return '';
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+        return new Date(ts).toLocaleString('pt-BR');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function tsToDate(ts) {
+      if (!ts) return null;
+      try {
+        if (typeof ts.toDate === 'function') return ts.toDate();
+        const d = new Date(ts);
+        return Number.isNaN(d.getTime()) ? null : d;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function toDateInputValue(ts) {
+      const d = tsToDate(ts);
+      if (!d) return '';
+      try {
+        return d.toISOString().slice(0, 10);
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function asItemRow(title, subtitle, right, actionsHtml) {
+      return `
+        <div class="list__item">
+          <div class="list__main">
+            <div class="list__title">${title}</div>
+            <div class="list__sub">${subtitle || ''}</div>
+          </div>
+          <div class="list__meta">${right || ''}</div>
+          <div class="list__actions">${actionsHtml || ''}</div>
+        </div>
+      `;
+    }
+
+    function selectedEmployeeId() {
+      const id = String($('employeeId').value || '');
+      return id || null;
+    }
+
+    function clearEmployeeForm() {
+      $('employeeId').value = '';
+      $('employeeName').value = '';
+      $('employeeType').value = 'funcionario';
+      $('employeePosition').value = '';
+      $('employeeStatus').value = 'ativo';
+      $('employeeCpf').value = '';
+      $('employeePhone').value = '';
+      $('employeeEmail').value = '';
+      $('employeeStart').value = '';
+      $('employeeEnd').value = '';
+      $('employeeSupplierId').value = '';
+      $('employeeNotes').value = '';
+      setMsg($('employeeMsg'), '');
+
+      state.selectedEmployeeId = null;
+      clearShiftForm();
+      clearLeaveForm();
+      clearTrainingForm();
+      clearEpiForm();
+      clearEmpOccForm();
+      renderSubLists([]).catch(() => {});
+    }
+
+    function fillEmployeeForm(e) {
+      $('employeeId').value = e.id;
+      $('employeeName').value = e.name || '';
+      $('employeeType').value = e.type || 'funcionario';
+      $('employeePosition').value = e.position || '';
+      $('employeeStatus').value = e.status || 'ativo';
+      $('employeeCpf').value = e.cpf || '';
+      $('employeePhone').value = e.phone || '';
+      $('employeeEmail').value = e.email || '';
+      $('employeeStart').value = toDateInputValue(e.startAt);
+      $('employeeEnd').value = toDateInputValue(e.endAt);
+      $('employeeSupplierId').value = e.supplierId || '';
+      $('employeeNotes').value = e.notes || '';
+      setMsg($('employeeMsg'), 'Editando colaborador.');
+
+      state.selectedEmployeeId = e.id;
+    }
+
+    function clearShiftForm() {
+      $('shiftId').value = '';
+      $('shiftDate').value = '';
+      $('shiftStart').value = '';
+      $('shiftEnd').value = '';
+      $('shiftArea').value = '';
+      $('shiftNotes').value = '';
+      setMsg($('shiftMsg'), '');
+    }
+
+    function fillShiftForm(s) {
+      $('shiftId').value = s.id;
+      $('shiftDate').value = toDateInputValue(s.date);
+      $('shiftStart').value = s.startTime || '';
+      $('shiftEnd').value = s.endTime || '';
+      $('shiftArea').value = s.area || '';
+      $('shiftNotes').value = s.notes || '';
+      setMsg($('shiftMsg'), 'Editando escala.');
+    }
+
+    function clearLeaveForm() {
+      $('leaveId').value = '';
+      $('leaveType').value = 'ferias';
+      $('leaveStart').value = '';
+      $('leaveEnd').value = '';
+      $('leaveNotes').value = '';
+      setMsg($('leaveMsg'), '');
+    }
+
+    function fillLeaveForm(l) {
+      $('leaveId').value = l.id;
+      $('leaveType').value = l.type || 'ferias';
+      $('leaveStart').value = toDateInputValue(l.startAt);
+      $('leaveEnd').value = toDateInputValue(l.endAt);
+      $('leaveNotes').value = l.notes || '';
+      setMsg($('leaveMsg'), 'Editando férias/afastamento.');
+    }
+
+    function clearTrainingForm() {
+      $('trainingId').value = '';
+      $('trainingTitle').value = '';
+      $('trainingDate').value = '';
+      $('trainingValidUntil').value = '';
+      $('trainingProvider').value = '';
+      $('trainingCertUrl').value = '';
+      $('trainingNotes').value = '';
+      setMsg($('trainingMsg'), '');
+    }
+
+    function fillTrainingForm(t) {
+      $('trainingId').value = t.id;
+      $('trainingTitle').value = t.title || '';
+      $('trainingDate').value = toDateInputValue(t.date);
+      $('trainingValidUntil').value = toDateInputValue(t.validUntil);
+      $('trainingProvider').value = t.provider || '';
+      $('trainingCertUrl').value = t.certificateUrl || '';
+      $('trainingNotes').value = t.notes || '';
+      setMsg($('trainingMsg'), 'Editando treinamento.');
+    }
+
+    function clearEpiForm() {
+      $('epiId').value = '';
+      $('epiDate').value = '';
+      $('epiOk').value = '1';
+      $('epiItems').value = '';
+      $('epiNotes').value = '';
+      setMsg($('epiMsg'), '');
+    }
+
+    function fillEpiForm(c) {
+      $('epiId').value = c.id;
+      $('epiDate').value = toDateInputValue(c.date);
+      $('epiOk').value = c.ok ? '1' : '0';
+      $('epiItems').value = Array.isArray(c.items) ? c.items.join('\n') : '';
+      $('epiNotes').value = c.notes || '';
+      setMsg($('epiMsg'), 'Editando checklist.');
+    }
+
+    function clearEmpOccForm() {
+      $('empOccId').value = '';
+      $('empOccTitle').value = '';
+      $('empOccSeverity').value = 'media';
+      $('empOccStatus').value = 'aberto';
+      $('empOccDate').value = '';
+      $('empOccDesc').value = '';
+      $('empOccAttachment').value = '';
+      setMsg($('empOccMsg'), '');
+    }
+
+    function fillEmpOccForm(o) {
+      $('empOccId').value = o.id;
+      $('empOccTitle').value = o.title || '';
+      $('empOccSeverity').value = o.severity || 'media';
+      $('empOccStatus').value = o.status || 'aberto';
+      $('empOccDate').value = toDateInputValue(o.date);
+      $('empOccDesc').value = o.description || '';
+      $('empOccAttachment').value = o.attachmentUrl || '';
+      setMsg($('empOccMsg'), 'Editando ocorrência.');
+    }
+
+    async function renderEmployees() {
+      if (!state.condoId) return;
+
+      state.employees = await listEmployees(state.condoId);
+
+      $('employeesList').innerHTML = state.employees.length
+        ? state.employees.map((e) => {
+            const badge = `<span class="badge">${e.type || 'funcionario'}</span> <span class="badge">${e.status || 'ativo'}</span>`;
+            const sub = `Cargo: ${e.position || '-'} • Tel: ${e.phone || '-'} • Email: ${e.email || '-'}${e.supplierId ? ` • supplierId: ${e.supplierId}` : ''}`;
+            const right = `Atualizado: ${formatTs(e.updatedAt)}`;
+            return asItemRow(
+              `${(e.name || '(sem nome)')} ${badge}`,
+              sub,
+              right,
+              `<button class="btn btn--ghost" type="button" data-action="emp-edit" data-id="${e.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="emp-del" data-id="${e.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhum colaborador cadastrado.</p>';
+    }
+
+    async function renderSubLists() {
+      const empId = selectedEmployeeId();
+      if (!state.condoId || !empId) {
+        $('shiftsList').innerHTML = '<p class="muted">Selecione um colaborador.</p>';
+        $('leavesList').innerHTML = '<p class="muted">Selecione um colaborador.</p>';
+        $('trainingsList').innerHTML = '<p class="muted">Selecione um colaborador.</p>';
+        $('episList').innerHTML = '<p class="muted">Selecione um colaborador.</p>';
+        $('empOccList').innerHTML = '<p class="muted">Selecione um colaborador.</p>';
+        return;
+      }
+
+      const [shifts, leaves, trainings, epis, occs] = await Promise.all([
+        listEmployeeShifts(state.condoId, empId),
+        listEmployeeLeaves(state.condoId, empId),
+        listEmployeeTrainings(state.condoId, empId),
+        listEmployeeEpiChecks(state.condoId, empId),
+        listEmployeeOccurrences(state.condoId, empId),
+      ]);
+
+      state.shifts = shifts || [];
+      state.leaves = leaves || [];
+      state.trainings = trainings || [];
+      state.epis = epis || [];
+      state.occurrences = occs || [];
+
+      $('shiftsList').innerHTML = state.shifts.length
+        ? state.shifts.map((s) => {
+            const d = toDateInputValue(s.date) || '-';
+            const sub = `${s.startTime || '-'} → ${s.endTime || '-'} • Área: ${s.area || '-'}${s.notes ? ` • ${s.notes}` : ''}`;
+            return asItemRow(
+              `${d}`,
+              sub,
+              '',
+              `<button class="btn btn--ghost" type="button" data-action="shift-edit" data-id="${s.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="shift-del" data-id="${s.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhuma escala registrada.</p>';
+
+      $('leavesList').innerHTML = state.leaves.length
+        ? state.leaves.map((l) => {
+            const a = toDateInputValue(l.startAt) || '-';
+            const b = toDateInputValue(l.endAt) || '-';
+            const sub = `Período: ${a} → ${b}${l.notes ? ` • ${l.notes}` : ''}`;
+            return asItemRow(
+              `${l.type || 'ferias'}`,
+              sub,
+              '',
+              `<button class="btn btn--ghost" type="button" data-action="leave-edit" data-id="${l.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="leave-del" data-id="${l.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhum período registrado.</p>';
+
+      $('trainingsList').innerHTML = state.trainings.length
+        ? state.trainings.map((t) => {
+            const d = toDateInputValue(t.date) || '-';
+            const v = toDateInputValue(t.validUntil) || '-';
+            const cert = t.certificateUrl ? ` • <a href="${t.certificateUrl}" target="_blank" rel="noreferrer">certificado</a>` : '';
+            const sub = `Data: ${d} • Validade: ${v} • Instrutor: ${t.provider || '-'}${cert}${t.notes ? ` • ${t.notes}` : ''}`;
+            return asItemRow(
+              `${t.title || '(sem título)'}`,
+              sub,
+              '',
+              `<button class="btn btn--ghost" type="button" data-action="training-edit" data-id="${t.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="training-del" data-id="${t.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhum treinamento registrado.</p>';
+
+      $('episList').innerHTML = state.epis.length
+        ? state.epis.map((c) => {
+            const d = toDateInputValue(c.date) || '-';
+            const ok = c.ok ? '<span class="badge">ok</span>' : '<span class="badge badge--alt">pendente</span>';
+            const items = Array.isArray(c.items) && c.items.length ? ` • Itens: ${c.items.length}` : '';
+            const sub = `${ok}${items}${c.notes ? ` • ${c.notes}` : ''}`;
+            return asItemRow(
+              `${d}`,
+              sub,
+              '',
+              `<button class="btn btn--ghost" type="button" data-action="epi-edit" data-id="${c.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="epi-del" data-id="${c.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhum checklist registrado.</p>';
+
+      $('empOccList').innerHTML = state.occurrences.length
+        ? state.occurrences.map((o) => {
+            const d = toDateInputValue(o.date) || '-';
+            const sev = `<span class="badge">${o.severity || 'media'}</span>`;
+            const st = `<span class="badge">${o.status || 'aberto'}</span>`;
+            const att = o.attachmentUrl ? ` • <a href="${o.attachmentUrl}" target="_blank" rel="noreferrer">laudo</a>` : '';
+            const sub = `Data: ${d}${o.description ? ` • ${o.description}` : ''}${att}`;
+            return asItemRow(
+              `${(o.title || '(sem título)')} ${sev} ${st}`,
+              sub,
+              '',
+              `<button class="btn btn--ghost" type="button" data-action="occ-edit" data-id="${o.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="occ-del" data-id="${o.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhuma ocorrência registrada.</p>';
+    }
+
+    async function renderAll() {
+      if (!state.condoId) return;
+      try {
+        setMsg($('ctxHint'), 'Carregando...');
+        await renderEmployees();
+        await renderSubLists();
+        setMsg($('ctxHint'), `CondoId selecionado: ${state.condoId}`);
+      } catch (err) {
+        setMsg($('ctxHint'), err.message || String(err), true);
+      }
+    }
+
+    function bindActions() {
+      $('refreshBtn').addEventListener('click', async () => renderAll());
+      $('employeeClearBtn').addEventListener('click', () => clearEmployeeForm());
+      $('shiftClearBtn').addEventListener('click', () => clearShiftForm());
+      $('leaveClearBtn').addEventListener('click', () => clearLeaveForm());
+      $('trainingClearBtn').addEventListener('click', () => clearTrainingForm());
+      $('epiClearBtn').addEventListener('click', () => clearEpiForm());
+      $('empOccClearBtn').addEventListener('click', () => clearEmpOccForm());
+
+      $('employeeType').addEventListener('change', () => {
+        const isThird = $('employeeType').value === 'terceirizado';
+        $('employeeSupplierId').disabled = !isThird;
+        if (!isThird) $('employeeSupplierId').value = '';
+      });
+
+      $('employeesList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'emp-edit') {
+          const emp = state.employees.find((x) => x && x.id === id);
+          if (emp) {
+            fillEmployeeForm(emp);
+            $('employeeType').dispatchEvent(new Event('change'));
+            await renderSubLists();
+          }
+          return;
+        }
+
+        if (action === 'emp-del') {
+          if (!confirm('Excluir este colaborador?')) return;
+          try {
+            await deleteEmployee(state.condoId, id);
+            if ($('employeeId').value === id) clearEmployeeForm();
+            setMsg($('employeeMsg'), 'Excluído.');
+            await renderAll();
+          } catch (err) {
+            setMsg($('employeeMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('shiftsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.shifts.find((x) => x && x.id === id);
+
+        if (action === 'shift-edit' && item) return fillShiftForm(item);
+        if (action === 'shift-del') {
+          if (!confirm('Excluir este item de escala?')) return;
+          try {
+            await deleteEmployeeShift(state.condoId, selectedEmployeeId(), id);
+            if ($('shiftId').value === id) clearShiftForm();
+            await renderSubLists();
+          } catch (err) {
+            setMsg($('shiftMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('leavesList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.leaves.find((x) => x && x.id === id);
+
+        if (action === 'leave-edit' && item) return fillLeaveForm(item);
+        if (action === 'leave-del') {
+          if (!confirm('Excluir este período?')) return;
+          try {
+            await deleteEmployeeLeave(state.condoId, selectedEmployeeId(), id);
+            if ($('leaveId').value === id) clearLeaveForm();
+            await renderSubLists();
+          } catch (err) {
+            setMsg($('leaveMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('trainingsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.trainings.find((x) => x && x.id === id);
+
+        if (action === 'training-edit' && item) return fillTrainingForm(item);
+        if (action === 'training-del') {
+          if (!confirm('Excluir este treinamento?')) return;
+          try {
+            await deleteEmployeeTraining(state.condoId, selectedEmployeeId(), id);
+            if ($('trainingId').value === id) clearTrainingForm();
+            await renderSubLists();
+          } catch (err) {
+            setMsg($('trainingMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('episList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.epis.find((x) => x && x.id === id);
+
+        if (action === 'epi-edit' && item) return fillEpiForm(item);
+        if (action === 'epi-del') {
+          if (!confirm('Excluir este checklist?')) return;
+          try {
+            await deleteEmployeeEpiCheck(state.condoId, selectedEmployeeId(), id);
+            if ($('epiId').value === id) clearEpiForm();
+            await renderSubLists();
+          } catch (err) {
+            setMsg($('epiMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('empOccList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.occurrences.find((x) => x && x.id === id);
+
+        if (action === 'occ-edit' && item) return fillEmpOccForm(item);
+        if (action === 'occ-del') {
+          if (!confirm('Excluir esta ocorrência?')) return;
+          try {
+            await deleteEmployeeOccurrence(state.condoId, selectedEmployeeId(), id);
+            if ($('empOccId').value === id) clearEmpOccForm();
+            await renderSubLists();
+          } catch (err) {
+            setMsg($('empOccMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('employeeDeleteBtn').addEventListener('click', async () => {
+        const id = String($('employeeId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este colaborador?')) return;
+        try {
+          await deleteEmployee(state.condoId, id);
+          clearEmployeeForm();
+          setMsg($('employeeMsg'), 'Excluído.');
+          await renderAll();
+        } catch (err) {
+          setMsg($('employeeMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('shiftDeleteBtn').addEventListener('click', async () => {
+        const id = String($('shiftId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este item de escala?')) return;
+        try {
+          await deleteEmployeeShift(state.condoId, selectedEmployeeId(), id);
+          clearShiftForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('shiftMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('leaveDeleteBtn').addEventListener('click', async () => {
+        const id = String($('leaveId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este período?')) return;
+        try {
+          await deleteEmployeeLeave(state.condoId, selectedEmployeeId(), id);
+          clearLeaveForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('leaveMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('trainingDeleteBtn').addEventListener('click', async () => {
+        const id = String($('trainingId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este treinamento?')) return;
+        try {
+          await deleteEmployeeTraining(state.condoId, selectedEmployeeId(), id);
+          clearTrainingForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('trainingMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('epiDeleteBtn').addEventListener('click', async () => {
+        const id = String($('epiId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este checklist?')) return;
+        try {
+          await deleteEmployeeEpiCheck(state.condoId, selectedEmployeeId(), id);
+          clearEpiForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('epiMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('empOccDeleteBtn').addEventListener('click', async () => {
+        const id = String($('empOccId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir esta ocorrência?')) return;
+        try {
+          await deleteEmployeeOccurrence(state.condoId, selectedEmployeeId(), id);
+          clearEmpOccForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('empOccMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('employeeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const id = String($('employeeId').value || '');
+
+          const payload = {
+            name: $('employeeName').value,
+            type: $('employeeType').value,
+            position: $('employeePosition').value,
+            status: $('employeeStatus').value,
+            cpf: $('employeeCpf').value,
+            phone: $('employeePhone').value,
+            email: $('employeeEmail').value,
+            startDate: $('employeeStart').value,
+            endDate: $('employeeEnd').value,
+            supplierId: $('employeeSupplierId').value,
+            notes: $('employeeNotes').value,
+          };
+
+          if (id) {
+            await updateEmployee(state.condoId, id, payload);
+            setMsg($('employeeMsg'), 'Atualizado.');
+          } else {
+            const created = await createEmployee(state.condoId, payload);
+            setMsg($('employeeMsg'), 'Cadastrado.');
+            $('employeeId').value = created.id;
+            state.selectedEmployeeId = created.id;
+          }
+
+          await renderAll();
+        } catch (err) {
+          setMsg($('employeeMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('shiftForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const empId = selectedEmployeeId();
+          if (!empId) throw new Error('Selecione um colaborador.');
+          const id = String($('shiftId').value || '');
+
+          const payload = {
+            date: $('shiftDate').value,
+            startTime: $('shiftStart').value,
+            endTime: $('shiftEnd').value,
+            area: $('shiftArea').value,
+            notes: $('shiftNotes').value,
+          };
+
+          if (id) {
+            await updateEmployeeShift(state.condoId, empId, id, payload);
+            setMsg($('shiftMsg'), 'Atualizado.');
+          } else {
+            await createEmployeeShift(state.condoId, empId, payload);
+            setMsg($('shiftMsg'), 'Registrado.');
+          }
+
+          clearShiftForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('shiftMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('leaveForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const empId = selectedEmployeeId();
+          if (!empId) throw new Error('Selecione um colaborador.');
+          const id = String($('leaveId').value || '');
+
+          const payload = {
+            type: $('leaveType').value,
+            startDate: $('leaveStart').value,
+            endDate: $('leaveEnd').value,
+            notes: $('leaveNotes').value,
+          };
+
+          if (id) {
+            await updateEmployeeLeave(state.condoId, empId, id, payload);
+            setMsg($('leaveMsg'), 'Atualizado.');
+          } else {
+            await createEmployeeLeave(state.condoId, empId, payload);
+            setMsg($('leaveMsg'), 'Registrado.');
+          }
+
+          clearLeaveForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('leaveMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('trainingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const empId = selectedEmployeeId();
+          if (!empId) throw new Error('Selecione um colaborador.');
+          const id = String($('trainingId').value || '');
+
+          const payload = {
+            title: $('trainingTitle').value,
+            date: $('trainingDate').value,
+            validUntil: $('trainingValidUntil').value,
+            provider: $('trainingProvider').value,
+            certificateUrl: $('trainingCertUrl').value,
+            notes: $('trainingNotes').value,
+          };
+
+          if (id) {
+            await updateEmployeeTraining(state.condoId, empId, id, payload);
+            setMsg($('trainingMsg'), 'Atualizado.');
+          } else {
+            await createEmployeeTraining(state.condoId, empId, payload);
+            setMsg($('trainingMsg'), 'Registrado.');
+          }
+
+          clearTrainingForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('trainingMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('epiForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const empId = selectedEmployeeId();
+          if (!empId) throw new Error('Selecione um colaborador.');
+          const id = String($('epiId').value || '');
+
+          const payload = {
+            date: $('epiDate').value,
+            ok: $('epiOk').value === '1',
+            itemsText: $('epiItems').value,
+            notes: $('epiNotes').value,
+          };
+
+          if (id) {
+            await updateEmployeeEpiCheck(state.condoId, empId, id, payload);
+            setMsg($('epiMsg'), 'Atualizado.');
+          } else {
+            await createEmployeeEpiCheck(state.condoId, empId, payload);
+            setMsg($('epiMsg'), 'Registrado.');
+          }
+
+          clearEpiForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('epiMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('empOccForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          const empId = selectedEmployeeId();
+          if (!empId) throw new Error('Selecione um colaborador.');
+          const id = String($('empOccId').value || '');
+
+          const payload = {
+            title: $('empOccTitle').value,
+            severity: $('empOccSeverity').value,
+            status: $('empOccStatus').value,
+            date: $('empOccDate').value,
+            description: $('empOccDesc').value,
+            attachmentUrl: $('empOccAttachment').value,
+          };
+
+          if (id) {
+            await updateEmployeeOccurrence(state.condoId, empId, id, payload);
+            setMsg($('empOccMsg'), 'Atualizado.');
+          } else {
+            await createEmployeeOccurrence(state.condoId, empId, payload);
+            setMsg($('empOccMsg'), 'Registrado.');
+          }
+
+          clearEmpOccForm();
+          await renderSubLists();
+        } catch (err) {
+          setMsg($('empOccMsg'), err.message || String(err), true);
+        }
+      });
+    }
+
+    async function bootstrap() {
+      $('logoutBtn').addEventListener('click', async () => {
+        await logoutUser();
+        location.href = '/login.html';
+      });
+
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
+
+      bindActions();
+      clearEmployeeForm();
+      $('employeeType').dispatchEvent(new Event('change'));
+
+      watchAuthAndContext((ev) => {
+        const user = ev && ev.user ? ev.user : null;
+        state.user = user || null;
+        if (user) $('userBadge').textContent = user.email || user.uid;
+
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
+
+        try {
+          state.condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = (state.condos || []).find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        if (!state.condoId) {
+          setMsg($('ctxHint'), 'Selecione um condomínio.', true);
+          return;
+        }
+
+        clearEmployeeForm();
+        renderAll().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : null;
+      setActiveCondoName(state.condoId || '—');
+      if (!state.condoId) setMsg($('ctxHint'), 'Selecione um condomínio.', true);
+      await renderAll();
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

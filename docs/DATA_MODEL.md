@@ -26,7 +26,18 @@ Por condomínio (subcoleções em `condos/{condoId}`):
 - `assets/{assetId}`
 - `suppliers/{supplierId}`
 - `contracts/{contractId}`
+- `contracts/{contractId}/adjustments/{adjustmentId}`
+- `contracts/{contractId}/evaluations/{evaluationId}`
+- `contracts/{contractId}/services/{serviceId}`
 - `employees/{employeeId}`
+- `employees/{employeeId}/shifts/{shiftId}`
+- `employees/{employeeId}/leaves/{leaveId}`
+- `employees/{employeeId}/trainings/{trainingId}`
+- `employees/{employeeId}/epiChecks/{checkId}`
+- `employees/{employeeId}/occurrences/{occurrenceId}`
+- `insurancePolicies/{policyId}` (alias compat: `insurances/{insuranceId}`)
+- `riskMap/{riskId}` (alias compat: `risks/{riskId}`)
+- `incidents/{incidentId}` (sinistros)
 - `notices/{noticeId}` (alias compat: `announcements/{id}`)
 - `polls/{pollId}` (+ `polls/{pollId}/votes/{uid}`)
 - `assemblies/{assemblyId}` (+ `assemblies/{assemblyId}/minutes/{minuteId}`)
@@ -267,6 +278,13 @@ Exemplo:
 { "name": "João", "role": "porteiro", "status": "active", "phone": "+55..." }
 ```
 
+Subcoleções (cadastro/controle interno):
+- `condos/{condoId}/employees/{employeeId}/shifts/{shiftId}` (turnos)
+- `condos/{condoId}/employees/{employeeId}/leaves/{leaveId}` (afastamentos/férias)
+- `condos/{condoId}/employees/{employeeId}/trainings/{trainingId}` (treinamentos)
+- `condos/{condoId}/employees/{employeeId}/epiChecks/{checkId}` (EPI)
+- `condos/{condoId}/employees/{employeeId}/occurrences/{occurrenceId}` (ocorrências internas)
+
 ### `condos/{condoId}/suppliers/{supplierId}`
 Fornecedores.
 
@@ -278,7 +296,7 @@ Exemplo:
 ### `condos/{condoId}/contracts/{contractId}`
 Contratos.
 
-Exemplo (sem upload; anexo é URL):
+Exemplo (sem upload; documento é URL):
 ```json
 {
   "supplierId": "sup_1",
@@ -286,17 +304,60 @@ Exemplo (sem upload; anexo é URL):
   "startsAt": "<timestamp>",
   "endsAt": "<timestamp>",
   "status": "active",
-  "attachmentUrl": "https://..."
+  "contractUrl": "https://..."
 }
 ```
+
+Subcoleções (histórico):
+- `condos/{condoId}/contracts/{contractId}/adjustments/{adjustmentId}` (reajustes)
+- `condos/{condoId}/contracts/{contractId}/evaluations/{evaluationId}` (avaliações)
+- `condos/{condoId}/contracts/{contractId}/services/{serviceId}` (serviços, com vínculo opcional a `workOrderId`/`accountsPayableId`)
+
+Observações:
+- Para compatibilidade, alguns ambientes podem ter `attachmentUrl` no lugar de `contractUrl`.
+
+### `condos/{condoId}/insurancePolicies/{policyId}` (alias: `insurances/{insuranceId}`)
+Apólices de seguro (sem Storage; `policyUrl` é URL opcional).
+
+### `condos/{condoId}/riskMap/{riskId}` (alias: `risks/{riskId}`)
+Mapa de riscos (itens e controles; sem anexos locais).
+
+### `condos/{condoId}/incidents/{incidentId}`
+Sinistros (vinculáveis a uma apólice por `policyId`; laudo/comprovantes por URL).
 
 ### `condos/{condoId}/notices/{noticeId}`
 Avisos/comunicados.
 
 Exemplo:
 ```json
-{ "title": "Manutenção", "body": "...", "status": "published", "publishedAt": "<timestamp>", "createdAt": "<timestamp>" }
+{
+  "title": "Manutenção",
+  "body": "...",
+  "status": "publicado",
+  "publishedAt": "<timestamp>",
+  "channels": ["app", "email", "whatsapp"],
+  "template": {"scope":"org","id":"tpl_123"},
+  "createdAt": "<timestamp>"
+}
 ```
+
+Intenção de envio (MVP, sem disparo real):
+- `condos/{condoId}/announcements/{announcementId}/deliveries/{channel}`
+
+Exemplo (delivery):
+```json
+{
+  "channel": "email",
+  "status": "pendente",
+  "provider": "mock",
+  "createdAt": "<timestamp>",
+  "updatedAt": "<timestamp>"
+}
+```
+
+Templates reutilizáveis:
+- Por condomínio: `condos/{condoId}/commsTemplates/{templateId}`
+- Por carteira (org): `orgs/{orgId}/commsTemplates/{templateId}`
 
 ### `condos/{condoId}/polls/{pollId}`
 Enquetes.

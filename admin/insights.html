@@ -81,6 +81,21 @@
 
     <section class="grid grid--3" style="margin-top: 16px;">
       <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Saúde financeira</h2>
+        <p id="healthKpi" class="kpi">—</p>
+        <p id="healthSub" class="kpiSub">—</p>
+        <div id="healthNote" class="insightNote"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 2;">
+        <h2 class="h2">Alertas (explicáveis)</h2>
+        <p class="kpiSub">Ordem por severidade. Segurança real fica nas rules; aqui é só UX.</p>
+        <div id="alertsList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+    </section>
+
+    <section class="grid grid--3" style="margin-top: 16px;">
+      <article class="card" style="grid-column: span 1;">
         <h2 class="h2">Ranking de custos (categoria)</h2>
         <p id="rankSub" class="kpiSub">—</p>
         <div id="rankList" class="miniList" style="margin-top: 12px;"></div>
@@ -98,16 +113,41 @@
         <p class="finePrint" style="margin-top: 10px;">Cálculo via charges com status open/partial por referenceMonth.</p>
       </article>
     </section>
+
+    <section class="grid grid--3" style="margin-top: 16px;">
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Sugestões</h2>
+        <p class="kpiSub">Textos por regras (sem envio automático).</p>
+        <div id="suggestionsList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Outliers (centro de custo)</h2>
+        <p class="kpiSub">Top 5 do mês vs média anterior.</p>
+        <div id="ccOutliersList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+
+      <article class="card" style="grid-column: span 1;">
+        <h2 class="h2">Previsão de obras/manutenções</h2>
+        <p class="kpiSub">Heurística: garantia + planos vencidos + execuções.</p>
+        <div id="worksList" class="miniList" style="margin-top: 12px;"></div>
+      </article>
+    </section>
   </main>
 
   <script type="module">
-    import { protect } from '/js/route-guard.js';
+    import { setupAdminPage } from '/js/admin-access.js';
     import { logoutUser } from '/js/auth.js';
 
     import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
     import { getCondoInsights } from '/js/modules/insights.js';
 
-    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA']);
+    const env = await setupAdminPage({
+      rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+      logoutBtnId: null,
+      userBadgeId: 'userBadge',
+    });
+    if (!env || env.ok !== true) return;
 
     const $ = (id) => document.getElementById(id);
 
@@ -232,6 +272,52 @@
       });
     }
 
+    function renderAlerts(containerEl, alerts) {
+      if (!containerEl) return;
+      containerEl.innerHTML = '';
+      const arr = Array.isArray(alerts) ? alerts : [];
+      if (!arr.length) {
+        containerEl.innerHTML = '<p class="muted">Sem alertas no momento.</p>';
+        return;
+      }
+
+      arr.forEach((a) => {
+        const row = document.createElement('div');
+        row.className = 'miniItem';
+
+        const left = document.createElement('div');
+        const title = document.createElement('div');
+        title.style.fontWeight = '800';
+        title.textContent = a && a.title ? String(a.title) : 'Alerta';
+
+        const why = document.createElement('div');
+        why.style.marginTop = '6px';
+        why.style.color = 'var(--muted)';
+        why.style.fontSize = '12px';
+        const whyArr = a && Array.isArray(a.why) ? a.why : [];
+        why.textContent = whyArr.length ? whyArr.join(' • ') : '';
+
+        const action = document.createElement('div');
+        action.style.marginTop = '6px';
+        action.style.color = 'var(--muted)';
+        action.style.fontSize = '12px';
+        action.textContent = a && a.action ? `Ação: ${String(a.action)}` : '';
+
+        left.appendChild(title);
+        if (why.textContent) left.appendChild(why);
+        if (action.textContent) left.appendChild(action);
+
+        const right = document.createElement('div');
+        right.className = 'mono';
+        const sev = a && a.severity ? String(a.severity) : '';
+        right.textContent = sev ? sev.toUpperCase() : '';
+
+        row.appendChild(left);
+        row.appendChild(right);
+        containerEl.appendChild(row);
+      });
+    }
+
     async function renderAll() {
       if (!state.condoId) return;
       if (state.loading) return;
@@ -257,18 +343,61 @@
         }
 
         // Inadimplência
-        setText('delinqKpi', data.delinquencyIncrease.currentBr || '—');
-        if (data.delinquencyIncrease.baselineAvgBr) {
-          setText('delinqSub', `Média 3 meses: ${data.delinquencyIncrease.baselineAvgBr}`);
+        const curRate = data.delinquencyTrend && typeof data.delinquencyTrend.currentRate === 'number' ? data.delinquencyTrend.currentRate : null;
+        const baseRate = data.delinquencyTrend && typeof data.delinquencyTrend.baselineRateAvg === 'number' ? data.delinquencyTrend.baselineRateAvg : null;
+        const deltaRate = data.delinquencyTrend && typeof data.delinquencyTrend.deltaRate === 'number' ? data.delinquencyTrend.deltaRate : null;
+
+        setText('delinqKpi', curRate != null ? fmtPct(curRate) : '—');
+        setText('delinqSub', baseRate != null ? `Média 3 meses: ${fmtPct(baseRate)}` : 'Média 3 meses: —');
+
+        if (deltaRate != null && deltaRate >= 0.05) {
+          setHtml('delinqFlag', `<span class="pill pill--warn">⚠ Tendência: +${Math.round(deltaRate * 100)} p.p.</span>`);
         } else {
-          setText('delinqSub', 'Média 3 meses: —');
+          setHtml('delinqFlag', '<span class="muted">Sem aumento relevante.</span>');
         }
 
-        if (data.delinquencyIncrease.isOutlier) {
-          setHtml('delinqFlag', `<span class="pill pill--warn">⚠ Aumento: +${fmtPct(data.delinquencyIncrease.deltaPct)}</span>`);
+        // Saúde financeira
+        setText('healthKpi', data.health && typeof data.health.score === 'number' ? `${data.health.score}/100` : '—');
+        setText('healthSub', data.health && data.health.level ? `Nível: ${String(data.health.level)}` : 'Nível: —');
+        if (data.health) {
+          setHtml(
+            'healthNote',
+            `<span class="muted">Fluxo do mês: ${moneyBrFromCents(data.health.netCashCents || 0)} • Inadimplência: ${fmtPct(data.health.delinquencyRate || 0)}</span>`
+          );
         } else {
-          setHtml('delinqFlag', data.delinquencyIncrease.note ? `<span class="muted">${data.delinquencyIncrease.note}</span>` : '<span class="muted">Sem aumento relevante.</span>');
+          setHtml('healthNote', '<span class="muted">—</span>');
         }
+
+        // Alertas + sugestões
+        renderAlerts($('alertsList'), data.alerts || []);
+        renderMiniList(
+          $('suggestionsList'),
+          (data.suggestions || []).map((s, idx) => ({ left: s, right: `#${idx + 1}` })),
+          'left',
+          'right'
+        );
+
+        // Outliers por centro de custo
+        renderMiniList(
+          $('ccOutliersList'),
+          (data.spendingOutliersByCostCenter || []).map((x) => ({
+            left: x.costCenterName,
+            right: `${x.currentBr} (${x.deltaBr} • +${Math.round((x.deltaPct || 0) * 100)}%)`,
+          })),
+          'left',
+          'right'
+        );
+
+        // Previsão de obras/manutenções
+        renderMiniList(
+          $('worksList'),
+          ((data.worksForecast && data.worksForecast.items) || []).map((x) => ({
+            left: `${x.assetName} (${String(x.priority || '').toUpperCase()})`,
+            right: Array.isArray(x.reasons) ? x.reasons.join(' • ') : '',
+          })),
+          'left',
+          'right'
+        );
 
         // Manutenções vencidas
         setText('maintKpi', String(data.overdueMaintenance.overdueCount || 0));
@@ -285,9 +414,10 @@
 
         // Gráficos
         renderBarChart($('expChart'), data.charts.expensesByMonth, 'totalCents', 'monthRef', (v) => moneyBrFromCents(v));
-        renderBarChart($('delinqChart'), data.charts.delinquencyByMonth, 'amountCents', 'monthRef', (v, it) => {
+        renderBarChart($('delinqChart'), data.charts.delinquencyByMonth, 'delinquentCents', 'monthRef', (v, it) => {
           const count = typeof it.openCount === 'number' ? it.openCount : 0;
-          return `${moneyBrFromCents(v)} • ${count} em aberto`;
+          const rate = typeof it.delinquencyRate === 'number' ? it.delinquencyRate : 0;
+          return `${moneyBrFromCents(v)} • ${count} em aberto • ${fmtPct(rate)}`;
         });
       } catch (err) {
         setHint(err.message || String(err), true);

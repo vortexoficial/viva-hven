@@ -1,0 +1,108 @@
+/* Viva Haven — Layout
+   App/admin shells, topbars, navs.
+*/
+
+/* Topbar padrão (admin) */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.topbar__left,
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar__left { min-width: 0; }
+.topbar__right { justify-content: flex-end; }
+.topbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* Admin shell nav (sub-menu) */
+.vhAdminNav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.vhAdminNav__inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 10px var(--pad);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.vhAdminNav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 900;
+  font-size: var(--fs-12);
+}
+.vhAdminNav__link[aria-current="page"] { border-color: var(--border-2); box-shadow: var(--shadow-soft); }
+.vhAdminNav__spacer { flex: 1; min-width: 12px; }
+.vhAdminNav__hint { font-size: var(--fs-12); color: var(--muted); font-weight: 800; }
+
+/* App bottom nav (mobile) */
+.bottomNav {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 48px);
+  max-width: 420px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 18px;
+  box-shadow: var(--shadow-soft);
+  z-index: 1000;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  position: relative;
+}
+.navItem__icon { color: var(--muted); display: flex; }
+.navItem__icon svg { width: 24px; height: 24px; }
+.navItem--active { background: color-mix(in srgb, var(--brand-b) 12%, transparent); }
+.navItem--active .navItem__icon { color: var(--brand-b); }
+.navIndicator { position: absolute; bottom: -8px; width: 4px; height: 4px; border-radius: 50%; background: var(--brand-b); opacity: 0; transform: translateY(4px); transition: all var(--dur-2) var(--ease); }
+.navItem--active .navIndicator { opacity: 1; transform: translateY(0); }
+
+/* Main spacing */
+main.container { padding-top: 16px; padding-bottom: 72px; }
+
+@media (max-width: 520px) {
+  main.container { padding-bottom: 120px; }
+}

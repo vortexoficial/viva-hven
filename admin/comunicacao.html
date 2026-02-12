@@ -66,6 +66,14 @@
             <input type="hidden" id="annId" />
 
             <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Template (opcional)</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <select id="annTemplate" class="input" style="flex:1;min-width:220px;"></select>
+                <button id="annApplyTemplateBtn" class="btn btn--ghost" type="button">Aplicar</button>
+              </div>
+            </div>
+
+            <div>
               <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
               <input id="annTitle" class="input" required />
             </div>
@@ -90,12 +98,23 @@
               </div>
             </div>
 
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Canais</label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <label style="display:flex;gap:8px;align-items:center;"><input id="annChApp" type="checkbox" checked /> App</label>
+                <label style="display:flex;gap:8px;align-items:center;"><input id="annChEmail" type="checkbox" /> E-mail (MVP: intenção)</label>
+                <label style="display:flex;gap:8px;align-items:center;"><input id="annChWhatsapp" type="checkbox" /> WhatsApp (MVP: intenção)</label>
+              </div>
+            </div>
+
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
               <button id="annSaveBtn" class="btn" type="submit">Salvar</button>
               <button id="annClearBtn" class="btn btn--ghost" type="button">Limpar</button>
               <button id="annDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
               <span id="annMsg" style="font-size:12px;color:var(--muted);"></span>
             </div>
+
+            <div id="annMeta" style="font-size:12px;color:var(--muted);"></div>
           </form>
         </article>
 
@@ -147,13 +166,67 @@
             <div id="pollResults" style="margin-top:6px;font-size:12px;color:var(--muted);"></div>
           </form>
         </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Templates</h2>
+
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="flex:1;min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Escopo</label>
+              <select id="tplScope" class="input" style="width:100%;">
+                <option value="condo">Condomínio</option>
+                <option value="org">Carteira (Org)</option>
+              </select>
+            </div>
+            <div>
+              <button id="tplRefreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
+            </div>
+          </div>
+
+          <div id="tplList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <form id="tplForm" style="display:grid;gap:10px;">
+            <input type="hidden" id="tplId" />
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+              <input id="tplName" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+              <input id="tplTitle" class="input" required />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Conteúdo</label>
+              <textarea id="tplBody" class="input" rows="4" required></textarea>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Canais padrão</label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <label style="display:flex;gap:8px;align-items:center;"><input id="tplChApp" type="checkbox" checked /> App</label>
+                <label style="display:flex;gap:8px;align-items:center;"><input id="tplChEmail" type="checkbox" /> E-mail</label>
+                <label style="display:flex;gap:8px;align-items:center;"><input id="tplChWhatsapp" type="checkbox" /> WhatsApp</label>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button class="btn" type="submit">Salvar</button>
+              <button id="tplClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              <button id="tplDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              <span id="tplMsg" style="font-size:12px;color:var(--muted);"></span>
+            </div>
+          </form>
+        </article>
       </section>
     </main>
 
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { protect } from '/js/route-guard.js';
+      import { setupAdminPage } from '/js/admin-access.js';
       import { logoutUser } from '/js/auth.js';
       import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
 
@@ -162,6 +235,16 @@
         createAnnouncement,
         updateAnnouncement,
         deleteAnnouncement,
+        listAnnouncementDeliveries,
+        countAnnouncementReads,
+        listCondoCommsTemplates,
+        listOrgCommsTemplatesForCondo,
+        createCondoCommsTemplate,
+        updateCondoCommsTemplate,
+        deleteCondoCommsTemplate,
+        createOrgCommsTemplateForCondo,
+        updateOrgCommsTemplateForCondo,
+        deleteOrgCommsTemplateForCondo,
         listPolls,
         createPoll,
         updatePoll,
@@ -169,7 +252,12 @@
         listPollVotes,
       } from '/js/modules/comms.js';
 
-      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+      const env = await setupAdminPage({
+        rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+        logoutBtnId: null,
+        userBadgeId: 'userBadge',
+      });
+      if (!env || env.ok !== true) return;
 
       const $ = (id) => document.getElementById(id);
 
@@ -178,6 +266,10 @@
         condos: [],
         announcements: [],
         polls: [],
+        templates: {
+          condo: [],
+          org: [],
+        },
       };
 
       function setActiveCondoName(text) {
@@ -221,13 +313,136 @@
         `;
       }
 
+      function getSelectedAnnouncementChannels() {
+        const channels = [];
+        if ($('annChApp') && $('annChApp').checked) channels.push('app');
+        if ($('annChEmail') && $('annChEmail').checked) channels.push('email');
+        if ($('annChWhatsapp') && $('annChWhatsapp').checked) channels.push('whatsapp');
+        return channels;
+      }
+
+      function parseTemplateValue(value) {
+        const v = String(value || '').trim();
+        if (!v) return null;
+        const parts = v.split(':');
+        if (parts.length !== 2) return null;
+        const scope = String(parts[0] || '').trim();
+        const id = String(parts[1] || '').trim();
+        if (!scope || !id) return null;
+        if (!['condo', 'org'].includes(scope)) return null;
+        return { scope, id };
+      }
+
+      function getSelectedAnnouncementTemplate() {
+        const sel = $('annTemplate');
+        if (!sel) return null;
+        return parseTemplateValue(sel.value);
+      }
+
+      function findTemplate(scope, id) {
+        const list = scope === 'org' ? state.templates.org : state.templates.condo;
+        return (list || []).find((t) => t && t.id === id) || null;
+      }
+
+      function renderAnnouncementTemplateSelect() {
+        const sel = $('annTemplate');
+        if (!sel) return;
+
+        const current = sel.value;
+        const condo = Array.isArray(state.templates.condo) ? state.templates.condo : [];
+        const org = Array.isArray(state.templates.org) ? state.templates.org : [];
+
+        const options = [];
+        options.push('<option value="">(sem template)</option>');
+        if (condo.length) {
+          options.push('<optgroup label="Condomínio">');
+          condo.forEach((t) => {
+            options.push(`<option value="condo:${t.id}">${t.name || t.id}</option>`);
+          });
+          options.push('</optgroup>');
+        }
+        if (org.length) {
+          options.push('<optgroup label="Carteira (Org)">');
+          org.forEach((t) => {
+            options.push(`<option value="org:${t.id}">${t.name || t.id}</option>`);
+          });
+          options.push('</optgroup>');
+        }
+
+        sel.innerHTML = options.join('');
+        sel.value = current || '';
+      }
+
+      async function refreshTemplates() {
+        if (!state.condoId) return;
+        try {
+          state.templates.condo = await listCondoCommsTemplates(state.condoId);
+        } catch (e) {
+          state.templates.condo = [];
+        }
+        try {
+          state.templates.org = await listOrgCommsTemplatesForCondo(state.condoId);
+        } catch (e) {
+          state.templates.org = [];
+        }
+
+        renderAnnouncementTemplateSelect();
+        await refreshTplList();
+      }
+
+      async function loadAnnMeta(announcementId) {
+        const box = $('annMeta');
+        if (!box) return;
+        if (!state.condoId || !announcementId) {
+          box.innerHTML = '';
+          return;
+        }
+
+        box.innerHTML = '<span class="muted">Carregando métricas...</span>';
+        try {
+          const readCount = await countAnnouncementReads(state.condoId, announcementId);
+          const deliveries = await listAnnouncementDeliveries(state.condoId, announcementId);
+          const del = Array.isArray(deliveries) ? deliveries : [];
+
+          const parts = [];
+          parts.push(`<div><strong>Lidos:</strong> ${readCount}</div>`);
+
+          if (del.length) {
+            const byChannel = {};
+            del.forEach((d) => {
+              const ch = String(d.channel || d.id || '').toLowerCase();
+              if (!ch) return;
+              byChannel[ch] = d;
+            });
+
+            ['email', 'whatsapp'].forEach((ch) => {
+              const d = byChannel[ch];
+              if (!d) return;
+              const st = String(d.status || 'pendente');
+              parts.push(`<div><strong>${ch === 'email' ? 'E-mail' : 'WhatsApp'}:</strong> ${st}${d.errorMessage ? ` • ${String(d.errorMessage)}` : ''}</div>`);
+            });
+          } else {
+            parts.push('<div class="muted">Sem intenções registradas (email/WhatsApp).</div>');
+          }
+
+          box.innerHTML = `<div style="display:grid;gap:6px;">${parts.join('')}</div>`;
+        } catch (e) {
+          box.innerHTML = `<span class="muted">${e && e.message ? e.message : String(e)}</span>`;
+        }
+      }
+
       function clearAnnForm() {
         $('annId').value = '';
         $('annTitle').value = '';
         $('annBody').value = '';
         $('annStatus').value = 'rascunho';
         $('annDate').value = '';
+        if ($('annTemplate')) $('annTemplate').value = '';
+        if ($('annChApp')) $('annChApp').checked = true;
+        if ($('annChEmail')) $('annChEmail').checked = false;
+        if ($('annChWhatsapp')) $('annChWhatsapp').checked = false;
         setMsg($('annMsg'), '');
+        if ($('annMeta')) $('annMeta').innerHTML = '';
       }
 
       function clearPollForm() {
@@ -252,6 +467,24 @@
         } catch (e) {
           $('annDate').value = '';
         }
+
+        // Template + canais
+        try {
+          const tpl = item.template && typeof item.template === 'object' ? item.template : null;
+          const scope = tpl && tpl.scope ? String(tpl.scope) : '';
+          const id = tpl && tpl.id ? String(tpl.id) : '';
+          if ($('annTemplate')) $('annTemplate').value = scope && id ? `${scope}:${id}` : '';
+        } catch (e) {
+          if ($('annTemplate')) $('annTemplate').value = '';
+        }
+
+        const channels = Array.isArray(item.channels) ? item.channels.map((c) => String(c || '').toLowerCase()) : [];
+        const ch = channels.length ? channels : ['app'];
+        if ($('annChApp')) $('annChApp').checked = ch.includes('app');
+        if ($('annChEmail')) $('annChEmail').checked = ch.includes('email');
+        if ($('annChWhatsapp')) $('annChWhatsapp').checked = ch.includes('whatsapp');
+
+        loadAnnMeta(item.id).catch(() => {});
       }
 
       function fillPollForm(item) {
@@ -270,6 +503,80 @@
         $('pollResults').innerHTML = '';
       }
 
+      // ===== Templates UI =====
+      function getTplScope() {
+        const sel = $('tplScope');
+        const v = sel ? String(sel.value || 'condo') : 'condo';
+        return v === 'org' ? 'org' : 'condo';
+      }
+
+      function getTplChannelsDefaultFromForm() {
+        const channels = [];
+        if ($('tplChApp') && $('tplChApp').checked) channels.push('app');
+        if ($('tplChEmail') && $('tplChEmail').checked) channels.push('email');
+        if ($('tplChWhatsapp') && $('tplChWhatsapp').checked) channels.push('whatsapp');
+        return channels;
+      }
+
+      function clearTplForm() {
+        if ($('tplId')) $('tplId').value = '';
+        if ($('tplName')) $('tplName').value = '';
+        if ($('tplTitle')) $('tplTitle').value = '';
+        if ($('tplBody')) $('tplBody').value = '';
+        if ($('tplChApp')) $('tplChApp').checked = true;
+        if ($('tplChEmail')) $('tplChEmail').checked = false;
+        if ($('tplChWhatsapp')) $('tplChWhatsapp').checked = false;
+        setMsg($('tplMsg'), '');
+      }
+
+      function fillTplForm(item) {
+        if (!item) return;
+        if ($('tplId')) $('tplId').value = item.id || '';
+        if ($('tplName')) $('tplName').value = item.name || '';
+        if ($('tplTitle')) $('tplTitle').value = item.title || '';
+        if ($('tplBody')) $('tplBody').value = item.body || '';
+        const ch = Array.isArray(item.channelsDefault)
+          ? item.channelsDefault.map((c) => String(c || '').toLowerCase()).filter(Boolean)
+          : ['app'];
+        if ($('tplChApp')) $('tplChApp').checked = ch.includes('app') || ch.length === 0;
+        if ($('tplChEmail')) $('tplChEmail').checked = ch.includes('email');
+        if ($('tplChWhatsapp')) $('tplChWhatsapp').checked = ch.includes('whatsapp');
+      }
+
+      async function renderTplList() {
+        const root = $('tplList');
+        if (!root) return;
+        const scope = getTplScope();
+        const items = scope === 'org' ? state.templates.org : state.templates.condo;
+
+        root.innerHTML = (items && items.length)
+          ? items
+              .map((t) => {
+                const right = `
+                  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button class="btn btn--ghost" data-tpl-edit="${t.id}" type="button">Editar</button>
+                  </div>
+                `;
+                const ch = Array.isArray(t.channelsDefault) ? t.channelsDefault.join(', ') : '';
+                const subtitle = ch ? `Canais: ${ch}` : '';
+                return asListItem(t.name || '(sem nome)', subtitle, right);
+              })
+              .join('')
+          : '<p class="muted">Nenhum template.</p>';
+
+        root.querySelectorAll('button[data-tpl-edit]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-tpl-edit');
+            const item = (items || []).find((x) => x.id === id);
+            if (item) fillTplForm(item);
+          });
+        });
+      }
+
+      async function refreshTplList() {
+        await renderTplList();
+      }
+
       async function renderAnnouncements() {
         const root = $('annList');
         if (!root) return;
@@ -282,7 +589,8 @@
                     <button class="btn btn--ghost" data-ann-edit="${a.id}" type="button">Editar</button>
                   </div>
                 `;
-                const subtitle = `${a.status || 'rascunho'}${a.publishedAt ? ` • ${formatTs(a.publishedAt)}` : ''}`;
+                const ch = Array.isArray(a.channels) && a.channels.length ? a.channels.join(', ') : 'app';
+                const subtitle = `${a.status || 'rascunho'}${a.publishedAt ? ` • ${formatTs(a.publishedAt)}` : ''} • canais: ${ch}`;
                 return asListItem(a.title || '(sem título)', subtitle, right);
               })
               .join('')
@@ -330,6 +638,7 @@
         try {
           state.announcements = await listAnnouncements(state.condoId, {});
           state.polls = await listPolls(state.condoId, {});
+          await refreshTemplates();
           await renderAnnouncements();
           await renderPolls();
           setStatus(`OK • avisos: ${state.announcements.length} • enquetes: ${state.polls.length}`);
@@ -388,6 +697,106 @@
         $('pollClearBtn').addEventListener('click', clearPollForm);
         $('pollResultsBtn').addEventListener('click', showPollResults);
 
+        const applyTplBtn = $('annApplyTemplateBtn');
+        if (applyTplBtn) {
+          applyTplBtn.addEventListener('click', () => {
+            const sel = getSelectedAnnouncementTemplate();
+            if (!sel) {
+              setMsg($('annMsg'), 'Selecione um template para aplicar.', true);
+              return;
+            }
+            const tpl = findTemplate(sel.scope, sel.id);
+            if (!tpl) {
+              setMsg($('annMsg'), 'Template não encontrado (atualize a lista).', true);
+              return;
+            }
+            $('annTitle').value = tpl.title || '';
+            $('annBody').value = tpl.body || '';
+
+            const ch = Array.isArray(tpl.channelsDefault)
+              ? tpl.channelsDefault.map((c) => String(c || '').toLowerCase()).filter(Boolean)
+              : [];
+            if (ch.length) {
+              if ($('annChApp')) $('annChApp').checked = ch.includes('app');
+              if ($('annChEmail')) $('annChEmail').checked = ch.includes('email');
+              if ($('annChWhatsapp')) $('annChWhatsapp').checked = ch.includes('whatsapp');
+            }
+
+            setMsg($('annMsg'), 'Template aplicado.');
+          });
+        }
+
+        const tplRefreshBtn = $('tplRefreshBtn');
+        if (tplRefreshBtn) tplRefreshBtn.addEventListener('click', refreshTemplates);
+
+        const tplScope = $('tplScope');
+        if (tplScope) {
+          tplScope.addEventListener('change', async () => {
+            clearTplForm();
+            await refreshTplList();
+          });
+        }
+
+        const tplClearBtn = $('tplClearBtn');
+        if (tplClearBtn) tplClearBtn.addEventListener('click', clearTplForm);
+
+        const tplDeleteBtn = $('tplDeleteBtn');
+        if (tplDeleteBtn) {
+          tplDeleteBtn.addEventListener('click', async () => {
+            const id = $('tplId') ? $('tplId').value : '';
+            if (!id || !state.condoId) return;
+            if (!confirm('Excluir este template?')) return;
+            setMsg($('tplMsg'), 'Excluindo...');
+            try {
+              const scope = getTplScope();
+              if (scope === 'org') await deleteOrgCommsTemplateForCondo(state.condoId, id);
+              else await deleteCondoCommsTemplate(state.condoId, id);
+              clearTplForm();
+              await refreshTemplates();
+              setMsg($('tplMsg'), 'Excluído.');
+            } catch (e) {
+              setMsg($('tplMsg'), e && e.message ? e.message : String(e), true);
+            }
+          });
+        }
+
+        const tplForm = $('tplForm');
+        if (tplForm) {
+          tplForm.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            if (!state.condoId) {
+              openSelector();
+              return;
+            }
+
+            setMsg($('tplMsg'), 'Salvando...');
+            try {
+              const scope = getTplScope();
+              const id = $('tplId') ? $('tplId').value : '';
+              const payload = {
+                name: $('tplName').value,
+                title: $('tplTitle').value,
+                body: $('tplBody').value,
+                channelsDefault: getTplChannelsDefaultFromForm(),
+              };
+
+              if (scope === 'org') {
+                if (id) await updateOrgCommsTemplateForCondo(state.condoId, id, payload);
+                else await createOrgCommsTemplateForCondo(state.condoId, payload);
+              } else {
+                if (id) await updateCondoCommsTemplate(state.condoId, id, payload);
+                else await createCondoCommsTemplate(state.condoId, payload);
+              }
+
+              clearTplForm();
+              await refreshTemplates();
+              setMsg($('tplMsg'), 'OK.');
+            } catch (e) {
+              setMsg($('tplMsg'), e && e.message ? e.message : String(e), true);
+            }
+          });
+        }
+
         $('annDeleteBtn').addEventListener('click', async () => {
           const id = $('annId').value;
           if (!id || !state.condoId) return;
@@ -434,6 +843,8 @@
               body: $('annBody').value,
               status: $('annStatus').value,
               publishedDate: $('annDate').value,
+              channels: getSelectedAnnouncementChannels(),
+              template: getSelectedAnnouncementTemplate(),
             };
 
             if (id) await updateAnnouncement(state.condoId, id, payload);

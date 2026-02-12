@@ -218,6 +218,20 @@
                 <input id="apAttachmentUrl" class="input" type="url" placeholder="https://..." />
               </div>
             </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fornecedor (cadastro)</label>
+                <select id="apSupplierId" class="input">
+                  <option value="">(sem vínculo)</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contrato</label>
+                <select id="apContractId" class="input">
+                  <option value="">(sem vínculo)</option>
+                </select>
+              </div>
+            </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button id="apBtn" class="btn" type="submit">Criar conta a pagar</button>
             </div>
@@ -311,9 +325,10 @@
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { protect } from '/js/route-guard.js';
+      import { setupAdminPage } from '/js/admin-access.js';
       import { logoutUser } from '/js/auth.js';
       import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+      import { listSuppliers, listContracts } from '/js/modules/contracts.js';
       import {
         generateMonthlyCharges,
         listCharges,
@@ -334,7 +349,12 @@
         Money,
       } from '/js/modules/finance.js';
 
-      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'CONSELHO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+      const env = await setupAdminPage({
+        rolesAny: ['GESTOR', 'SINDICO', 'CONSELHO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+        logoutBtnId: null,
+        userBadgeId: 'userBadge',
+      });
+      if (!env || env.ok !== true) return;
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
@@ -342,6 +362,8 @@
 
       const state = {
         condoId: '',
+        suppliers: [],
+        contracts: [],
       };
 
       function setStatus(msg) {
@@ -405,6 +427,57 @@
           row.innerHTML = mapLine(it);
           container.appendChild(row);
         });
+      }
+
+      function supplierLabelById(id) {
+        const sid = id ? String(id) : '';
+        if (!sid) return '';
+        const s = (state.suppliers || []).find((x) => x && String(x.id) === sid);
+        return s && s.name ? String(s.name) : sid;
+      }
+
+      function contractLabelById(id) {
+        const cid = id ? String(id) : '';
+        if (!cid) return '';
+        const c = (state.contracts || []).find((x) => x && String(x.id) === cid);
+        const title = c && (c.title || c.name) ? String(c.title || c.name) : '';
+        return title ? title : cid;
+      }
+
+      function renderApLookups() {
+        const supSel = $('apSupplierId');
+        const conSel = $('apContractId');
+        if (supSel) supSel.innerHTML = '<option value="">(sem vínculo)</option>';
+        if (conSel) conSel.innerHTML = '<option value="">(sem vínculo)</option>';
+
+        (state.suppliers || []).forEach((s) => {
+          if (!supSel || !s) return;
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = (s.name || s.id) + (s.cnpj ? (' — ' + s.cnpj) : '');
+          supSel.appendChild(opt);
+        });
+
+        (state.contracts || []).forEach((c) => {
+          if (!conSel || !c) return;
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          const sup = c.supplierId ? supplierLabelById(c.supplierId) : '';
+          opt.textContent = (c.title || c.id) + (sup ? (' — ' + sup) : '');
+          conSel.appendChild(opt);
+        });
+      }
+
+      async function refreshApLookups() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const [suppliers, contracts] = await Promise.all([
+          listSuppliers(cId),
+          listContracts(cId),
+        ]);
+        state.suppliers = suppliers || [];
+        state.contracts = contracts || [];
+        renderApLookups();
       }
 
       async function refreshCharges() {
@@ -562,7 +635,17 @@
           items,
           (ap) => {
             const due = fmtDateMaybe(ap.dueAt);
-            const sub = [due ? ('venc: ' + due) : null, ap.vendor ? ('forn: ' + ap.vendor) : null, ap.costCenterId ? ('cc: ' + ap.costCenterId) : null, ap.status ? ('status: ' + apStatusLabel(ap.status)) : null]
+            const supplierName = ap.supplierId ? supplierLabelById(ap.supplierId) : '';
+            const contractTitle = ap.contractId ? contractLabelById(ap.contractId) : '';
+            const vendorLabel = supplierName || (ap.vendor ? String(ap.vendor) : '');
+
+            const sub = [
+              due ? ('venc: ' + due) : null,
+              vendorLabel ? ('forn: ' + vendorLabel) : null,
+              contractTitle ? ('contrato: ' + contractTitle) : null,
+              ap.costCenterId ? ('cc: ' + ap.costCenterId) : null,
+              ap.status ? ('status: ' + apStatusLabel(ap.status)) : null,
+            ]
               .filter(Boolean)
               .join(' • ');
             const attach = ap.attachment && ap.attachment.url ? ('<a class="btn btn--ghost" style="display:inline-flex;" target="_blank" href="' + ap.attachment.url + '">Anexo</a>') : '';
@@ -643,6 +726,7 @@
         await refreshDelinq();
         await refreshCostCenters();
         await refreshBudget();
+        await refreshApLookups();
         await refreshAccountsPayable();
       }
 
@@ -772,13 +856,17 @@
         const description = $('apDesc').value;
         const vendor = $('apVendor').value;
         const attachmentUrl = $('apAttachmentUrl').value;
+        const supplierId = $('apSupplierId') ? $('apSupplierId').value : '';
+        const contractId = $('apContractId') ? $('apContractId').value : '';
 
         await withBusy($('apBtn'), async () => {
-          await createAccountsPayable(cId, { dueDate, costCenterId, amount, description, vendor, attachmentUrl });
+          await createAccountsPayable(cId, { dueDate, costCenterId, amount, description, vendor, supplierId, contractId, attachmentUrl });
           $('apAmount').value = '';
           $('apDesc').value = '';
           $('apVendor').value = '';
           $('apAttachmentUrl').value = '';
+          if ($('apSupplierId')) $('apSupplierId').value = '';
+          if ($('apContractId')) $('apContractId').value = '';
           await refreshAccountsPayable();
           setStatus('Conta a pagar criada.');
         });

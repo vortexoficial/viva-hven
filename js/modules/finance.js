@@ -915,6 +915,8 @@ export async function createAccountsPayable(condoId, data) {
 
   const description = cleanString(data.description);
   const vendor = cleanString(data.vendor) || null;
+  const supplierId = cleanString(data.supplierId) || null;
+  const contractId = cleanString(data.contractId) || null;
   const dueAt = toDateOnly(data.dueDate || data.dueAt) || new Date();
   const amountCents = data.amountCents != null ? cleanNumber(data.amountCents) : parseMoneyToCents(data.amount);
   const costCenterId = cleanString(data.costCenterId) || null;
@@ -928,6 +930,8 @@ export async function createAccountsPayable(condoId, data) {
     condoId: cId,
     description,
     vendor,
+    supplierId,
+    contractId,
     dueAt,
     amountCents,
     currency: 'BRL',
@@ -963,7 +967,7 @@ export async function createAccountsPayable(condoId, data) {
     entityType: 'accountsPayable',
     entityId: apRef.id,
     targetPath: `condos/${cId}/accountsPayable/${apRef.id}`,
-    metadata: { amountCents, vendor, costCenterId, hasAttachment: !!attachment },
+    metadata: { amountCents, vendor, supplierId, contractId, costCenterId, hasAttachment: !!attachment },
   });
 
   return { id: apRef.id, ...apDoc, attachment };

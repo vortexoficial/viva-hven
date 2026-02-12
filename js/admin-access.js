@@ -8,6 +8,8 @@ import { showError, setLoading, toast } from './ui.js';
 import { watchAuthAndContext, getActiveContext, openSelector } from './active-context.js';
 import { getMembershipForCondo, getMembershipForOrg, normalizeMembershipRoleUpper } from './rbac.js';
 
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
 function cleanString(v) {
   return String(v || '').trim();
 }
@@ -148,6 +150,34 @@ function setUserBadge(userBadgeId, text) {
   if (el) el.textContent = cleanString(text);
 }
 
+async function inferOrgIdBestEffort(db, user, condoId) {
+  try {
+    const uid = user && user.uid ? cleanString(user.uid) : '';
+    if (uid) {
+      const uSnap = await getDoc(doc(db, 'users', uid));
+      if (uSnap.exists()) {
+        const d = uSnap.data() || {};
+        const o = cleanString(d.orgId);
+        if (o) return o;
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const cId = cleanString(condoId);
+    if (cId) {
+      const cSnap = await getDoc(doc(db, 'condos', cId));
+      if (cSnap.exists()) {
+        const d = cSnap.data() || {};
+        const o = cleanString(d.orgId);
+        if (o) return o;
+      }
+    }
+  } catch (e) {}
+
+  return '';
+}
+
 async function waitForAuthAndContext(opts) {
   opts = opts || {};
 
@@ -240,7 +270,22 @@ export async function setupAdminPage(opts) {
 
     const user = ready.user;
     const condoId = ready.context && ready.context.condoId ? cleanString(ready.context.condoId) : '';
-    const orgId = ready.context && ready.context.orgId ? cleanString(ready.context.orgId) : '';
+    let orgId = ready.context && ready.context.orgId ? cleanString(ready.context.orgId) : '';
+
+    // Best-effort: se orgId não veio do contexto, tenta inferir por perfil/condo
+    if (!orgId) {
+      try {
+        const inferred = await inferOrgIdBestEffort(db, user, condoId);
+        if (inferred) orgId = inferred;
+      } catch (e) {}
+    }
+
+    // Mantém vh_active_org para compatibilidade com guard legado
+    if (orgId) {
+      try {
+        localStorage.setItem('vh_active_org', orgId);
+      } catch (e) {}
+    }
 
     setUserBadge(opts.userBadgeId || 'userBadge', user.email || user.uid);
 
@@ -250,13 +295,6 @@ export async function setupAdminPage(opts) {
 
     if (condoId) {
       condoMembership = await getMembershipForCondo(user.uid, condoId);
-      // se orgId não veio do contexto, tenta derivar do doc do condo
-      if (!orgId) {
-        try {
-          // best-effort: não falha página
-          // (o active-context já tenta manter orgId coerente)
-        } catch (e) {}
-      }
     }
 
     if (orgId) {

@@ -125,8 +125,18 @@
         </label>
 
         <label class="field">
+          <span>Renovação (opcional)</span>
+          <input id="contractRenewal" class="input" type="date" />
+        </label>
+
+        <label class="field">
           <span>Valor (opcional)</span>
           <input id="contractValue" class="input" type="number" step="0.01" placeholder="0,00" />
+        </label>
+
+        <label class="field" style="grid-column:1/-1;">
+          <span>URL do contrato (opcional)</span>
+          <input id="contractUrl" class="input" type="url" placeholder="https://..." />
         </label>
 
         <label class="field" style="grid-column:1/-1;">
@@ -145,11 +155,122 @@
       <div class="divider"></div>
       <h3 class="h3">Lista</h3>
       <div id="contractsList" class="list"></div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Detalhes do contrato</h3>
+      <p class="muted" style="margin-top:-8px;">Use “Detalhes” na lista para gerenciar reajustes, avaliações e histórico de serviços.</p>
+      <div id="contractDetailsHint" class="muted"></div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Reajustes</h3>
+      <form id="adjustmentForm" class="grid grid--3">
+        <input type="hidden" id="adjustmentId" />
+        <label class="field">
+          <span>Vigência *</span>
+          <input id="adjustmentEffective" class="input" type="date" required />
+        </label>
+        <label class="field">
+          <span>% (opcional)</span>
+          <input id="adjustmentPercent" class="input" type="number" step="0.01" placeholder="Ex.: 8.5" />
+        </label>
+        <label class="field">
+          <span>Índice (opcional)</span>
+          <input id="adjustmentIndex" class="input" placeholder="Ex.: IPCA" />
+        </label>
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="adjustmentNotes" class="input" rows="2"></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="adjustmentClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="adjustmentDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="adjustmentMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <div id="adjustmentsList" class="list"></div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Avaliações</h3>
+      <form id="evaluationForm" class="grid grid--3">
+        <input type="hidden" id="evaluationId" />
+        <label class="field">
+          <span>Data (opcional)</span>
+          <input id="evaluationDate" class="input" type="date" />
+        </label>
+        <label class="field">
+          <span>Nota (1-5) *</span>
+          <select id="evaluationScore" class="input" required>
+            <option value="">Selecione…</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <div></div>
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="evaluationNotes" class="input" rows="2"></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="evaluationClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="evaluationDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="evaluationMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <div id="evaluationsList" class="list"></div>
+
+      <div class="divider"></div>
+      <h3 class="h3">Histórico de serviços</h3>
+      <form id="serviceForm" class="grid grid--3">
+        <input type="hidden" id="serviceId" />
+        <label class="field">
+          <span>Data (opcional)</span>
+          <input id="serviceDate" class="input" type="date" />
+        </label>
+        <label class="field" style="grid-column:2/-1;">
+          <span>Descrição *</span>
+          <input id="serviceDescription" class="input" required />
+        </label>
+        <label class="field">
+          <span>Valor (R$) (opcional)</span>
+          <input id="serviceAmount" class="input" placeholder="Ex.: 120,00" />
+        </label>
+        <label class="field">
+          <span>OS (workOrderId) (opcional)</span>
+          <input id="serviceWorkOrderId" class="input" placeholder="Opcional" />
+        </label>
+        <label class="field">
+          <span>Conta a pagar (accountsPayableId) (opcional)</span>
+          <input id="serviceApId" class="input" placeholder="Opcional" />
+        </label>
+        <label class="field" style="grid-column:1/-1;">
+          <span>Anexo URL (opcional)</span>
+          <input id="serviceAttachmentUrl" class="input" type="url" placeholder="https://..." />
+        </label>
+        <label class="field" style="grid-column:1/-1;">
+          <span>Observações</span>
+          <textarea id="serviceNotes" class="input" rows="2"></textarea>
+        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" type="submit">Salvar</button>
+          <button id="serviceClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <button id="serviceDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+          <span id="serviceMsg" class="muted"></span>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <div id="servicesList" class="list"></div>
     </section>
   </main>
 
   <script type="module">
-    import { protect } from '/js/route-guard.js';
+    import { setupAdminPage } from '/js/admin-access.js';
     import { logoutUser } from '/js/auth.js';
     import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
 
@@ -162,9 +283,26 @@
       createContract,
       updateContract,
       deleteContract,
+      listContractAdjustments,
+      createContractAdjustment,
+      updateContractAdjustment,
+      deleteContractAdjustment,
+      listContractEvaluations,
+      createContractEvaluation,
+      updateContractEvaluation,
+      deleteContractEvaluation,
+      listContractServices,
+      createContractService,
+      updateContractService,
+      deleteContractService,
     } from '/js/modules/contracts.js';
 
-    await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+    const env = await setupAdminPage({
+      rolesAny: ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'GESTOR_CARTEIRA', 'ADMIN'],
+      logoutBtnId: null,
+      userBadgeId: 'userBadge',
+    });
+    if (!env || env.ok !== true) return;
 
     const $ = (id) => document.getElementById(id);
 
@@ -174,6 +312,10 @@
       user: null,
       suppliers: [],
       contracts: [],
+      selectedContractId: null,
+      adjustments: [],
+      evaluations: [],
+      services: [],
     };
 
     function setActiveCondoName(text) {
@@ -281,7 +423,9 @@
       $('contractStatus').value = 'ativo';
       $('contractStart').value = '';
       $('contractEnd').value = '';
+      $('contractRenewal').value = '';
       $('contractValue').value = '';
+      $('contractUrl').value = '';
       $('contractNotes').value = '';
       setMsg($('contractMsg'), '');
     }
@@ -293,9 +437,143 @@
       $('contractStatus').value = c.status || 'ativo';
       $('contractStart').value = toDateInputValue(c.startAt);
       $('contractEnd').value = toDateInputValue(c.endAt);
+      $('contractRenewal').value = toDateInputValue(c.renewalAt);
       $('contractValue').value = (typeof c.value === 'number' && Number.isFinite(c.value)) ? String(c.value) : '';
+      $('contractUrl').value = c.contractUrl || '';
       $('contractNotes').value = c.notes || '';
       setMsg($('contractMsg'), 'Editando contrato.');
+    }
+
+    function selectedContractId() {
+      const id = String(state.selectedContractId || '');
+      return id || null;
+    }
+
+    function clearAdjustmentForm() {
+      $('adjustmentId').value = '';
+      $('adjustmentEffective').value = '';
+      $('adjustmentPercent').value = '';
+      $('adjustmentIndex').value = '';
+      $('adjustmentNotes').value = '';
+      setMsg($('adjustmentMsg'), '');
+    }
+
+    function fillAdjustmentForm(a) {
+      $('adjustmentId').value = a.id;
+      $('adjustmentEffective').value = toDateInputValue(a.effectiveAt);
+      $('adjustmentPercent').value = (a.percent != null && Number.isFinite(Number(a.percent))) ? String(a.percent) : '';
+      $('adjustmentIndex').value = a.index || '';
+      $('adjustmentNotes').value = a.notes || '';
+      setMsg($('adjustmentMsg'), 'Editando reajuste.');
+    }
+
+    function clearEvaluationForm() {
+      $('evaluationId').value = '';
+      $('evaluationDate').value = '';
+      $('evaluationScore').value = '';
+      $('evaluationNotes').value = '';
+      setMsg($('evaluationMsg'), '');
+    }
+
+    function fillEvaluationForm(ev) {
+      $('evaluationId').value = ev.id;
+      $('evaluationDate').value = toDateInputValue(ev.date);
+      $('evaluationScore').value = ev.score != null ? String(ev.score) : '';
+      $('evaluationNotes').value = ev.notes || '';
+      setMsg($('evaluationMsg'), 'Editando avaliação.');
+    }
+
+    function clearServiceForm() {
+      $('serviceId').value = '';
+      $('serviceDate').value = '';
+      $('serviceDescription').value = '';
+      $('serviceAmount').value = '';
+      $('serviceWorkOrderId').value = '';
+      $('serviceApId').value = '';
+      $('serviceAttachmentUrl').value = '';
+      $('serviceNotes').value = '';
+      setMsg($('serviceMsg'), '');
+    }
+
+    function fillServiceForm(sv) {
+      $('serviceId').value = sv.id;
+      $('serviceDate').value = toDateInputValue(sv.date);
+      $('serviceDescription').value = sv.description || '';
+      $('serviceAmount').value = sv.amountCents != null && Number.isFinite(Number(sv.amountCents)) ? String((Number(sv.amountCents) / 100).toFixed(2)).replace('.', ',') : '';
+      $('serviceWorkOrderId').value = sv.workOrderId || '';
+      $('serviceApId').value = sv.accountsPayableId || '';
+      $('serviceAttachmentUrl').value = sv.attachmentUrl || '';
+      $('serviceNotes').value = sv.notes || '';
+      setMsg($('serviceMsg'), 'Editando serviço.');
+    }
+
+    function renderContractDetailsHint() {
+      const id = selectedContractId();
+      const c = id ? state.contracts.find((x) => x && x.id === id) : null;
+      $('contractDetailsHint').textContent = c ? `Contrato selecionado: ${c.title || c.id}` : 'Nenhum contrato selecionado.';
+    }
+
+    function renderContractDetailsLists() {
+      $('adjustmentsList').innerHTML = state.adjustments.length
+        ? state.adjustments.map((a) => asItemRow(
+            `${toDateInputValue(a.effectiveAt) || '-'}${a.percent != null ? ` • ${a.percent}%` : ''}${a.index ? ` • ${a.index}` : ''}`,
+            `${a.notes || ''}`,
+            '',
+            `<button class="btn btn--ghost" type="button" data-action="adj-edit" data-id="${a.id}">Editar</button>
+             <button class="btn btn--ghost" type="button" data-action="adj-del" data-id="${a.id}">Excluir</button>`
+          )).join('')
+        : '<p class="muted">Nenhum reajuste cadastrado.</p>';
+
+      $('evaluationsList').innerHTML = state.evaluations.length
+        ? state.evaluations.map((ev) => asItemRow(
+            `Nota: ${ev.score != null ? ev.score : '-'}${toDateInputValue(ev.date) ? ` • ${toDateInputValue(ev.date)}` : ''}`,
+            `${ev.notes || ''}`,
+            '',
+            `<button class="btn btn--ghost" type="button" data-action="eval-edit" data-id="${ev.id}">Editar</button>
+             <button class="btn btn--ghost" type="button" data-action="eval-del" data-id="${ev.id}">Excluir</button>`
+          )).join('')
+        : '<p class="muted">Nenhuma avaliação cadastrada.</p>';
+
+      $('servicesList').innerHTML = state.services.length
+        ? state.services.map((sv) => {
+            const date = toDateInputValue(sv.date) || '-';
+            const amount = sv.amountCents != null && Number.isFinite(Number(sv.amountCents)) ? `R$ ${(Number(sv.amountCents) / 100).toFixed(2).replace('.', ',')}` : '';
+            const links = sv.attachmentUrl ? `<a href="${sv.attachmentUrl}" target="_blank" rel="noopener">Anexo</a>` : '';
+            const refs = `${sv.workOrderId ? `OS: ${sv.workOrderId}` : ''}${sv.accountsPayableId ? `${sv.workOrderId ? ' • ' : ''}AP: ${sv.accountsPayableId}` : ''}`;
+            const sub = `${date}${amount ? ` • ${amount}` : ''}${refs ? ` • ${refs}` : ''}${sv.notes ? ` • ${sv.notes}` : ''}`;
+            return asItemRow(
+              `${sv.description || '(sem descrição)'}`,
+              sub,
+              links,
+              `<button class="btn btn--ghost" type="button" data-action="svc-edit" data-id="${sv.id}">Editar</button>
+               <button class="btn btn--ghost" type="button" data-action="svc-del" data-id="${sv.id}">Excluir</button>`
+            );
+          }).join('')
+        : '<p class="muted">Nenhum serviço registrado.</p>';
+    }
+
+    async function renderContractDetails() {
+      renderContractDetailsHint();
+      const contractId = selectedContractId();
+      if (!state.condoId || !contractId) {
+        state.adjustments = [];
+        state.evaluations = [];
+        state.services = [];
+        renderContractDetailsLists();
+        return;
+      }
+
+      try {
+        state.adjustments = await listContractAdjustments(state.condoId, contractId);
+        state.evaluations = await listContractEvaluations(state.condoId, contractId);
+        state.services = await listContractServices(state.condoId, contractId);
+      } catch (e) {
+        // Se rules ainda não permitem, ao menos não quebra a tela.
+        state.adjustments = [];
+        state.evaluations = [];
+        state.services = [];
+      }
+      renderContractDetailsLists();
     }
 
     function renderSupplierOptions() {
@@ -346,12 +624,15 @@
               const endBadge = dueSoonBadge(c.endAt, c.status);
               const dates = `${toDateInputValue(c.startAt) || '-'} → ${toDateInputValue(c.endAt) || '-'}`;
               const right = `${endBadge} <span class="badge">${c.status || 'ativo'}</span>`;
-              const sub = `Fornecedor: ${supplierLabel} • Período: ${dates}${c.value != null ? ` • Valor: ${c.value}` : ''}${c.notes ? ` • ${c.notes}` : ''}`;
+              const renewal = toDateInputValue(c.renewalAt) ? ` • Renovação: ${toDateInputValue(c.renewalAt)}` : '';
+              const url = c.contractUrl ? ` • <a href="${c.contractUrl}" target="_blank" rel="noopener">Contrato</a>` : '';
+              const sub = `Fornecedor: ${supplierLabel} • Período: ${dates}${renewal}${c.value != null ? ` • Valor: ${c.value}` : ''}${url}${c.notes ? ` • ${c.notes}` : ''}`;
               return asItemRow(
                 `${(c.title || '(sem título)')}`,
                 sub,
                 right,
-                `<button class="btn btn--ghost" type="button" data-action="contract-edit" data-id="${c.id}">Editar</button>
+                `<button class="btn btn--ghost" type="button" data-action="contract-open" data-id="${c.id}">Detalhes</button>
+                 <button class="btn btn--ghost" type="button" data-action="contract-edit" data-id="${c.id}">Editar</button>
                  <button class="btn btn--ghost" type="button" data-action="contract-del" data-id="${c.id}">Excluir</button>`
               );
             }).join('')
@@ -397,7 +678,18 @@
 
         if (action === 'contract-edit') {
           const c = state.contracts.find((x) => x && x.id === id);
-          if (c) fillContractForm(c);
+          if (c) {
+            state.selectedContractId = id;
+            fillContractForm(c);
+            await renderContractDetails();
+          }
+          return;
+        }
+
+        if (action === 'contract-open') {
+          state.selectedContractId = id;
+          setMsg($('contractMsg'), 'Contrato selecionado para detalhes.');
+          await renderContractDetails();
           return;
         }
 
@@ -420,6 +712,10 @@
 
       $('supplierClearBtn').addEventListener('click', () => clearSupplierForm());
       $('contractClearBtn').addEventListener('click', () => clearContractForm());
+
+      $('adjustmentClearBtn').addEventListener('click', () => clearAdjustmentForm());
+      $('evaluationClearBtn').addEventListener('click', () => clearEvaluationForm());
+      $('serviceClearBtn').addEventListener('click', () => clearServiceForm());
 
       $('supplierDeleteBtn').addEventListener('click', async () => {
         const id = String($('supplierId').value || '');
@@ -489,7 +785,9 @@
             status: $('contractStatus').value,
             startDate: $('contractStart').value,
             endDate: $('contractEnd').value,
+            renewalDate: $('contractRenewal').value,
             value: $('contractValue').value,
+            contractUrl: $('contractUrl').value,
             notes: $('contractNotes').value,
           };
 
@@ -497,14 +795,216 @@
             await updateContract(state.condoId, id, payload);
             setMsg($('contractMsg'), 'Contrato atualizado.');
           } else {
-            await createContract(state.condoId, payload);
+            const created = await createContract(state.condoId, payload);
+            state.selectedContractId = created && created.id ? created.id : null;
             setMsg($('contractMsg'), 'Contrato cadastrado.');
           }
 
           clearContractForm();
           await renderAll();
+          await renderContractDetails();
         } catch (err) {
           setMsg($('contractMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('adjustmentsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.adjustments.find((x) => x && x.id === id);
+
+        if (action === 'adj-edit' && item) {
+          fillAdjustmentForm(item);
+          return;
+        }
+
+        if (action === 'adj-del') {
+          if (!confirm('Excluir este reajuste?')) return;
+          try {
+            await deleteContractAdjustment(state.condoId, selectedContractId(), id);
+            clearAdjustmentForm();
+            await renderContractDetails();
+          } catch (err) {
+            setMsg($('adjustmentMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('evaluationsList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.evaluations.find((x) => x && x.id === id);
+
+        if (action === 'eval-edit' && item) {
+          fillEvaluationForm(item);
+          return;
+        }
+
+        if (action === 'eval-del') {
+          if (!confirm('Excluir esta avaliação?')) return;
+          try {
+            await deleteContractEvaluation(state.condoId, selectedContractId(), id);
+            clearEvaluationForm();
+            await renderContractDetails();
+          } catch (err) {
+            setMsg($('evaluationMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('servicesList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const item = state.services.find((x) => x && x.id === id);
+
+        if (action === 'svc-edit' && item) {
+          fillServiceForm(item);
+          return;
+        }
+
+        if (action === 'svc-del') {
+          if (!confirm('Excluir este serviço?')) return;
+          try {
+            await deleteContractService(state.condoId, selectedContractId(), id);
+            clearServiceForm();
+            await renderContractDetails();
+          } catch (err) {
+            setMsg($('serviceMsg'), err.message || String(err), true);
+          }
+        }
+      });
+
+      $('adjustmentDeleteBtn').addEventListener('click', async () => {
+        const id = String($('adjustmentId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este reajuste?')) return;
+        try {
+          await deleteContractAdjustment(state.condoId, selectedContractId(), id);
+          clearAdjustmentForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('adjustmentMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('evaluationDeleteBtn').addEventListener('click', async () => {
+        const id = String($('evaluationId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir esta avaliação?')) return;
+        try {
+          await deleteContractEvaluation(state.condoId, selectedContractId(), id);
+          clearEvaluationForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('evaluationMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('serviceDeleteBtn').addEventListener('click', async () => {
+        const id = String($('serviceId').value || '');
+        if (!id) return;
+        if (!confirm('Excluir este serviço?')) return;
+        try {
+          await deleteContractService(state.condoId, selectedContractId(), id);
+          clearServiceForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('serviceMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('adjustmentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const contractId = selectedContractId();
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          if (!contractId) throw new Error('Selecione um contrato (Detalhes).');
+
+          const id = String($('adjustmentId').value || '');
+          const payload = {
+            effectiveDate: $('adjustmentEffective').value,
+            percent: $('adjustmentPercent').value,
+            index: $('adjustmentIndex').value,
+            notes: $('adjustmentNotes').value,
+          };
+
+          if (id) {
+            await updateContractAdjustment(state.condoId, contractId, id, payload);
+            setMsg($('adjustmentMsg'), 'Reajuste atualizado.');
+          } else {
+            await createContractAdjustment(state.condoId, contractId, payload);
+            setMsg($('adjustmentMsg'), 'Reajuste cadastrado.');
+          }
+          clearAdjustmentForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('adjustmentMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('evaluationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const contractId = selectedContractId();
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          if (!contractId) throw new Error('Selecione um contrato (Detalhes).');
+
+          const id = String($('evaluationId').value || '');
+          const payload = {
+            date: $('evaluationDate').value,
+            score: $('evaluationScore').value,
+            notes: $('evaluationNotes').value,
+          };
+
+          if (id) {
+            await updateContractEvaluation(state.condoId, contractId, id, payload);
+            setMsg($('evaluationMsg'), 'Avaliação atualizada.');
+          } else {
+            await createContractEvaluation(state.condoId, contractId, payload);
+            setMsg($('evaluationMsg'), 'Avaliação cadastrada.');
+          }
+          clearEvaluationForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('evaluationMsg'), err.message || String(err), true);
+        }
+      });
+
+      $('serviceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          const contractId = selectedContractId();
+          if (!state.condoId) throw new Error('Selecione um condomínio.');
+          if (!contractId) throw new Error('Selecione um contrato (Detalhes).');
+
+          const id = String($('serviceId').value || '');
+          const payload = {
+            date: $('serviceDate').value,
+            description: $('serviceDescription').value,
+            amount: $('serviceAmount').value,
+            workOrderId: $('serviceWorkOrderId').value,
+            accountsPayableId: $('serviceApId').value,
+            attachmentUrl: $('serviceAttachmentUrl').value,
+            notes: $('serviceNotes').value,
+          };
+
+          if (id) {
+            await updateContractService(state.condoId, contractId, id, payload);
+            setMsg($('serviceMsg'), 'Serviço atualizado.');
+          } else {
+            await createContractService(state.condoId, contractId, payload);
+            setMsg($('serviceMsg'), 'Serviço registrado.');
+          }
+          clearServiceForm();
+          await renderContractDetails();
+        } catch (err) {
+          setMsg($('serviceMsg'), err.message || String(err), true);
         }
       });
     }
@@ -525,6 +1025,11 @@
       bindActions();
       clearSupplierForm();
       clearContractForm();
+      clearAdjustmentForm();
+      clearEvaluationForm();
+      clearServiceForm();
+      renderContractDetailsHint();
+      renderContractDetailsLists();
 
       watchAuthAndContext((ev) => {
         const user = ev && ev.user ? ev.user : null;
@@ -546,7 +1051,12 @@
 
         clearSupplierForm();
         clearContractForm();
+        clearAdjustmentForm();
+        clearEvaluationForm();
+        clearServiceForm();
+        state.selectedContractId = null;
         renderAll().catch(() => {});
+        renderContractDetails().catch(() => {});
       });
 
       const initial = getActiveContext();
