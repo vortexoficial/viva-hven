@@ -368,8 +368,36 @@
   gap: 10px;
 }
 
+.vhHomePage {
+  gap: 18px;
+  padding-top: 20px;
+}
+
+.vhHomePage .card {
+  padding: 20px;
+}
+
+.vhHomePage .vhSectionHead {
+  margin-bottom: 12px;
+}
+
+.vhHomePage #status {
+  margin-top: -2px;
+}
+
 @media (min-width: 760px) {
   .vhQuickGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .vhHomePage {
+    gap: 16px;
+    padding-top: 16px;
+  }
+
+  .vhHomePage .card {
+    padding: 16px;
   }
 }
