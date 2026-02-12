@@ -329,7 +329,7 @@
 
 /* Sections */
 .section {
-  padding: var(--section-spacing) 0;
+  padding: var(--section-spacing, 72px) 0;
   position: relative;
 }
 .section::before {
