@@ -120,7 +120,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--brand-b) 14%, var(--border));
@@ -130,7 +130,24 @@
   font-weight: 800;
   font-size: var(--fs-12);
   white-space: nowrap;
+  gap: 8px;
   transition: border-color var(--dur-2) var(--ease), background var(--dur-2) var(--ease), color var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+.vhAppNav__linkIcon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+.vhAppNav__linkIcon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.vhAppNav__linkText {
+  line-height: 1;
 }
 .vhAppNav__link:hover {
   transform: translateY(-1px);
@@ -148,6 +165,21 @@
 
 @media (max-width: 760px) {
   .vhAppNav__hint { display: none; }
+  .vhAppNav__inner {
+    padding: 10px var(--pad);
+    gap: 7px;
+  }
+  .vhAppNav__link {
+    min-height: 34px;
+    padding: 0 12px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .vhAppNav__linkIcon,
+  .vhAppNav__linkIcon svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 /* App bottom nav (mobile) */

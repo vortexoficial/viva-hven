@@ -24,47 +24,54 @@
   </head>
 
   <body>
-    <main class="container" style="padding-top: 28px; padding-bottom: 72px;">
-      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
-        <div>
-          <h1 class="section__title" style="margin-bottom: 6px;">Boletos</h1>
-          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+    <main class="container vhHomePage" style="padding-bottom: 72px;">
+      <section class="card vhHomeTop">
+        <div class="vhPageHead">
+          <div class="vhPageHead__main">
+            <span class="vhPageHead__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 3h6l4 4v14H6V3h2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            <div>
+              <h1 class="section__title" style="margin-bottom: 6px;">Boletos</h1>
+              <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
             Veja suas cobranças e baixe comprovantes (quando disponíveis).
-          </p>
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <span data-vh-context-anchor="1"></span>
-          <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
-          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
-        </div>
-      </div>
-
-      <section class="card" style="margin-top: 14px;">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-          <div style="flex:1;min-width:240px;">
-            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
+              </p>
+            </div>
           </div>
-          <div>
-            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
-            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+
+          <div class="vhPageHead__actions">
+            <span data-vh-context-anchor="1"></span>
+            <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
+            <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
           </div>
         </div>
       </section>
 
-      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+      <section class="card vhContextCard">
+        <div class="vhContextRow">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
+          </div>
+          <div class="vhContextActions">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn btn--primary" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
 
-      <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
+      <div id="status" class="muted" style="font-size: 12px;"></div>
+
+      <section class="vhPanelStack">
         <article class="card">
           <h2 class="card__title" style="margin-bottom: 10px;">Cobranças</h2>
-          <div id="chargeList" style="display:grid;gap:10px;"></div>
+          <div id="chargeList" class="vhChargeList"></div>
         </article>
 
         <article class="card">
           <h2 class="card__title" style="margin-bottom: 10px;">Detalhe</h2>
           <input type="hidden" id="chargeId" />
-          <div id="detail" style="font-size:12px;color:var(--muted);"></div>
+          <div id="detail" class="vhDetail"></div>
           <div id="receipt" style="margin-top:10px;"></div>
         </article>
       </section>
@@ -168,7 +175,7 @@
       function renderNoContext(container) {
         if (!container) return;
         container.innerHTML =
-          '<div class="card" style="padding:12px;">' +
+          '<div class="vhSoftPanel">' +
           '  <div style="font-weight:900;">Selecione um condomínio</div>' +
           '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">O app usa o contexto ativo para listar boletos.</div>' +
           '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
@@ -183,7 +190,7 @@
       function renderNoUnit(container, msg) {
         if (!container) return;
         container.innerHTML =
-          '<div class="card" style="padding:12px;">' +
+          '<div class="vhSoftPanel">' +
           '  <div style="font-weight:900;">Cobranças indisponíveis</div>' +
           '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">' +
           (msg ? String(msg) : 'Sua unidade não está vinculada ao seu acesso.') +
@@ -206,14 +213,10 @@
 
         items.forEach((it) => {
           const row = document.createElement('div');
-          row.className = 'card';
-          row.style.padding = '12px';
+          row.className = 'vhChargeItem';
 
           const head = document.createElement('div');
-          head.style.display = 'flex';
-          head.style.alignItems = 'center';
-          head.style.justifyContent = 'space-between';
-          head.style.gap = '10px';
+          head.className = 'vhChargeHead';
 
           const left = document.createElement('div');
           const title = (it.referenceMonth ? ('Ref. ' + it.referenceMonth) : 'Cobrança') + (it.description ? (' — ' + it.description) : '');
@@ -223,9 +226,9 @@
             .join(' • ');
 
           left.innerHTML =
-            '<div style="font-weight:800;">' + title + '</div>' +
-            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
-            '<div style="margin-top:6px;font-size:12px;color:var(--text-2);">' + Money.centsToBr(it.amountCents) + '</div>';
+            '<p class="vhChargeTitle">' + title + '</p>' +
+            '<div class="vhChargeMeta">' + subtitle + '</div>' +
+            '<div class="vhChargeAmount">' + Money.centsToBr(it.amountCents) + '</div>';
 
           const pickBtn = document.createElement('button');
           pickBtn.type = 'button';
