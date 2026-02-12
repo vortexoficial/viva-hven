@@ -3,6 +3,8 @@
 
 import './ui.js';
 import './active-context.js';
+import './app-panels-nav.js';
+import './app-finalize.js';
 
 function bindOnce() {
   try {

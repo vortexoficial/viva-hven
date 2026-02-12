@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "seed": "node scripts/seed-demo.mjs"
+    "seed": "node scripts/seed-demo.mjs",
+    "checkup": "node scripts/checkup.mjs",
+    "emulators:hosting": "firebase emulators:start --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:prod": "firebase deploy --only hosting,firestore:rules,firestore:indexes"
   },
   "dependencies": {
     "firebase-admin": "^13.0.2"

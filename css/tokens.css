@@ -41,6 +41,8 @@
   --container: 1120px;
   --container-wide: 1200px;
   --pad: 24px;
+  --panel-gap: 14px;
+  --topbar-h: 64px;
 
   /* Motion */
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -57,6 +59,7 @@
   --bg-alt: #111827;
   --surface: rgba(255, 255, 255, 0.06);
   --surface-2: rgba(255, 255, 255, 0.09);
+  --surface-3: rgba(255, 255, 255, 0.13);
   --border: rgba(255, 255, 255, 0.08);
   --border-2: rgba(255, 255, 255, 0.12);
 
@@ -79,16 +82,13 @@
   --focus: 0 0 0 3px rgba(34, 211, 238, 0.35);
 }
 
-:root[data-theme="dark"] {
-  /* Mantém o tema padrão (dark-first). */
-}
-
 /* Light mode (quando NÃO está com data-theme="dark") */
 :root:not([data-theme="dark"]) {
   --bg: #ffffff;
   --bg-alt: #f3f4f6;
   --surface: #ffffff;
   --surface-2: #f9fafb;
+  --surface-3: #f3f4f6;
   --border: #e5e7eb;
   --border-2: #d1d5db;
 

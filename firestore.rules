@@ -40,21 +40,19 @@ service cloud.firestore {
     }
 
     function normalizeRole(role) {
-      if (!(role is string)) return '';
-
-      // Canoniza para o formato esperado nas regras (minúsculo / snake)
-      return role == 'MORADOR' || role == 'morador' ? 'morador' :
-             role == 'PORTEIRO' || role == 'porteiro' ? 'porteiro' :
-             role == 'CONSELHO' || role == 'conselho' ? 'conselho' :
-             role == 'SUBSINDICO' || role == 'subsindico' ? 'subsindico' :
-             role == 'SINDICO' || role == 'sindico' ? 'sindico' :
-             role == 'GESTOR' || role == 'gestor' ? 'gestor' :
-             role == 'ADMINISTRADORA' || role == 'administradora' ? 'administradora' :
-             role == 'GESTOR_CARTEIRA' || role == 'gestor_carteira' ? 'gestor_carteira' :
-             // Compat legado
-             role == 'CARTEIRA' || role == 'carteira' ? 'carteira' :
-             role == 'ADMIN' || role == 'admin' ? 'admin' :
-             role;
+          // Canoniza para o formato esperado nas regras (minúsculo / snake)
+          return !(role is string) ? '' :
+            role == 'MORADOR' || role == 'morador' ? 'morador' :
+            role == 'PORTEIRO' || role == 'porteiro' ? 'porteiro' :
+            role == 'CONSELHO' || role == 'conselho' ? 'conselho' :
+            role == 'SUBSINDICO' || role == 'subsindico' ? 'subsindico' :
+            role == 'SINDICO' || role == 'sindico' ? 'sindico' :
+            role == 'GESTOR' || role == 'gestor' ? 'gestor' :
+            role == 'ADMINISTRADORA' || role == 'administradora' ? 'administradora' :
+            role == 'GESTOR_CARTEIRA' || role == 'gestor_carteira' ? 'gestor_carteira' :
+            role == 'CARTEIRA' || role == 'carteira' ? 'carteira' :
+            role == 'ADMIN' || role == 'admin' ? 'admin' :
+            role;
     }
 
     function explicitPerms(mDoc) {

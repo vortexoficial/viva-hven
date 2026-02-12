@@ -4,15 +4,21 @@
 
 const LINKS = [
   { href: '/admin/dashboard.html', label: 'Dashboard' },
+  { href: '/admin/assembleias.html', label: 'Assembleias' },
   { href: '/admin/condominio.html', label: 'Condomínio' },
+  { href: '/admin/governanca.html', label: 'Governança' },
   { href: '/admin/pessoas.html', label: 'Pessoas' },
+  { href: '/admin/moradores.html', label: 'Moradores' },
   { href: '/admin/funcionarios.html', label: 'Funcionários' },
+  { href: '/admin/comunicacao.html', label: 'Comunicação' },
   { href: '/admin/manutencao.html', label: 'Manutenção' },
   { href: '/admin/fornecedores.html', label: 'Fornecedores' },
   { href: '/admin/obras.html', label: 'Obras' },
   { href: '/admin/seguranca.html', label: 'Segurança' },
   { href: '/admin/seguros.html', label: 'Seguros' },
   { href: '/admin/financeiro.html', label: 'Financeiro' },
+  { href: '/admin/carteira.html', label: 'Carteira' },
+  { href: '/admin/insights.html', label: 'Insights' },
   { href: '/admin/memberships.html', label: 'Memberships' },
   { href: '/admin/logs.html', label: 'Logs' },
 ];
@@ -59,7 +65,7 @@ function mountAdminNav() {
 
   const hint = document.createElement('div');
   hint.className = 'vhAdminNav__hint';
-  hint.textContent = 'Painel administrativo';
+  hint.textContent = 'Admin completo • v2';
   inner.appendChild(hint);
 
   nav.appendChild(inner);
