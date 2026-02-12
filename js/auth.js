@@ -38,6 +38,35 @@ function looksLikeEmail(value) {
   return v.includes('@');
 }
 
+function authErrorMessage(e, fallback) {
+  var code = String(e && e.code ? e.code : '').toLowerCase();
+  if (!code) return fallback;
+
+  if (code.includes('auth/invalid-credential') || code.includes('auth/wrong-password')) {
+    return 'E-mail ou senha inválidos.';
+  }
+  if (code.includes('auth/user-disabled')) {
+    return 'Usuário desativado.';
+  }
+  if (code.includes('auth/too-many-requests')) {
+    return 'Muitas tentativas. Tente novamente em alguns minutos.';
+  }
+  if (code.includes('auth/email-already-in-use')) {
+    return 'Este e-mail já está em uso.';
+  }
+  if (code.includes('auth/weak-password')) {
+    return 'Senha fraca. Use uma senha mais forte.';
+  }
+  if (code.includes('auth/invalid-email')) {
+    return 'E-mail inválido.';
+  }
+  if (code.includes('auth/operation-not-allowed')) {
+    return 'Login por e-mail/senha não está habilitado no Firebase Authentication.';
+  }
+
+  return fallback;
+}
+
 async function getUserProfileByUid(db, uid) {
   var ref = doc(db, 'users', uid);
   var snap = await getDoc(ref);
@@ -68,7 +97,12 @@ export async function registerUser(payload) {
   var auth = firebase.auth;
   var db = firebase.db;
 
-  var cred = await createUserWithEmailAndPassword(auth, email, password);
+  var cred;
+  try {
+    cred = await createUserWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    throw new Error(authErrorMessage(e, 'Falha ao cadastrar.'));
+  }
   var user = cred.user;
 
   try {
@@ -110,7 +144,12 @@ export async function loginUser(payload) {
 
   var email = identifier;
 
-  var cred = await signInWithEmailAndPassword(auth, email, password);
+  var cred;
+  try {
+    cred = await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    throw new Error(authErrorMessage(e, 'Falha ao entrar.'));
+  }
   var user = cred.user;
 
   var profile = await getUserProfileByUid(db, user.uid);
