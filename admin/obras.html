@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -33,6 +35,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +45,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -59,6 +61,31 @@
           <h2 class="card__title" style="margin-bottom: 10px;">Obras (áreas comuns)</h2>
 
           <div id="projectList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+          <section class="card" style="padding:12px;margin-bottom:12px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+              <div style="font-weight:900;">Resumo físico-financeiro</div>
+              <div id="projectRollupHint" style="font-size:12px;color:var(--muted);">Selecione uma obra para ver o resumo.</div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(4, minmax(0, 1fr));margin-top:10px;">
+              <div>
+                <div style="font-size:11px;color:var(--muted);font-weight:800;">Previsto (centavos)</div>
+                <div id="rollupPlanned" style="font-weight:900;">—</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);font-weight:800;">Realizado (centavos)</div>
+                <div id="rollupActual" style="font-weight:900;">—</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);font-weight:800;">Físico (%)</div>
+                <div id="rollupPhysical" style="font-weight:900;">—</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);font-weight:800;">Financeiro (%)</div>
+                <div id="rollupFinancial" style="font-weight:900;">—</div>
+              </div>
+            </div>
+          </section>
 
           <form id="projectForm" style="display:grid;gap:10px;">
             <input type="hidden" id="projectId" />
@@ -111,7 +138,7 @@
             <div style="display:grid;gap:10px;grid-template-columns: 1fr auto;align-items:end;">
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo</label>
-                <input id="projectFile" class="input" type="file" />
+                <input id="projectFileUrl" class="input" type="url" placeholder="https://..." />
               </div>
               <button id="projectAddFileBtn" class="btn" type="button">Enviar anexo</button>
             </div>
@@ -124,6 +151,136 @@
               <button id="projectDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
             </div>
           </form>
+
+          <section class="card" style="padding:12px;margin-top:12px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+              <div style="font-weight:900;">Cronograma (etapas)</div>
+              <div style="font-size:12px;color:var(--muted);">Crie etapas, defina previsto e aprove por etapa.</div>
+            </div>
+
+            <div id="stageList" style="display:grid;gap:10px;margin-top:10px;"></div>
+
+            <form id="stageForm" style="display:grid;gap:10px;margin-top:12px;">
+              <input type="hidden" id="stageId" />
+
+              <div style="display:grid;gap:10px;grid-template-columns: 1fr auto;align-items:end;">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título da etapa</label>
+                  <input id="stageTitle" class="input" placeholder="Ex: Demolição e preparo" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ordem</label>
+                  <input id="stageOrder" class="input" type="number" min="1" placeholder="#" style="width:120px;" />
+                </div>
+              </div>
+
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição (opcional)</label>
+                <textarea id="stageDesc" class="input" rows="2" placeholder="Escopo da etapa"></textarea>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(4, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="stageStatus" class="input">
+                    <option value="rascunho">Rascunho</option>
+                    <option value="pendente_aprovacao">Pendente aprovação</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="reprovado">Reprovado</option>
+                    <option value="em_execucao">Em execução</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Peso (%)</label>
+                  <input id="stageWeight" class="input" type="number" min="0" max="100" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Previsto (centavos)</label>
+                  <input id="stagePlannedCost" class="input" type="number" min="0" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">URL anexo</label>
+                  <input id="stageFileUrl" class="input" type="url" placeholder="https://..." />
+                </div>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Início previsto</label>
+                  <input id="stageStart" class="input" type="date" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fim previsto</label>
+                  <input id="stageEnd" class="input" type="date" />
+                </div>
+              </div>
+
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Decisão/observação (opcional)</label>
+                <textarea id="stageDecisionNote" class="input" rows="2" placeholder="Condições / motivo / observações"></textarea>
+              </div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="stageSaveBtn" class="btn" type="submit">Salvar etapa</button>
+                <button id="stageClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+                <button id="stageDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+                <button id="stageApproveBtn" class="btn btn--ghost" type="button">Aprovar</button>
+                <button id="stageRejectBtn" class="btn btn--ghost" type="button">Reprovar</button>
+                <button id="stageAddFileBtn" class="btn btn--ghost" type="button">Anexar URL</button>
+              </div>
+
+              <div id="stageAttachments" style="display:grid;gap:10px;"></div>
+            </form>
+          </section>
+
+          <section class="card" style="padding:12px;margin-top:12px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+              <div style="font-weight:900;">Medições</div>
+              <div style="font-size:12px;color:var(--muted);">Registre medições (físico e financeiro) por etapa.</div>
+            </div>
+
+            <div id="measurementList" style="display:grid;gap:10px;margin-top:10px;"></div>
+
+            <form id="measurementForm" style="display:grid;gap:10px;margin-top:12px;">
+              <div style="display:grid;gap:10px;grid-template-columns: 1fr 1fr;">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Etapa</label>
+                  <select id="measurementStageId" class="input"></select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
+                  <input id="measurementDate" class="input" type="date" />
+                </div>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Físico (%)</label>
+                  <input id="measurementPhysical" class="input" type="number" min="0" max="100" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (centavos)</label>
+                  <input id="measurementAmount" class="input" type="number" min="0" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">URL anexo</label>
+                  <input id="measurementFileUrl" class="input" type="url" placeholder="https://..." />
+                </div>
+              </div>
+
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observação</label>
+                <textarea id="measurementNote" class="input" rows="2" placeholder="Opcional"></textarea>
+              </div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="measurementSaveBtn" class="btn" type="submit">Registrar medição</button>
+                <button id="measurementClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+              </div>
+            </form>
+          </section>
         </article>
 
         <article class="card">
@@ -186,13 +343,22 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import {
         listProjects,
         createProject,
         updateProject,
         deleteProject,
         addProjectAttachment,
+        listProjectStages,
+        createProjectStage,
+        updateProjectStage,
+        decideProjectStage,
+        deleteProjectStage,
+        addProjectStageAttachment,
+        listProjectMeasurements,
+        createProjectMeasurement,
+        deleteProjectMeasurement,
         listUnitReforms,
         updateUnitReformAsAdmin,
       } from '/js/modules/works.js';
@@ -201,7 +367,11 @@
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -220,17 +390,12 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name || c.id;
-          ctxCondo.appendChild(opt);
-        });
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
       }
 
       function renderLinks(container, attachments) {
@@ -251,6 +416,74 @@
             (url ? '<a class="btn" target="_blank" href="' + url + '">Abrir</a>' : '<div style="font-size:12px;color:var(--muted);">Sem URL</div>');
           container.appendChild(card);
         });
+      }
+
+      function fmtDateOnlyMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') return v.toDate().toISOString().slice(0, 10);
+          if (v instanceof Date) return v.toISOString().slice(0, 10);
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function fmtDateTimeMaybe(v) {
+        try {
+          if (!v) return '';
+          if (typeof v.toDate === 'function') return v.toDate().toLocaleString('pt-BR');
+          if (v instanceof Date) return v.toLocaleString('pt-BR');
+          return '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function setProjectRollups(project) {
+        const hint = $('projectRollupHint');
+        const planned = $('rollupPlanned');
+        const actual = $('rollupActual');
+        const physical = $('rollupPhysical');
+        const financial = $('rollupFinancial');
+
+        if (!project || !project.id) {
+          if (hint) hint.textContent = 'Selecione uma obra para ver o resumo.';
+          if (planned) planned.textContent = '—';
+          if (actual) actual.textContent = '—';
+          if (physical) physical.textContent = '—';
+          if (financial) financial.textContent = '—';
+          return;
+        }
+
+        if (hint) hint.textContent = 'Atualiza automaticamente pelas etapas e medições.';
+        if (planned) planned.textContent = typeof project.plannedCostCents === 'number' ? String(project.plannedCostCents) : '—';
+        if (actual) actual.textContent = typeof project.actualCostCents === 'number' ? String(project.actualCostCents) : '—';
+        if (physical) physical.textContent = typeof project.physicalPercent === 'number' ? (String(project.physicalPercent) + '%') : '—';
+        if (financial) financial.textContent = typeof project.financialPercent === 'number' ? (String(project.financialPercent) + '%') : '—';
+      }
+
+      function clearStageForm() {
+        $('stageId').value = '';
+        $('stageTitle').value = '';
+        $('stageOrder').value = '';
+        $('stageDesc').value = '';
+        $('stageStatus').value = 'rascunho';
+        $('stageWeight').value = '';
+        $('stagePlannedCost').value = '';
+        $('stageFileUrl').value = '';
+        $('stageStart').value = '';
+        $('stageEnd').value = '';
+        $('stageDecisionNote').value = '';
+        $('stageAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+      }
+
+      function clearMeasurementsForm() {
+        $('measurementDate').value = '';
+        $('measurementPhysical').value = '';
+        $('measurementAmount').value = '';
+        $('measurementFileUrl').value = '';
+        $('measurementNote').value = '';
       }
 
       function renderProjectList(items) {
@@ -287,6 +520,8 @@
             $('projectEnd').value = it.endAt && typeof it.endAt.toDate === 'function' ? it.endAt.toDate().toISOString().slice(0, 10) : '';
             $('projectContractor').value = it.contractor || '';
             renderLinks($('projectAttachments'), it.attachments);
+            setProjectRollups(it);
+            refreshProjectExtras().catch(() => {});
             setStatus('Obra selecionada.');
           });
 
@@ -333,6 +568,150 @@
         });
       }
 
+      function renderStageList(items) {
+        const el = $('stageList');
+        el.innerHTML = '';
+        if (!items || items.length === 0) {
+          el.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma etapa.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const subtitle = [
+            it.status ? ('status: ' + it.status) : null,
+            (typeof it.order === 'number' ? ('ordem: ' + it.order) : null),
+            (typeof it.plannedCostCents === 'number' ? ('prev: ' + it.plannedCostCents) : null),
+          ].filter(Boolean).join(' • ');
+
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+            '<div>' +
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '</div>' +
+            '<button class="btn btn--ghost" type="button">Editar</button>' +
+            '</div>';
+
+          row.querySelector('button').addEventListener('click', () => {
+            $('stageId').value = it.id;
+            $('stageTitle').value = it.title || '';
+            $('stageOrder').value = typeof it.order === 'number' ? String(it.order) : '';
+            $('stageDesc').value = it.description || '';
+            $('stageStatus').value = it.status || 'rascunho';
+            $('stageWeight').value = typeof it.plannedWeightPercent === 'number' ? String(it.plannedWeightPercent) : '';
+            $('stagePlannedCost').value = typeof it.plannedCostCents === 'number' ? String(it.plannedCostCents) : '';
+            $('stageStart').value = fmtDateOnlyMaybe(it.plannedStartAt);
+            $('stageEnd').value = fmtDateOnlyMaybe(it.plannedEndAt);
+            $('stageDecisionNote').value = it.decisionNote || '';
+            renderLinks($('stageAttachments'), it.attachments);
+            setStatus('Etapa selecionada.');
+          });
+
+          el.appendChild(row);
+        });
+      }
+
+      function fillStageSelect(selectEl, stages) {
+        selectEl.innerHTML = '';
+        const list = Array.isArray(stages) ? stages : [];
+        if (list.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Cadastre etapas primeiro';
+          selectEl.appendChild(opt);
+          return;
+        }
+        list.forEach((s) => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = (typeof s.order === 'number' ? (String(s.order) + ' — ') : '') + (s.title || s.id);
+          selectEl.appendChild(opt);
+        });
+      }
+
+      function renderMeasurementList(items, stagesById) {
+        const el = $('measurementList');
+        el.innerHTML = '';
+        if (!items || items.length === 0) {
+          el.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma medição.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const stage = stagesById && it.stageId ? stagesById[String(it.stageId)] : null;
+          const subtitle = [
+            stage ? ('etapa: ' + (stage.title || it.stageId)) : (it.stageId ? ('etapa: ' + it.stageId) : null),
+            (typeof it.physicalPercent === 'number' ? ('físico: ' + it.physicalPercent + '%') : null),
+            (typeof it.amountCents === 'number' ? ('valor: ' + it.amountCents) : null),
+            (it.measuredAt ? ('data: ' + fmtDateOnlyMaybe(it.measuredAt)) : null),
+            (it.createdAt ? ('criado: ' + fmtDateTimeMaybe(it.createdAt)) : null),
+          ].filter(Boolean).join(' • ');
+
+          const attach = (it.attachments && it.attachments.length && it.attachments[0] && it.attachments[0].url)
+            ? '<a class="btn btn--ghost" target="_blank" href="' + it.attachments[0].url + '">Anexo</a>'
+            : '';
+
+          row.innerHTML =
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+            '<div>' +
+            '<div style="font-weight:800;">' + (it.title || 'Medição') + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:10px;align-items:center;">' +
+            attach +
+            '<button class="btn btn--ghost" type="button">Excluir</button>' +
+            '</div>' +
+            '</div>';
+
+          row.querySelector('button').addEventListener('click', () => {
+            const cId = currentCondoId();
+            const pId = $('projectId').value;
+            if (!cId || !pId) return;
+            withBusy(row.querySelector('button'), async () => {
+              await deleteProjectMeasurement(cId, pId, it.id);
+              await refreshProjectExtras();
+              await refreshAll();
+              setStatus('Medição excluída.');
+            });
+          });
+
+          el.appendChild(row);
+        });
+      }
+
+      async function refreshProjectExtras() {
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        if (!cId || !pId) {
+          $('stageList').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione uma obra.</p>';
+          $('measurementList').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione uma obra.</p>';
+          $('measurementStageId').innerHTML = '';
+          clearStageForm();
+          clearMeasurementsForm();
+          return;
+        }
+
+        const [stages, measurements] = await Promise.all([
+          listProjectStages(cId, pId),
+          listProjectMeasurements(cId, pId),
+        ]);
+
+        const stagesById = {};
+        stages.forEach((s) => { stagesById[String(s.id)] = s; });
+
+        renderStageList(stages);
+        fillStageSelect($('measurementStageId'), stages);
+        renderMeasurementList(measurements, stagesById);
+      }
+
       async function refreshAll() {
         const cId = currentCondoId();
         renderProjectList([]);
@@ -348,6 +727,16 @@
 
         renderProjectList(projects);
         renderReformList(reforms);
+
+        const selId = $('projectId').value;
+        if (selId) {
+          const cur = projects.find((p) => p && p.id === selId);
+          setProjectRollups(cur || { id: selId });
+          await refreshProjectExtras();
+        } else {
+          setProjectRollups(null);
+          await refreshProjectExtras();
+        }
       }
 
       function clearProjectForm() {
@@ -360,8 +749,15 @@
         $('projectStart').value = '';
         $('projectEnd').value = '';
         $('projectContractor').value = '';
-        $('projectFile').value = '';
+        $('projectFileUrl').value = '';
         $('projectAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+
+        setProjectRollups(null);
+        clearStageForm();
+        clearMeasurementsForm();
+        $('stageList').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione uma obra.</p>';
+        $('measurementList').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione uma obra.</p>';
+        $('measurementStageId').innerHTML = '';
       }
 
       // Logout
@@ -379,9 +775,8 @@
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        await withBusy(null, refreshAll);
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       $('projectClearBtn').addEventListener('click', () => {
         clearProjectForm();
@@ -393,6 +788,7 @@
         const cId = currentCondoId();
         if (!cId) {
           setStatus('Selecione um condomínio.');
+          openSelector();
           return;
         }
 
@@ -434,20 +830,173 @@
       $('projectAddFileBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const id = $('projectId').value;
-        const file = $('projectFile').files && $('projectFile').files[0] ? $('projectFile').files[0] : null;
+        const url = $('projectFileUrl').value;
         if (!cId || !id) {
           setStatus('Selecione uma obra.');
           return;
         }
-        if (!file) {
-          setStatus('Selecione um arquivo.');
+        if (!url) {
+          setStatus('Informe uma URL.');
           return;
         }
         await withBusy($('projectAddFileBtn'), async () => {
-          await addProjectAttachment(cId, id, file);
-          $('projectFile').value = '';
+          await addProjectAttachment(cId, id, url);
+          $('projectFileUrl').value = '';
           await refreshAll();
           setStatus('Anexo enviado.');
+        });
+      });
+
+      // Etapas (cronograma)
+      $('stageClearBtn').addEventListener('click', () => {
+        clearStageForm();
+        setStatus('Form de etapa limpo.');
+      });
+
+      $('stageForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        if (!cId || !pId) {
+          setStatus('Selecione uma obra.');
+          if (!cId) openSelector();
+          return;
+        }
+
+        const stageId = $('stageId').value;
+        const payload = {
+          title: $('stageTitle').value,
+          description: $('stageDesc').value,
+          status: $('stageStatus').value,
+          order: $('stageOrder').value ? Number($('stageOrder').value) : null,
+          plannedWeightPercent: $('stageWeight').value ? Number($('stageWeight').value) : null,
+          plannedCostCents: $('stagePlannedCost').value ? Number($('stagePlannedCost').value) : null,
+          plannedStartDate: $('stageStart').value || null,
+          plannedEndDate: $('stageEnd').value || null,
+        };
+
+        await withBusy($('stageSaveBtn'), async () => {
+          if (stageId) await updateProjectStage(cId, pId, stageId, payload);
+          else await createProjectStage(cId, pId, payload);
+          await refreshProjectExtras();
+          await refreshAll();
+          setStatus('Etapa salva.');
+        });
+      });
+
+      $('stageDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        const sId = $('stageId').value;
+        if (!cId || !pId || !sId) {
+          setStatus('Selecione uma etapa.');
+          if (!cId) openSelector();
+          return;
+        }
+        await withBusy($('stageDeleteBtn'), async () => {
+          await deleteProjectStage(cId, pId, sId);
+          clearStageForm();
+          await refreshProjectExtras();
+          await refreshAll();
+          setStatus('Etapa excluída.');
+        });
+      });
+
+      $('stageApproveBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        const sId = $('stageId').value;
+        if (!cId || !pId || !sId) {
+          setStatus('Selecione uma etapa.');
+          if (!cId) openSelector();
+          return;
+        }
+        const note = $('stageDecisionNote').value;
+        await withBusy($('stageApproveBtn'), async () => {
+          await decideProjectStage(cId, pId, sId, 'aprovar', note);
+          await refreshProjectExtras();
+          await refreshAll();
+          setStatus('Etapa aprovada.');
+        });
+      });
+
+      $('stageRejectBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        const sId = $('stageId').value;
+        if (!cId || !pId || !sId) {
+          setStatus('Selecione uma etapa.');
+          if (!cId) openSelector();
+          return;
+        }
+        const note = $('stageDecisionNote').value;
+        await withBusy($('stageRejectBtn'), async () => {
+          await decideProjectStage(cId, pId, sId, 'reprovar', note);
+          await refreshProjectExtras();
+          await refreshAll();
+          setStatus('Etapa reprovada.');
+        });
+      });
+
+      $('stageAddFileBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        const sId = $('stageId').value;
+        const url = $('stageFileUrl').value;
+        if (!cId || !pId || !sId) {
+          setStatus('Selecione uma etapa.');
+          if (!cId) openSelector();
+          return;
+        }
+        if (!url) {
+          setStatus('Informe uma URL.');
+          return;
+        }
+        await withBusy($('stageAddFileBtn'), async () => {
+          await addProjectStageAttachment(cId, pId, sId, url);
+          $('stageFileUrl').value = '';
+          await refreshProjectExtras();
+          setStatus('Anexo da etapa enviado.');
+        });
+      });
+
+      // Medições
+      $('measurementClearBtn').addEventListener('click', () => {
+        clearMeasurementsForm();
+        setStatus('Form de medição limpo.');
+      });
+
+      $('measurementForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        const pId = $('projectId').value;
+        if (!cId || !pId) {
+          setStatus('Selecione uma obra.');
+          if (!cId) openSelector();
+          return;
+        }
+        const stageId = $('measurementStageId').value;
+        if (!stageId) {
+          setStatus('Selecione uma etapa.');
+          return;
+        }
+
+        const url = $('measurementFileUrl').value;
+        const payload = {
+          stageId,
+          measuredDate: $('measurementDate').value || null,
+          physicalPercent: $('measurementPhysical').value ? Number($('measurementPhysical').value) : null,
+          amountCents: $('measurementAmount').value ? Number($('measurementAmount').value) : null,
+          note: $('measurementNote').value || null,
+          attachments: url ? [{ url, name: 'anexo' }] : [],
+        };
+
+        await withBusy($('measurementSaveBtn'), async () => {
+          await createProjectMeasurement(cId, pId, payload);
+          clearMeasurementsForm();
+          await refreshProjectExtras();
+          await refreshAll();
+          setStatus('Medição registrada.');
         });
       });
 
@@ -457,6 +1006,7 @@
         const id = $('reformId').value;
         if (!cId || !id) {
           setStatus('Selecione uma solicitação.');
+          if (!cId) openSelector();
           return;
         }
         const note = $('reformDecisionNote').value;
@@ -472,6 +1022,7 @@
         const id = $('reformId').value;
         if (!cId || !id) {
           setStatus('Selecione uma solicitação.');
+          if (!cId) openSelector();
           return;
         }
         const note = $('reformDecisionNote').value;
@@ -488,6 +1039,7 @@
         const id = $('reformId').value;
         if (!cId || !id) {
           setStatus('Selecione uma solicitação.');
+          if (!cId) openSelector();
           return;
         }
         const payload = {
@@ -504,11 +1056,30 @@
         });
       });
 
-      // Init
-      const condos = await listCondos();
-      fillCondoSelect(condos);
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        clearProjectForm();
+        $('reformAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+        refreshAll().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
       clearProjectForm();
       $('reformAttachments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem anexos.</p>';
+      await withBusy(null, refreshAll);
     </script>
   </body>
 </html>

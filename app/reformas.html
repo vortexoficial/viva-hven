@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
 
     <script>
       (function () {
@@ -33,6 +34,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +44,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -100,9 +101,9 @@
             </div>
 
             <div>
-              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo (opcional)</label>
-              <input id="reformFile" class="input" type="file" />
-              <p style="margin:6px 0 0;font-size:12px;color:var(--muted);">Envie o anexo depois de abrir (no detalhe).</p>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">URL do anexo (opcional)</label>
+              <input id="reformFileUrl" class="input" type="url" placeholder="https://..." />
+              <p style="margin:6px 0 0;font-size:12px;color:var(--muted);">MVP sem upload: você pode anexar uma URL agora ou no detalhe.</p>
             </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -120,9 +121,10 @@
           <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
             <h3 style="margin:0 0 8px;font-size:13px;">Adicionar anexo</h3>
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-              <input id="addFile" class="input" type="file" style="flex:1;min-width:220px;" />
+              <input id="addFileUrl" class="input" type="url" placeholder="https://..." style="flex:1;min-width:220px;" />
               <button id="addFileBtn" class="btn" type="button">Enviar</button>
             </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Cole o link do arquivo para anexar.</div>
           </div>
         </article>
       </section>
@@ -133,14 +135,18 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import { listUnitReforms, createUnitReform, addUnitReformAttachment } from '/js/modules/works.js';
 
-      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+      await protect(['/app/']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -159,17 +165,27 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name || c.id;
-          ctxCondo.appendChild(opt);
-        });
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
+      }
+
+      function renderNoContext(container) {
+        if (!container) return;
+        container.innerHTML =
+          '<div class="card" style="padding:12px;">' +
+          '  <div style="font-weight:900;">Selecione um condomínio</div>' +
+          '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">As reformas dependem do contexto ativo.</div>' +
+          '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
+          '    <button id="pickCtxInline" class="btn" type="button">Escolher condomínio</button>' +
+          '  </div>' +
+          '</div>';
+
+        const btn = container.querySelector('#pickCtxInline');
+        if (btn) btn.addEventListener('click', () => openSelector());
       }
 
       function fmtDateTimeMaybe(v) {
@@ -241,7 +257,8 @@
         $('reformAttachments').innerHTML = '';
 
         if (!cId) {
-          renderList($('reformList'), [], () => {});
+          renderNoContext($('reformList'));
+          setStatus('Selecione um condomínio.');
           return;
         }
 
@@ -276,9 +293,8 @@
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        await withBusy(null, refreshReforms);
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       // Abrir reforma
       $('reformForm').addEventListener('submit', async (e) => {
@@ -286,9 +302,11 @@
         const cId = currentCondoId();
         if (!cId) {
           setStatus('Selecione um condomínio.');
+          openSelector();
           return;
         }
 
+        const attachmentUrl = $('reformFileUrl').value;
         const payload = {
           title: $('reformTitle').value,
           description: $('reformDesc').value,
@@ -297,6 +315,7 @@
           contact: $('reformContact').value,
           startDate: $('reformStart').value,
           endDate: $('reformEnd').value,
+          attachments: attachmentUrl ? [attachmentUrl] : [],
         };
 
         await withBusy($('reformOpenBtn'), async () => {
@@ -308,7 +327,7 @@
           $('reformContact').value = '';
           $('reformStart').value = '';
           $('reformEnd').value = '';
-          $('reformFile').value = '';
+          $('reformFileUrl').value = '';
           await refreshReforms();
           setStatus('Solicitação enviada.');
         });
@@ -318,27 +337,44 @@
       $('addFileBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const rId = $('reformId').value;
-        const file = $('addFile').files && $('addFile').files[0] ? $('addFile').files[0] : null;
+        const url = $('addFileUrl').value;
         if (!cId || !rId) {
           setStatus('Selecione uma solicitação.');
+          if (!cId) openSelector();
           return;
         }
-        if (!file) {
-          setStatus('Selecione um arquivo.');
+        if (!url) {
+          setStatus('Informe uma URL.');
           return;
         }
 
         await withBusy($('addFileBtn'), async () => {
-          await addUnitReformAttachment(cId, rId, file);
-          $('addFile').value = '';
+          await addUnitReformAttachment(cId, rId, url);
+          $('addFileUrl').value = '';
           await refreshReforms();
           setStatus('Anexo enviado.');
         });
       });
 
-      // Init
-      const condos = await listCondos();
-      fillCondoSelect(condos);
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        refreshReforms().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
       await withBusy(null, refreshReforms);
     </script>
 
