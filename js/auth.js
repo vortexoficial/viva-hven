@@ -137,6 +137,7 @@ export async function loginUser(payload) {
 
   var firebase = await initFirebase();
   var auth = firebase.auth;
+  var db = firebase.db;
 
   if (!looksLikeEmail(identifier)) {
     throw new Error('Login por CPF indisponível. Use e-mail.');
