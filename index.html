@@ -28,12 +28,12 @@
     />
 
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
     <link rel="stylesheet" href="css/styles.css" />
-    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="js/core-init.js"></script>
     <script src="js/icons-sprite.js" defer></script>
 
     <script>
@@ -948,7 +948,7 @@
         try {
           if (!('serviceWorker' in navigator)) return;
           window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/sw.js').catch(function () {});
+            navigator.serviceWorker.register('sw.js').catch(function () {});
           });
         } catch (e) {}
       })();
