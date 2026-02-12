@@ -64,11 +64,6 @@
 
     await protect(['/app/']);
 
-    // Notificações (MVP): ao abrir a tela de avisos, limpa o dot.
-    try {
-      localStorage.setItem('vh_unread_avisos', '0');
-    } catch (e) {}
-
     const $ = (id) => document.getElementById(id);
 
     const state = {
@@ -135,6 +130,13 @@
       if (!root) return;
 
       const items = await listAnnouncements(state.condoId, { publishedOnly: true, channel: 'app' });
+
+      // Notificações (MVP): salva contagem de não lidos para o dot no App Shell.
+      try {
+        const unread = (items || []).filter((a) => !state.receipts.has(receiptKey('announcement', a.id))).length;
+        localStorage.setItem('vh_unread_avisos', String(Math.max(0, unread)));
+      } catch (e) {}
+
       if (!items.length) {
         root.innerHTML = '<p class="muted">Nenhum aviso publicado.</p>';
         return;
