@@ -342,16 +342,60 @@ export function bindGlobalErrorHandlers() {
   if (globalBound) return;
   globalBound = true;
 
+  let lastMsg = '';
+  let lastAt = 0;
+  let inHandler = false;
+
+  function shouldIgnore(message) {
+    const now = Date.now();
+    const msg = String(message || '').trim();
+    if (!msg) return true;
+
+    // Evita cascata (ex.: erro disparando erro)
+    if (inHandler) return true;
+
+    // Dedup curto: mesma mensagem em sequência
+    if (msg === lastMsg && now - lastAt < 1200) return true;
+
+    lastMsg = msg;
+    lastAt = now;
+    return false;
+  }
+
+  function report(errLike) {
+    let msg = '';
+    try {
+      msg = formatError(errLike);
+    } catch (e) {
+      msg = 'Erro inesperado.';
+    }
+
+    if (shouldIgnore(msg)) return;
+
+    // Desacopla do stack atual para evitar loops síncronos.
+    try {
+      inHandler = true;
+      window.setTimeout(() => {
+        try {
+          showError(msg);
+        } catch (e) {}
+        inHandler = false;
+      }, 0);
+    } catch (e) {
+      inHandler = false;
+    }
+  }
+
   window.addEventListener('unhandledrejection', (ev) => {
     try {
-      showError(ev && ev.reason ? ev.reason : ev);
+      report(ev && ev.reason ? ev.reason : ev);
     } catch (e) {}
   });
 
   window.addEventListener('error', (ev) => {
     try {
       const msg = ev && ev.error ? ev.error : (ev && ev.message ? ev.message : ev);
-      showError(msg);
+      report(msg);
     } catch (e) {}
   });
 }
