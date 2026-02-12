@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
 
     <script>
       (function () {
@@ -33,6 +34,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +44,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -74,14 +75,18 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
-      import { listCharges, getPayment, Money } from '/js/modules/finance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+      import { listMyCharges, getPayment, Money } from '/js/modules/finance.js';
 
-      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+      await protect(['/app/']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -100,7 +105,7 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
       }
 
       function fmtDateMaybe(v) {
@@ -119,14 +124,77 @@
         }
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
+      function toDate(v) {
+        try {
+          if (!v) return null;
+          if (typeof v.toDate === 'function') return v.toDate();
+          if (v instanceof Date) return v;
+          return null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function daysLate(dueAt) {
+        const d = toDate(dueAt);
+        if (!d) return 0;
+        const now = new Date();
+        const diff = now.getTime() - d.getTime();
+        if (diff <= 0) return 0;
+        return Math.floor(diff / (24 * 60 * 60 * 1000));
+      }
+
+      function computeLateBreakdown(amountCents, charge) {
+        const base = Number(amountCents || 0);
+        const dl = daysLate(charge && charge.dueAt ? charge.dueAt : null);
+        if (!dl) return { daysLate: 0, fineCents: 0, interestCents: 0, totalCents: base };
+
+        const finePercent = charge && charge.finePercent != null ? Number(charge.finePercent) : 0;
+        const interestMonthly = charge && charge.interestMonthlyPercent != null ? Number(charge.interestMonthlyPercent) : 0;
+
+        const fineCents = finePercent > 0 ? Math.round((base * finePercent) / 100) : 0;
+        const interestDaily = interestMonthly > 0 ? (interestMonthly / 100) / 30 : 0;
+        const interestCents = interestDaily > 0 ? Math.round(base * interestDaily * dl) : 0;
+
+        const totalCents = Math.max(0, base + fineCents + interestCents);
+        return { daysLate: dl, fineCents, interestCents, totalCents };
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
+      }
+
+      function renderNoContext(container) {
+        if (!container) return;
+        container.innerHTML =
+          '<div class="card" style="padding:12px;">' +
+          '  <div style="font-weight:900;">Selecione um condomínio</div>' +
+          '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">O app usa o contexto ativo para listar boletos.</div>' +
+          '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
+          '    <button id="pickCtxInline" class="btn" type="button">Escolher condomínio</button>' +
+          '  </div>' +
+          '</div>';
+
+        const btn = container.querySelector('#pickCtxInline');
+        if (btn) btn.addEventListener('click', () => openSelector());
+      }
+
+      function renderNoUnit(container, msg) {
+        if (!container) return;
+        container.innerHTML =
+          '<div class="card" style="padding:12px;">' +
+          '  <div style="font-weight:900;">Cobranças indisponíveis</div>' +
+          '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">' +
+          (msg ? String(msg) : 'Sua unidade não está vinculada ao seu acesso.') +
+          '  </div>' +
+          '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
+          '    <button id="pickCtxInline" class="btn btn--ghost" type="button">Trocar condomínio</button>' +
+          '  </div>' +
+          '</div>';
+
+        const btn = container.querySelector('#pickCtxInline');
+        if (btn) btn.addEventListener('click', () => openSelector());
       }
 
       function renderList(container, items, onPick) {
@@ -172,12 +240,6 @@
         });
       }
 
-      async function refresh() {
-        const condos = await listCondos();
-        fillCondoSelect(condos);
-        await refreshCharges();
-      }
-
       async function refreshCharges() {
         const cId = currentCondoId();
         const listEl = $('chargeList');
@@ -186,11 +248,20 @@
         $('receipt').innerHTML = '';
 
         if (!cId) {
-          renderList(listEl, [], () => {});
+          renderNoContext(listEl);
+          setStatus('Selecione um condomínio para ver suas cobranças.');
           return;
         }
 
-        const items = await listCharges(cId);
+        let items = [];
+        try {
+          items = await listMyCharges(cId);
+        } catch (e) {
+          // Caso o morador não tenha unitId no membership
+          renderNoUnit(listEl, e && e.message ? e.message : 'Não foi possível listar cobranças.');
+          setStatus(e && e.message ? e.message : 'Não foi possível listar cobranças.');
+          return;
+        }
 
         renderList(listEl, items, async (it) => {
           $('chargeId').value = it.id;
@@ -198,24 +269,54 @@
           const due = it.dueAt ? fmtDateMaybe(it.dueAt) : '';
           const paid = it.paidAt && typeof it.paidAt.toDate === 'function' ? fmtDateMaybe(it.paidAt) : '';
 
+          const late = computeLateBreakdown(it.amountCents, it);
+          const showLate = (it.status !== 'pago') && late.daysLate > 0;
+
           $('detail').innerHTML =
             '<div><strong>Valor:</strong> ' + Money.centsToBr(it.amountCents) + '</div>' +
             (due ? '<div><strong>Vencimento:</strong> ' + due + '</div>' : '') +
             (it.status ? '<div><strong>Status:</strong> ' + it.status + '</div>' : '') +
-            (paid ? '<div><strong>Pago em:</strong> ' + paid + '</div>' : '');
+            (paid ? '<div><strong>Pago em:</strong> ' + paid + '</div>' : '') +
+            (showLate
+              ? (
+                  '<div style="margin-top:8px;">' +
+                  '<div><strong>Atraso:</strong> ' + late.daysLate + ' dia(s)</div>' +
+                  (late.fineCents ? '<div><strong>Multa:</strong> ' + Money.centsToBr(late.fineCents) + '</div>' : '') +
+                  (late.interestCents ? '<div><strong>Juros:</strong> ' + Money.centsToBr(late.interestCents) + '</div>' : '') +
+                  '<div><strong>Total estimado:</strong> ' + Money.centsToBr(late.totalCents) + '</div>' +
+                  '</div>'
+                )
+              : '');
 
-          $('receipt').innerHTML = '';
-          if (it.paymentId) {
-            const payment = await getPayment(cId, it.paymentId);
-            const url = payment && payment.receipt && payment.receipt.url ? payment.receipt.url : '';
-            if (url) {
-              $('receipt').innerHTML = '<a class="btn" target="_blank" href="' + url + '">Baixar comprovante</a>';
-            } else {
-              $('receipt').innerHTML = '<p style="margin:0;font-size:12px;color:var(--muted);">Pagamento registrado, mas sem comprovante.</p>';
-            }
-          } else {
-            $('receipt').innerHTML = '<p style="margin:0;font-size:12px;color:var(--muted);">Sem comprovante disponível.</p>';
+          const links = [];
+          const boletoUrl = it.boletoUrl ? String(it.boletoUrl) : '';
+          const paymentUrl = it.paymentUrl ? String(it.paymentUrl) : '';
+          const receiptUrl = it.paymentReceiptUrl ? String(it.paymentReceiptUrl) : '';
+          const pix = it.pixCopyPaste ? String(it.pixCopyPaste) : '';
+
+          if (boletoUrl) links.push('<a class="btn" target="_blank" href="' + boletoUrl + '">Abrir boleto</a>');
+          if (paymentUrl) links.push('<a class="btn btn--ghost" target="_blank" href="' + paymentUrl + '">Pagar online</a>');
+          if (receiptUrl) links.push('<a class="btn btn--ghost" target="_blank" href="' + receiptUrl + '">Comprovante</a>');
+
+          // Compat: tenta buscar comprovante pelo paymentId (pode falhar por regra)
+          if (!receiptUrl && it.paymentId) {
+            try {
+              const payment = await getPayment(cId, it.paymentId);
+              const url = payment && payment.receipt && payment.receipt.url ? payment.receipt.url : '';
+              if (url) links.push('<a class="btn btn--ghost" target="_blank" href="' + url + '">Comprovante</a>');
+            } catch (e) {}
           }
+
+          $('receipt').innerHTML =
+            (links.length ? ('<div style="display:flex;gap:10px;flex-wrap:wrap;">' + links.join('') + '</div>') : '') +
+            (pix
+              ? (
+                  '<div style="margin-top:10px;">' +
+                  '<div style="font-weight:800;margin-bottom:6px;">PIX (copia e cola)</div>' +
+                  '<textarea class="input" rows="3" readonly>' + pix + '</textarea>' +
+                  '</div>'
+                )
+              : (links.length ? '' : '<p style="margin:0;font-size:12px;color:var(--muted);">Sem links de pagamento disponíveis.</p>'));
 
           setStatus('Cobrança selecionada.');
         });
@@ -231,16 +332,33 @@
 
       $('refreshBtn').addEventListener('click', async () => {
         await withBusy($('refreshBtn'), async () => {
-          await refresh();
+          await refreshCharges();
           setStatus('Atualizado.');
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        await withBusy(null, refreshCharges);
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
+
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        withBusy(null, refreshCharges).catch(() => {});
       });
 
-      await withBusy(null, refresh);
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || '';
+      setActiveCondoName(state.condoId || '—');
+      await withBusy(null, refreshCharges);
     </script>
 
     <script>

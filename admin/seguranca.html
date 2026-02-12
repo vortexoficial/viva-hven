@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Segurança | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <main class="container" style="padding-top: 28px; padding-bottom: 56px;">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+        <div>
+          <h1 class="section__title" style="margin-bottom: 6px;">Segurança e Ocorrências (Admin)</h1>
+          <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
+            Ocorrências, livro da portaria e controle de acesso (visitantes/prestadores).
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
+          <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
+          <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+        </div>
+      </div>
+
+      <section class="card" style="margin-top: 14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
+          </div>
+          <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn--ghost" type="button" data-tab="occ">Ocorrências</button>
+        <button class="btn btn--ghost" type="button" data-tab="gate">Portaria</button>
+        <button class="btn btn--ghost" type="button" data-tab="vis">Visitantes</button>
+        <button class="btn btn--ghost" type="button" data-tab="prov">Prestadores</button>
+        <button class="btn btn--ghost" type="button" data-tab="events">Entradas/Saídas</button>
+      </section>
+
+      <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--muted);"></div>
+
+      <!-- OCORRÊNCIAS -->
+      <section id="tab-occ" style="margin-top: 14px;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+              <h2 class="card__title" style="margin:0;">Ocorrências</h2>
+              <button id="emergencyBtn" class="btn btn--ghost" type="button">Botão de emergência</button>
+            </div>
+            <div id="occList" style="display:grid;gap:10px;margin-top:12px;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Registrar / Editar ocorrência</h2>
+            <form id="occForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="occId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Tipo</label>
+                  <input id="occType" class="input" placeholder="Ex: FURTO, VANDALISMO, BARULHO" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="occStatus" class="input">
+                    <option value="aberto">aberto</option>
+                    <option value="em_andamento">em_andamento</option>
+                    <option value="resolvido">resolvido</option>
+                    <option value="fechado">fechado</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+                <textarea id="occDesc" class="input" rows="3" placeholder="Descreva a ocorrência" required></textarea>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Envolvidos (1 por linha)</label>
+                  <textarea id="occInvolved" class="input" rows="3" placeholder="Ex:\nMorador 801\nVisitante - João"></textarea>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Evidências (URLs; 1 por linha)</label>
+                  <textarea id="occEvidence" class="input" rows="3" placeholder="Ex:\nhttps://...\nhttps://..."></textarea>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Conclusão (opcional)</label>
+                <textarea id="occConclusion" class="input" rows="2" placeholder="Anote o desfecho"></textarea>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="occSaveBtn" class="btn" type="submit">Salvar</button>
+                <button id="occClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+                <button id="occDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- PORTARIA -->
+      <section id="tab-gate" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Livro da portaria</h2>
+            <form id="gateForm" style="display:grid;gap:10px;">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Registro rápido</label>
+                <textarea id="gateText" class="input" rows="2" placeholder="Ex: 14:32 — Entrega na unidade 402 (porteiro)" required></textarea>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="gateSaveBtn" class="btn" type="submit">Registrar</button>
+              </div>
+            </form>
+          </article>
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Últimos registros</h2>
+            <div id="gateList" style="display:grid;gap:10px;"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- VISITANTES -->
+      <section id="tab-vis" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Visitantes</h2>
+            <div id="visList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="visCheckInBtn" class="btn btn--ghost" type="button">Check-in</button>
+              <button id="visCheckOutBtn" class="btn btn--ghost" type="button">Check-out</button>
+            </div>
+          </article>
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Autorizar / Editar visitante</h2>
+            <form id="visForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="visId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                  <input id="visName" class="input" placeholder="Ex: João" required />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Unidade (rótulo)</label>
+                  <input id="visUnitLabel" class="input" placeholder="Ex: Bloco A 402" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Documento (opcional)</label>
+                  <input id="visDoc" class="input" placeholder="RG/CPF" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Telefone (opcional)</label>
+                  <input id="visPhone" class="input" placeholder="(DD) 9xxxx-xxxx" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="visStatus" class="input">
+                    <option value="autorizado">autorizado</option>
+                    <option value="chegou">chegou</option>
+                    <option value="saiu">saiu</option>
+                    <option value="cancelado">cancelado</option>
+                    <option value="negado">negado</option>
+                    <option value="expirado">expirado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Previsto em (opcional)</label>
+                  <input id="visExpectedAt" class="input" type="datetime-local" />
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observações</label>
+                <textarea id="visNote" class="input" rows="2" placeholder="Opcional"></textarea>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="visSaveBtn" class="btn" type="submit">Salvar</button>
+                <button id="visClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+                <button id="visDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- PRESTADORES -->
+      <section id="tab-prov" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Prestadores</h2>
+            <div id="provList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="provCheckInBtn" class="btn btn--ghost" type="button">Check-in</button>
+              <button id="provCheckOutBtn" class="btn btn--ghost" type="button">Check-out</button>
+            </div>
+          </article>
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Cadastrar / Editar prestador</h2>
+            <form id="provForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="provId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Empresa</label>
+                  <input id="provCompany" class="input" placeholder="Ex: Alfa Manutenção" required />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Responsável (opcional)</label>
+                  <input id="provResponsible" class="input" placeholder="Ex: Carlos" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Serviço</label>
+                  <input id="provService" class="input" placeholder="Ex: elétrica" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Telefone</label>
+                  <input id="provPhone" class="input" placeholder="Opcional" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Documento</label>
+                  <input id="provDoc" class="input" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="provStatus" class="input">
+                    <option value="ativo">ativo</option>
+                    <option value="inativo">inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observações</label>
+                <textarea id="provNotes" class="input" rows="2" placeholder="Opcional"></textarea>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="provSaveBtn" class="btn" type="submit">Salvar</button>
+                <button id="provClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+                <button id="provDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- EVENTOS -->
+      <section id="tab-events" style="margin-top: 14px; display:none;">
+        <div style="display:grid;gap:14px;grid-template-columns: 1fr;">
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Histórico de entradas/saídas</h2>
+            <div id="eventList" style="display:grid;gap:10px;"></div>
+          </article>
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom:10px;">Registro manual (opcional)</h2>
+            <form id="eventForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="eventId" />
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Tipo</label>
+                  <select id="eventType" class="input">
+                    <option value="check_in">check_in</option>
+                    <option value="check_out">check_out</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Referência</label>
+                  <select id="eventRefKind" class="input">
+                    <option value="">(nenhuma)</option>
+                    <option value="visitor">visitor</option>
+                    <option value="provider">provider</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">refId</label>
+                  <input id="eventRefId" class="input" placeholder="id do visitante/prestador" />
+                </div>
+              </div>
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                  <input id="eventPersonName" class="input" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data/hora (opcional)</label>
+                  <input id="eventAt" class="input" type="datetime-local" />
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nota</label>
+                <input id="eventNote" class="input" placeholder="Opcional" />
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="eventSaveBtn" class="btn" type="submit">Registrar</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/a2hs.js" defer></script>
+
+    <script type="module">
+      import { protect } from '/js/route-guard.js';
+      import { logoutUser } from '/js/auth.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+      import {
+        listOccurrences,
+        createOccurrence,
+        updateOccurrence,
+        deleteOccurrence,
+        triggerEmergency,
+        listGatebookEntries,
+        createGatebookEntry,
+        listVisitors,
+        createVisitor,
+        updateVisitor,
+        deleteVisitor,
+        checkInVisitor,
+        checkOutVisitor,
+        listProviders,
+        createProvider,
+        updateProvider,
+        deleteProvider,
+        checkInProvider,
+        checkOutProvider,
+        listAccessEvents,
+        createAccessEvent,
+      } from '/js/modules/security.js';
+
+      await protect(['/admin/'], ['PORTEIRO', 'GESTOR', 'SINDICO', 'ADMINISTRADORA', 'ADMIN']);
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+        pickedOccId: '',
+        pickedVisId: '',
+        pickedProvId: '',
+      };
+
+      function setStatus(msg) {
+        statusEl.textContent = msg ? String(msg) : '';
+      }
+
+      async function withBusy(btn, fn) {
+        if (btn) btn.disabled = true;
+        try {
+          return await fn();
+        } catch (e) {
+          setStatus(e && e.message ? e.message : 'Erro');
+          throw e;
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      function currentCondoId() {
+        return state.condoId ? String(state.condoId) : '';
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
+      }
+
+      function fmtDateTimeMaybe(v) {
+        try {
+          if (!v) return '';
+          const d = typeof v.toDate === 'function' ? v.toDate() : v instanceof Date ? v : null;
+          if (!d) return '';
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mi = String(d.getMinutes()).padStart(2, '0');
+          return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function renderList(container, items, onPick, emptyMsg) {
+        if (!container) return;
+        const list = Array.isArray(items) ? items : [];
+        if (!list.length) {
+          container.innerHTML = '<div class="muted" style="font-size:12px;">' + (emptyMsg || 'Sem itens.') + '</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        list.forEach((it) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'card';
+          btn.style.textAlign = 'left';
+          btn.style.cursor = 'pointer';
+          btn.innerHTML = it.__html || '<div style="font-weight:900;">' + (it.title || it.name || it.company || it.id) + '</div>';
+          btn.addEventListener('click', () => onPick && onPick(it));
+          container.appendChild(btn);
+        });
+      }
+
+      function showTab(key) {
+        const map = {
+          occ: 'tab-occ',
+          gate: 'tab-gate',
+          vis: 'tab-vis',
+          prov: 'tab-prov',
+          events: 'tab-events',
+        };
+        Object.keys(map).forEach((k) => {
+          const el = $(map[k]);
+          if (!el) return;
+          el.style.display = k === key ? '' : 'none';
+        });
+      }
+
+      document.querySelectorAll('[data-tab]').forEach((b) => {
+        b.addEventListener('click', () => showTab(String(b.getAttribute('data-tab') || 'occ')));
+      });
+
+      function clearOccForm() {
+        state.pickedOccId = '';
+        $('occId').value = '';
+        $('occType').value = '';
+        $('occStatus').value = 'aberto';
+        $('occDesc').value = '';
+        $('occInvolved').value = '';
+        $('occEvidence').value = '';
+        $('occConclusion').value = '';
+      }
+
+      function clearVisForm() {
+        state.pickedVisId = '';
+        $('visId').value = '';
+        $('visName').value = '';
+        $('visUnitLabel').value = '';
+        $('visDoc').value = '';
+        $('visPhone').value = '';
+        $('visStatus').value = 'autorizado';
+        $('visExpectedAt').value = '';
+        $('visNote').value = '';
+      }
+
+      function clearProvForm() {
+        state.pickedProvId = '';
+        $('provId').value = '';
+        $('provCompany').value = '';
+        $('provResponsible').value = '';
+        $('provService').value = '';
+        $('provPhone').value = '';
+        $('provDoc').value = '';
+        $('provStatus').value = 'ativo';
+        $('provNotes').value = '';
+      }
+
+      async function refreshOccurrences() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('occList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+        const items = await listOccurrences(cId, { limit: 80 });
+        const decorated = (items || []).map((o) => {
+          const when = fmtDateTimeMaybe(o.createdAt);
+          const line1 = '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">' +
+            '<div style="font-weight:900;">' + (o.type || 'OCORRENCIA') + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + (o.status || '') + (when ? (' • ' + when) : '') + '</div>' +
+            '</div>';
+          const line2 = '<div style="font-size:12px;color:var(--muted);margin-top:6px;">' + String(o.description || '').slice(0, 160) + '</div>';
+          return { ...o, __html: line1 + line2 };
+        });
+        renderList(
+          $('occList'),
+          decorated,
+          (o) => {
+            state.pickedOccId = o.id;
+            $('occId').value = o.id || '';
+            $('occType').value = o.type || '';
+            $('occStatus').value = o.status || 'aberto';
+            $('occDesc').value = o.description || '';
+            $('occConclusion').value = o.conclusionText || '';
+            $('occInvolved').value = Array.isArray(o.involved) ? o.involved.map((x) => (x && x.name ? x.name : '')).filter(Boolean).join('\n') : '';
+            $('occEvidence').value = Array.isArray(o.evidenceUrls) ? o.evidenceUrls.join('\n') : '';
+            setStatus('Ocorrência selecionada.');
+          },
+          'Sem ocorrências.'
+        );
+      }
+
+      async function refreshGatebook() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('gateList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+        const items = await listGatebookEntries(cId, { limit: 80 });
+        const decorated = (items || []).map((g) => {
+          const when = fmtDateTimeMaybe(g.createdAt);
+          return {
+            ...g,
+            __html:
+              '<div style="font-weight:900;">' + (when ? when + ' — ' : '') + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap;">' + (g.text || '') + '</div>',
+          };
+        });
+        renderList($('gateList'), decorated, () => {}, 'Sem registros.');
+      }
+
+      async function refreshVisitors() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('visList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+        const items = await listVisitors(cId);
+        const decorated = (items || []).map((v) => {
+          const s = v.status || '';
+          const inAt = fmtDateTimeMaybe(v.checkInAt);
+          const outAt = fmtDateTimeMaybe(v.checkOutAt);
+          const meta = [s, v.unitLabel ? ('un: ' + v.unitLabel) : null, inAt ? ('in: ' + inAt) : null, outAt ? ('out: ' + outAt) : null]
+            .filter(Boolean)
+            .join(' • ');
+          return {
+            ...v,
+            __html:
+              '<div style="font-weight:900;">' + (v.name || v.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:6px;">' + meta + '</div>',
+          };
+        });
+        renderList(
+          $('visList'),
+          decorated,
+          (v) => {
+            state.pickedVisId = v.id;
+            $('visId').value = v.id || '';
+            $('visName').value = v.name || '';
+            $('visUnitLabel').value = v.unitLabel || '';
+            $('visDoc').value = v.document || '';
+            $('visPhone').value = v.phone || '';
+            $('visStatus').value = v.status || 'autorizado';
+            $('visExpectedAt').value = '';
+            $('visNote').value = v.note || '';
+            setStatus('Visitante selecionado.');
+          },
+          'Sem visitantes.'
+        );
+      }
+
+      async function refreshProviders() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('provList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+        const items = await listProviders(cId);
+        const decorated = (items || []).map((p) => {
+          const meta = [p.status || '', p.serviceType ? ('serv: ' + p.serviceType) : null].filter(Boolean).join(' • ');
+          return {
+            ...p,
+            __html:
+              '<div style="font-weight:900;">' + (p.company || p.name || p.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:6px;">' + meta + '</div>',
+          };
+        });
+        renderList(
+          $('provList'),
+          decorated,
+          (p) => {
+            state.pickedProvId = p.id;
+            $('provId').value = p.id || '';
+            $('provCompany').value = p.company || p.name || '';
+            $('provResponsible').value = p.responsible || '';
+            $('provService').value = p.serviceType || '';
+            $('provPhone').value = p.phone || '';
+            $('provDoc').value = p.document || '';
+            $('provStatus').value = p.status || 'ativo';
+            $('provNotes').value = p.notes || '';
+            setStatus('Prestador selecionado.');
+          },
+          'Sem prestadores.'
+        );
+      }
+
+      async function refreshEvents() {
+        const cId = currentCondoId();
+        if (!cId) {
+          renderList($('eventList'), [], () => {}, 'Selecione um condomínio.');
+          return;
+        }
+        const items = await listAccessEvents(cId, { limit: 120 });
+        const decorated = (items || []).map((e) => {
+          const when = fmtDateTimeMaybe(e.createdAt);
+          const who = e.personName || (e.refKind && e.refId ? e.refKind + ':' + e.refId : '');
+          const meta = [e.type || '', who || null].filter(Boolean).join(' • ');
+          return {
+            ...e,
+            __html:
+              '<div style="font-weight:900;">' + meta + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:6px;">' + (when ? when : '') + (e.note ? (' • ' + e.note) : '') + '</div>',
+          };
+        });
+        renderList($('eventList'), decorated, () => {}, 'Sem eventos.');
+      }
+
+      async function refreshAll() {
+        await refreshOccurrences();
+        await refreshGatebook();
+        await refreshVisitors();
+        await refreshProviders();
+        await refreshEvents();
+      }
+
+      $('logoutBtn').addEventListener('click', () => logoutUser().catch(() => {}));
+      $('pickCtxBtn').addEventListener('click', () => openSelector().catch(() => {}));
+      $('refreshBtn').addEventListener('click', () => withBusy($('refreshBtn'), refreshAll));
+
+      $('occClearBtn').addEventListener('click', clearOccForm);
+      $('visClearBtn').addEventListener('click', clearVisForm);
+      $('provClearBtn').addEventListener('click', clearProvForm);
+
+      $('occForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        withBusy($('occSaveBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          const id = String($('occId').value || '');
+          const payload = {
+            type: $('occType').value,
+            status: $('occStatus').value,
+            description: $('occDesc').value,
+            involved: $('occInvolved').value,
+            evidenceUrls: $('occEvidence').value,
+            conclusionText: $('occConclusion').value,
+          };
+
+          if (id) {
+            await updateOccurrence(cId, id, payload);
+            setStatus('Ocorrência atualizada.');
+          } else {
+            await createOccurrence(cId, payload);
+            setStatus('Ocorrência registrada.');
+          }
+          clearOccForm();
+          await refreshOccurrences();
+        });
+      });
+
+      $('occDeleteBtn').addEventListener('click', () => {
+        withBusy($('occDeleteBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('occId').value || '');
+          if (!cId || !id) throw new Error('Selecione uma ocorrência.');
+          if (!confirm('Excluir ocorrência?')) return;
+          await deleteOccurrence(cId, id);
+          clearOccForm();
+          await refreshOccurrences();
+          setStatus('Ocorrência excluída.');
+        });
+      });
+
+      $('emergencyBtn').addEventListener('click', () => {
+        withBusy($('emergencyBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          const desc = prompt('Descreva a emergência (opcional):', '');
+          const occ = await triggerEmergency(cId, { description: desc || '' });
+          try {
+            await createGatebookEntry(cId, 'EMERGÊNCIA: ' + (desc ? desc : 'Botão acionado') + ' (occ: ' + occ.id + ')');
+          } catch (e) {}
+          await refreshAll();
+          setStatus('Emergência registrada (MVP: registro interno).');
+        });
+      });
+
+      $('gateForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        withBusy($('gateSaveBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          await createGatebookEntry(cId, $('gateText').value);
+          $('gateText').value = '';
+          await refreshGatebook();
+          setStatus('Registro incluído no livro da portaria.');
+        });
+      });
+
+      $('visForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        withBusy($('visSaveBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          const id = String($('visId').value || '');
+          const payload = {
+            name: $('visName').value,
+            unitLabel: $('visUnitLabel').value,
+            document: $('visDoc').value,
+            phone: $('visPhone').value,
+            status: $('visStatus').value,
+            expectedAt: $('visExpectedAt').value,
+            note: $('visNote').value,
+          };
+          if (id) {
+            await updateVisitor(cId, id, payload);
+            setStatus('Visitante atualizado.');
+          } else {
+            await createVisitor(cId, payload);
+            setStatus('Visitante autorizado.');
+          }
+          clearVisForm();
+          await refreshVisitors();
+        });
+      });
+
+      $('visDeleteBtn').addEventListener('click', () => {
+        withBusy($('visDeleteBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('visId').value || '');
+          if (!cId || !id) throw new Error('Selecione um visitante.');
+          if (!confirm('Excluir visitante?')) return;
+          await deleteVisitor(cId, id);
+          clearVisForm();
+          await refreshVisitors();
+          setStatus('Visitante excluído.');
+        });
+      });
+
+      $('visCheckInBtn').addEventListener('click', () => {
+        withBusy($('visCheckInBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('visId').value || state.pickedVisId || '');
+          if (!cId || !id) throw new Error('Selecione um visitante.');
+          const note = prompt('Nota (opcional):', '') || '';
+          await checkInVisitor(cId, id, note);
+          await refreshAll();
+          setStatus('Check-in do visitante registrado.');
+        });
+      });
+
+      $('visCheckOutBtn').addEventListener('click', () => {
+        withBusy($('visCheckOutBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('visId').value || state.pickedVisId || '');
+          if (!cId || !id) throw new Error('Selecione um visitante.');
+          const note = prompt('Nota (opcional):', '') || '';
+          await checkOutVisitor(cId, id, note);
+          await refreshAll();
+          setStatus('Check-out do visitante registrado.');
+        });
+      });
+
+      $('provForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        withBusy($('provSaveBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          const id = String($('provId').value || '');
+          const payload = {
+            company: $('provCompany').value,
+            responsible: $('provResponsible').value,
+            serviceType: $('provService').value,
+            phone: $('provPhone').value,
+            document: $('provDoc').value,
+            status: $('provStatus').value,
+            notes: $('provNotes').value,
+          };
+          if (id) {
+            await updateProvider(cId, id, payload);
+            setStatus('Prestador atualizado.');
+          } else {
+            await createProvider(cId, payload);
+            setStatus('Prestador cadastrado.');
+          }
+          clearProvForm();
+          await refreshProviders();
+        });
+      });
+
+      $('provDeleteBtn').addEventListener('click', () => {
+        withBusy($('provDeleteBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('provId').value || '');
+          if (!cId || !id) throw new Error('Selecione um prestador.');
+          if (!confirm('Excluir prestador?')) return;
+          await deleteProvider(cId, id);
+          clearProvForm();
+          await refreshProviders();
+          setStatus('Prestador excluído.');
+        });
+      });
+
+      $('provCheckInBtn').addEventListener('click', () => {
+        withBusy($('provCheckInBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('provId').value || state.pickedProvId || '');
+          if (!cId || !id) throw new Error('Selecione um prestador.');
+          const note = prompt('Nota (opcional):', '') || '';
+          await checkInProvider(cId, id, note);
+          await refreshAll();
+          setStatus('Check-in do prestador registrado.');
+        });
+      });
+
+      $('provCheckOutBtn').addEventListener('click', () => {
+        withBusy($('provCheckOutBtn'), async () => {
+          const cId = currentCondoId();
+          const id = String($('provId').value || state.pickedProvId || '');
+          if (!cId || !id) throw new Error('Selecione um prestador.');
+          const note = prompt('Nota (opcional):', '') || '';
+          await checkOutProvider(cId, id, note);
+          await refreshAll();
+          setStatus('Check-out do prestador registrado.');
+        });
+      });
+
+      $('eventForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        withBusy($('eventSaveBtn'), async () => {
+          const cId = currentCondoId();
+          if (!cId) throw new Error('Selecione um condomínio.');
+          await createAccessEvent(cId, {
+            type: $('eventType').value,
+            refKind: $('eventRefKind').value,
+            refId: $('eventRefId').value,
+            personName: $('eventPersonName').value,
+            note: $('eventNote').value,
+            at: $('eventAt').value,
+          });
+          $('eventRefKind').value = '';
+          $('eventRefId').value = '';
+          $('eventPersonName').value = '';
+          $('eventNote').value = '';
+          $('eventAt').value = '';
+          await refreshEvents();
+          setStatus('Evento registrado.');
+        });
+      });
+
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        clearOccForm();
+        clearVisForm();
+        clearProvForm();
+        refreshAll().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
+      showTab('occ');
+      await withBusy(null, refreshAll);
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (!('serviceWorker' in navigator)) return;
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } catch (e) {}
+      })();
+    </script>
+  </body>
+</html>

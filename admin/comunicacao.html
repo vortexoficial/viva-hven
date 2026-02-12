@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -33,6 +35,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +45,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -151,10 +153,9 @@
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { initFirebase } from '/js/firebase-init.js';
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
 
       import {
         listAnnouncements,
@@ -178,6 +179,12 @@
         announcements: [],
         polls: [],
       };
+
+      function setActiveCondoName(text) {
+        const el = $('ctxCondoName');
+        if (!el) return;
+        el.textContent = text ? String(text) : '—';
+      }
 
       function setStatus(msg, isErr) {
         const el = $('status');
@@ -369,14 +376,14 @@
       }
 
       async function bootstrap() {
-        const { auth } = await initFirebase();
-
         $('logoutBtn').addEventListener('click', async () => {
           await logoutUser();
           location.href = '/login.html';
         });
 
         $('refreshBtn').addEventListener('click', refreshAll);
+        const pickBtn = $('pickCtxBtn');
+        if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
         $('annClearBtn').addEventListener('click', clearAnnForm);
         $('pollClearBtn').addEventListener('click', clearPollForm);
         $('pollResultsBtn').addEventListener('click', showPollResults);
@@ -413,7 +420,10 @@
 
         $('annForm').addEventListener('submit', async (ev) => {
           ev.preventDefault();
-          if (!state.condoId) return;
+          if (!state.condoId) {
+            openSelector();
+            return;
+          }
 
           setMsg($('annMsg'), 'Salvando...');
           const id = $('annId').value;
@@ -439,7 +449,10 @@
 
         $('pollForm').addEventListener('submit', async (ev) => {
           ev.preventDefault();
-          if (!state.condoId) return;
+          if (!state.condoId) {
+            openSelector();
+            return;
+          }
 
           setMsg($('pollMsg'), 'Salvando...');
           const id = $('pollId').value;
@@ -468,35 +481,27 @@
           }
         });
 
-        auth.onAuthStateChanged(async (user) => {
-          if (!user) return;
+        watchAuthAndContext((ev) => {
+          const ctx = ev && ev.context ? ev.context : getActiveContext();
+          state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
+
           try {
-            state.condos = await listCondos();
-            const select = $('ctxCondo');
-            select.innerHTML = '<option value="">Selecione um condomínio…</option>';
-            (state.condos || []).forEach((c) => {
-              const opt = document.createElement('option');
-              opt.value = c.id;
-              opt.textContent = c.name;
-              select.appendChild(opt);
-            });
-
-            if (state.condos && state.condos.length) {
-              state.condoId = state.condos[0].id;
-              select.value = state.condoId;
-              await refreshAll();
-            }
-
-            select.addEventListener('change', async () => {
-              state.condoId = select.value || null;
-              clearAnnForm();
-              clearPollForm();
-              await refreshAll();
-            });
+            state.condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+            const picked = (state.condos || []).find((c) => c && c.id === state.condoId);
+            setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
           } catch (e) {
-            setStatus(e && e.message ? e.message : String(e), true);
+            setActiveCondoName(state.condoId || '—');
           }
+
+          clearAnnForm();
+          clearPollForm();
+          refreshAll().catch(() => {});
         });
+
+        const initial = getActiveContext();
+        state.condoId = initial && initial.condoId ? String(initial.condoId) : null;
+        setActiveCondoName(state.condoId || '—');
+        await refreshAll();
       }
 
       bootstrap();

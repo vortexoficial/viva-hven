@@ -6,6 +6,7 @@
   <title>Morador • Reservas</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/core-init.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -14,6 +15,7 @@
       <h1 class="h1">Reservas</h1>
     </div>
     <div class="topbar__right">
+      <span data-vh-context-anchor="1"></span>
       <span id="userBadge" class="badge"></span>
       <button id="logoutBtn" class="btn btn--ghost">Sair</button>
     </div>
@@ -23,13 +25,18 @@
     <section class="card">
       <h2 class="h2">Nova reserva</h2>
       <form id="reservationForm" class="grid grid--3">
-        <label class="field">
-          <span>Condomínio</span>
-          <select id="condoSelect" class="input"></select>
-        </label>
+        <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;">
+          <div style="min-width:220px;">
+            <div style="font-weight:700;font-size:12px;">Condomínio ativo</div>
+            <div id="ctxCondoName" class="muted" style="margin-top:6px;">—</div>
+          </div>
+          <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+        </div>
         <label class="field">
           <span>Área *</span>
-          <input id="area" class="input" required placeholder="Ex.: Salão de festas" />
+          <select id="areaId" class="input" required>
+            <option value="">Carregando…</option>
+          </select>
         </label>
         <label class="field">
           <span>Título *</span>
@@ -55,6 +62,27 @@
     </section>
 
     <section class="card">
+      <h2 class="h2">Regras e disponibilidade</h2>
+      <div class="grid grid--3">
+        <div class="field" style="grid-column:1/-1;">
+          <span>Regras da área</span>
+          <div id="areaRules" class="muted" style="margin-top:6px;">Selecione uma área.</div>
+        </div>
+        <label class="field">
+          <span>Dia</span>
+          <input id="availDay" type="date" class="input" />
+        </label>
+        <div class="field" style="display:flex; gap:8px; align-items:flex-end;">
+          <button id="availBtn" class="btn btn--ghost" type="button">Ver disponibilidade</button>
+          <span id="availMsg" class="muted"></span>
+        </div>
+        <div class="field" style="grid-column:1/-1;">
+          <div id="availList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
       <h2 class="h2">Minhas reservas</h2>
       <div class="row" style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
         <button id="refreshBtn" class="btn btn--ghost">Atualizar</button>
@@ -65,13 +93,19 @@
   </main>
 
   <script type="module">
-    import { initFirebase } from '/js/firebase-init.js';
     import { protect } from '/js/route-guard.js';
-    import { listCondos } from '/js/modules/governance.js';
+    import { initFirebase } from '/js/firebase-init.js';
+    import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
 
-    import { createReservation, listReservations } from '/js/modules/residents.js';
+    import {
+      createReservation,
+      listReservations,
+      listCommonAreas,
+      listReservationCalendar,
+      cancelReservationAsResident,
+    } from '/js/modules/residents.js';
 
-    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+    await protect(['/app/']);
 
     const $ = (id) => document.getElementById(id);
 
@@ -79,6 +113,8 @@
       condoId: null,
       condos: [],
       user: null,
+      areas: [],
+      areaById: new Map(),
     };
 
     function setMsg(el, msg, isErr) {
@@ -108,13 +144,92 @@
       `;
     }
 
-    async function loadCondos() {
-      const condos = await listCondos();
-      return Array.isArray(condos) ? condos : [];
+    function setAreasSelect(areas) {
+      const sel = $('areaId');
+      if (!sel) return;
+      const items = Array.isArray(areas) ? areas : [];
+      if (!items.length) {
+        sel.innerHTML = '<option value="">(nenhuma área cadastrada)</option>';
+        sel.value = '';
+        return;
+      }
+      sel.innerHTML = '<option value="">Selecione…</option>' + items.map((a) => `<option value="${a.id}">${a.name || a.id}</option>`).join('');
+    }
+
+    function renderAreaRules(area) {
+      const el = $('areaRules');
+      if (!el) return;
+      if (!area) {
+        el.textContent = 'Selecione uma área.';
+        return;
+      }
+
+      const bits = [];
+      if (area.openHour != null && area.closeHour != null) bits.push(`Horário: ${area.openHour}h → ${area.closeHour}h`);
+      if (area.capacity != null) bits.push(`Capacidade: ${area.capacity}`);
+      if (area.feeCents != null) bits.push(`Taxa: ${(Number(area.feeCents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`);
+      bits.push(`Aprovação: ${area.requiresApproval ? 'necessária' : 'automática'}`);
+      if (area.cancelHoursBefore != null && Number(area.cancelHoursBefore) > 0) bits.push(`Cancelamento: até ${area.cancelHoursBefore}h antes`);
+
+      el.textContent = bits.length ? bits.join(' • ') : 'Sem regras específicas.';
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '';
+      try {
+        const d = typeof ts.toDate === 'function' ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts));
+        return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    async function renderAvailability() {
+      if (!state.condoId) {
+        $('availList').innerHTML = '<p class="muted">Selecione um condomínio.</p>';
+        setMsg($('availMsg'), 'Sem condomínio ativo.', true);
+        return;
+      }
+      const areaId = String($('areaId').value || '').trim();
+      const day = $('availDay').value;
+      if (!areaId) {
+        setMsg($('availMsg'), 'Selecione uma área.', true);
+        return;
+      }
+      if (!day) {
+        setMsg($('availMsg'), 'Selecione um dia.', true);
+        return;
+      }
+
+      setMsg($('availMsg'), 'Carregando...');
+      try {
+        const slots = await listReservationCalendar(state.condoId, { areaId, day });
+        $('availList').innerHTML = slots.length
+          ? slots.map((s) => {
+              const st = formatTime(s.startAt);
+              const en = formatTime(s.endAt);
+              const right = `<span class="badge">${s.status || 'solicitado'}</span>`;
+              return asItemRow(s.title || 'Reserva', `${st} → ${en}`, right);
+            }).join('')
+          : '<p class="muted">Sem reservas neste dia.</p>';
+        setMsg($('availMsg'), `Total: ${slots.length}`);
+      } catch (err) {
+        setMsg($('availMsg'), err.message || String(err), true);
+      }
+    }
+
+    function setActiveCondoName(text) {
+      const el = $('ctxCondoName');
+      if (!el) return;
+      el.textContent = text ? String(text) : '—';
     }
 
     async function renderList() {
-      if (!state.condoId) return;
+      if (!state.condoId) {
+        $('list').innerHTML = '<p class="muted">Selecione um condomínio para ver suas reservas.</p>';
+        setMsg($('listMsg'), 'Sem condomínio ativo.', true);
+        return;
+      }
       setMsg($('listMsg'), 'Carregando...');
       try {
         const items = await listReservations(state.condoId, { mineOnly: true });
@@ -122,7 +237,14 @@
           ? items.map((r) => {
               const start = formatTs(r.startAt);
               const end = formatTs(r.endAt);
-              const right = `Status: <span class="badge">${r.status || 'solicitado'}</span>`;
+              const status = r.status || 'solicitado';
+              const canCancel = status === 'solicitado' || status === 'aprovado';
+              const right = `
+                <div style="display:grid;gap:8px;justify-items:end;">
+                  <div>Status: <span class="badge">${status}</span></div>
+                  ${canCancel ? `<button class="btn btn--ghost" type="button" data-cancel="${r.id}">Cancelar</button>` : ''}
+                </div>
+              `;
               return asItemRow(
                 r.title,
                 `Área: ${r.area} • ${start} → ${end}${r.decisionNote ? ` • Obs: ${r.decisionNote}` : ''}`,
@@ -131,8 +253,48 @@
             }).join('')
           : '<p class="muted">Nenhuma reserva encontrada.</p>';
         setMsg($('listMsg'), `Total: ${items.length}`);
+
+        $('list').querySelectorAll('button[data-cancel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-cancel');
+            if (!id) return;
+            btn.disabled = true;
+            setMsg($('listMsg'), 'Cancelando...');
+            try {
+              await cancelReservationAsResident(state.condoId, id);
+              await renderList();
+              setMsg($('listMsg'), 'Reserva cancelada.');
+              try { await renderAvailability(); } catch (e) {}
+            } catch (e) {
+              setMsg($('listMsg'), e && e.message ? e.message : String(e), true);
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
       } catch (err) {
         setMsg($('listMsg'), err.message || String(err), true);
+      }
+    }
+
+    async function refreshAreas() {
+      state.areas = [];
+      state.areaById = new Map();
+      if (!state.condoId) {
+        setAreasSelect([]);
+        renderAreaRules(null);
+        return;
+      }
+      try {
+        const items = await listCommonAreas(state.condoId);
+        state.areas = items;
+        state.areaById = new Map(items.map((a) => [String(a.id), a]));
+        setAreasSelect(items);
+        const cur = String($('areaId').value || '').trim();
+        renderAreaRules(state.areaById.get(cur) || null);
+      } catch (e) {
+        setAreasSelect([]);
+        renderAreaRules(null);
       }
     }
 
@@ -146,12 +308,29 @@
 
       $('refreshBtn').addEventListener('click', renderList);
 
+      $('availBtn').addEventListener('click', renderAvailability);
+
+      $('areaId').addEventListener('change', async () => {
+        const cur = String($('areaId').value || '').trim();
+        renderAreaRules(state.areaById.get(cur) || null);
+        $('availList').innerHTML = '';
+        setMsg($('availMsg'), '');
+      });
+
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
+
       $('reservationForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         setMsg($('msg'), 'Enviando...');
         try {
+          if (!state.condoId) {
+            setMsg($('msg'), 'Selecione um condomínio antes de reservar.', true);
+            try { openSelector(); } catch (e) {}
+            return;
+          }
           await createReservation(state.condoId, {
-            area: $('area').value,
+            areaId: $('areaId').value,
             title: $('title').value,
             note: $('note').value,
             startAt: $('startAt').value,
@@ -160,43 +339,57 @@
           e.target.reset();
           setMsg($('msg'), 'Reserva enviada (aguardando aprovação).');
           await renderList();
+          try { await renderAvailability(); } catch (e) {}
         } catch (err) {
           setMsg($('msg'), err.message || String(err), true);
         }
       });
 
-      auth.onAuthStateChanged(async (user) => {
-        state.user = user || null;
-        if (!user) return;
-        $('userBadge').textContent = user.email || user.uid;
+      watchAuthAndContext((ev) => {
+        const user = ev && ev.user ? ev.user : null;
+        state.user = user;
+        if (user) $('userBadge').textContent = user.email || user.uid;
 
-        state.condos = await loadCondos();
-        const select = $('condoSelect');
-        select.innerHTML = '';
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
 
-        if (!state.condos.length) {
-          select.innerHTML = '<option value="">(sem condomínios)</option>';
-          setMsg($('msg'), 'Você não tem memberships para nenhum condomínio.', true);
-          return;
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
         }
 
-        for (const c of state.condos) {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name;
-          select.appendChild(opt);
-        }
+        refreshAreas().catch(() => {});
+        // default de disponibilidade: hoje
+        try {
+          if ($('availDay') && !$('availDay').value) {
+            const d = new Date();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            $('availDay').value = `${yyyy}-${mm}-${dd}`;
+          }
+        } catch (e) {}
 
-        state.condoId = state.condos[0].id;
-        select.value = state.condoId;
-
-        select.addEventListener('change', async () => {
-          state.condoId = select.value || null;
-          await renderList();
-        });
-
-        await renderList();
+        renderList().catch(() => {});
       });
+
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || null;
+      setActiveCondoName(state.condoId || '—');
+      try {
+        if ($('availDay') && !$('availDay').value) {
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          $('availDay').value = `${yyyy}-${mm}-${dd}`;
+        }
+      } catch (e) {}
+      await refreshAreas();
+      await renderList();
     }
 
     bootstrap();

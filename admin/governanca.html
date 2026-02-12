@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -33,6 +35,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,15 +45,14 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio atual</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div style="min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Org ID (para criar condomínio)</label>
             <input id="ctxOrgId" class="input" placeholder="ex: org_abc" />
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar listas</button>
           </div>
         </div>
@@ -237,8 +239,8 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
+      import { watchAuthAndContext, getActiveContext, openSelector, getAvailableCondos, refreshAvailableCondos } from '/js/active-context.js';
       import {
-        listCondos,
         createCondo,
         updateCondo,
         deleteCondo,
@@ -304,25 +306,23 @@
       }
 
       // Context
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+      const pickCtxBtn = $('pickCtxBtn');
       const ctxOrgId = $('ctxOrgId');
       let condosCache = [];
       let blocksCache = [];
 
+      const state = {
+        condoId: '',
+      };
+
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
       }
 
-      function fillCondoSelect(condos) {
-        const cur = currentCondoId();
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
-        if (cur) ctxCondo.value = cur;
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
       }
 
       function clearCondoForm() {
@@ -406,8 +406,10 @@
       }
 
       async function refreshCondos() {
-        condosCache = await listCondos();
-        fillCondoSelect(condosCache);
+        try {
+          await refreshAvailableCondos();
+        } catch (e) {}
+        condosCache = getAvailableCondos();
 
         const listEl = $('condoList');
         renderList(
@@ -559,16 +561,7 @@
         setStatus('Listas atualizadas.');
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        clearBlockForm();
-        clearUnitForm();
-        clearMandateForm();
-        await withBusy(null, async () => {
-          await refreshBlocks();
-          await refreshUnits();
-          await refreshMandates();
-        });
-      });
+      if (pickCtxBtn) pickCtxBtn.addEventListener('click', () => openSelector());
 
       $('condoClearBtn').addEventListener('click', () => {
         clearCondoForm();
@@ -683,6 +676,32 @@
       });
 
       // First load
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        clearBlockForm();
+        clearUnitForm();
+        clearMandateForm();
+        withBusy(null, async () => {
+          await refreshBlocks();
+          await refreshUnits();
+          await refreshMandates();
+        }).catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
       await withBusy(null, refreshAll);
     </script>
 

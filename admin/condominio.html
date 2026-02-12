@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Condomínio | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="h1">Condomínio</h1>
+      </div>
+      <div class="topbar__right">
+        <span data-vh-context-anchor="1"></span>
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2 class="h2">Contexto</h2>
+        <div class="grid grid--2">
+          <label class="field">
+            <span>Condomínio ativo</span>
+            <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
+          </label>
+          <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+        <p id="ctxHint" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Cadastro do condomínio</h2>
+        <form id="condoForm" class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Nome *</span>
+            <input id="condoName" class="input" required />
+          </label>
+
+          <label class="field">
+            <span>CNPJ</span>
+            <input id="condoCnpj" class="input" placeholder="00.000.000/0001-00" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="condoStatus" class="input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Fração ideal total (opcional)</span>
+            <input id="condoFractionsTotal" class="input" inputmode="numeric" placeholder="Ex.: 1000" />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>URL da Convenção</span>
+            <input id="condoConventionUrl" class="input" type="url" placeholder="https://..." />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>URL do Regimento Interno</span>
+            <input id="condoBylawsUrl" class="input" type="url" placeholder="https://..." />
+          </label>
+
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button id="condoSaveBtn" class="btn" type="submit">Salvar</button>
+            <span id="condoMsg" class="muted"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Torres</h2>
+        <form id="towerForm" class="grid grid--3">
+          <input type="hidden" id="towerId" />
+          <label class="field" style="grid-column: 1 / 3;">
+            <span>Nome *</span>
+            <input id="towerName" class="input" required placeholder="Ex.: Torre A" />
+          </label>
+          <label class="field">
+            <span>Ordem</span>
+            <input id="towerOrder" class="input" inputmode="numeric" placeholder="Ex.: 1" />
+          </label>
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button class="btn" type="submit">Salvar</button>
+            <button id="towerClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+            <span id="towerMsg" class="muted"></span>
+          </div>
+        </form>
+        <div class="divider"></div>
+        <div class="grid grid--2">
+          <div>
+            <h3 class="h3">Lista</h3>
+            <div id="towersList" class="list"></div>
+          </div>
+          <div>
+            <p class="muted">Use Torres para organizar unidades. Se seu condomínio usa “blocos”, você pode criar as torres como “Bloco A”, “Bloco B”, etc.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Unidades</h2>
+        <div class="grid grid--3">
+          <label class="field">
+            <span>Busca (número)</span>
+            <input id="unitSearch" class="input" placeholder="Ex.: 101" />
+          </label>
+          <label class="field">
+            <span>Filtrar por torre</span>
+            <select id="unitTowerFilter" class="input">
+              <option value="">(todas)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="unitStatusFilter" class="input">
+              <option value="">(todos)</option>
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+        </div>
+
+        <form id="unitForm" class="grid grid--3" style="margin-top: 10px;">
+          <input type="hidden" id="unitId" />
+          <label class="field">
+            <span>Número *</span>
+            <input id="unitNumber" class="input" required placeholder="Ex.: 101" />
+          </label>
+          <label class="field">
+            <span>Torre</span>
+            <select id="unitTowerId" class="input">
+              <option value="">(sem torre)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Andar</span>
+            <input id="unitFloor" class="input" inputmode="numeric" placeholder="Ex.: 10" />
+          </label>
+
+          <label class="field">
+            <span>Fração ideal</span>
+            <input id="unitFractionIdeal" class="input" inputmode="numeric" placeholder="Ex.: 12,5" />
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="unitStatus" class="input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+          <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+            <button class="btn" type="submit">Salvar</button>
+            <button id="unitClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          </div>
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button id="unitPrevBtn" class="btn btn--ghost" type="button">◀ Anterior</button>
+            <button id="unitNextBtn" class="btn btn--ghost" type="button">Próxima ▶</button>
+            <span id="unitMsg" class="muted"></span>
+          </div>
+        </form>
+
+        <div class="divider"></div>
+        <div id="unitsList" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Vagas (estacionamento)</h2>
+        <form id="parkingForm" class="grid grid--3">
+          <input type="hidden" id="parkingId" />
+          <label class="field">
+            <span>Label *</span>
+            <input id="parkingLabel" class="input" required placeholder="Ex.: V-12" />
+          </label>
+          <label class="field">
+            <span>Tipo</span>
+            <select id="parkingType" class="input">
+              <option value="car">car</option>
+              <option value="moto">moto</option>
+              <option value="other">other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="parkingStatus" class="input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+          <label class="field" style="grid-column: 1 / 3;">
+            <span>Unit ID (opcional)</span>
+            <input id="parkingUnitId" class="input" placeholder="unitId" />
+          </label>
+          <label class="field">
+            <span>Unit label (opcional)</span>
+            <input id="parkingUnitLabel" class="input" placeholder="Ex.: Torre A • 101" />
+          </label>
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button class="btn" type="submit">Salvar</button>
+            <button id="parkingClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+            <span id="parkingMsg" class="muted"></span>
+          </div>
+        </form>
+        <div class="divider"></div>
+        <div id="parkingList" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Depósitos</h2>
+        <form id="depositForm" class="grid grid--3">
+          <input type="hidden" id="depositId" />
+          <label class="field">
+            <span>Label *</span>
+            <input id="depositLabel" class="input" required placeholder="Ex.: D-03" />
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="depositStatus" class="input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Unit ID (opcional)</span>
+            <input id="depositUnitId" class="input" placeholder="unitId" />
+          </label>
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Unit label (opcional)</span>
+            <input id="depositUnitLabel" class="input" placeholder="Ex.: Torre A • 101" />
+          </label>
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button class="btn" type="submit">Salvar</button>
+            <button id="depositClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+            <span id="depositMsg" class="muted"></span>
+          </div>
+        </form>
+        <div class="divider"></div>
+        <div id="depositsList" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Status</h2>
+        <p id="status" class="muted" style="margin:0;"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { setupAdminPage } from '/js/admin-access.js';
+      import { showError, confirmDialog } from '/js/ui.js';
+      import { getActiveContext, openSelector, watchAuthAndContext } from '/js/active-context.js';
+
+      import {
+        collection,
+        deleteDoc,
+        doc,
+        getDoc,
+        getDocs,
+        limit,
+        orderBy,
+        query,
+        serverTimestamp,
+        setDoc,
+        startAfter,
+        updateDoc,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+      const state = {
+        condoId: '',
+        orgId: '',
+        towers: [],
+        unitCursor: null,
+        unitCursorStack: [],
+        unitPageSize: 25,
+        unitsRaw: [],
+      };
+
+      const els = {
+        ctxCondoName: document.getElementById('ctxCondoName'),
+        ctxHint: document.getElementById('ctxHint'),
+        pickCtxBtn: document.getElementById('pickCtxBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+        status: document.getElementById('status'),
+
+        condoForm: document.getElementById('condoForm'),
+        condoName: document.getElementById('condoName'),
+        condoCnpj: document.getElementById('condoCnpj'),
+        condoStatus: document.getElementById('condoStatus'),
+        condoFractionsTotal: document.getElementById('condoFractionsTotal'),
+        condoConventionUrl: document.getElementById('condoConventionUrl'),
+        condoBylawsUrl: document.getElementById('condoBylawsUrl'),
+        condoMsg: document.getElementById('condoMsg'),
+
+        towerForm: document.getElementById('towerForm'),
+        towerId: document.getElementById('towerId'),
+        towerName: document.getElementById('towerName'),
+        towerOrder: document.getElementById('towerOrder'),
+        towerClearBtn: document.getElementById('towerClearBtn'),
+        towerMsg: document.getElementById('towerMsg'),
+        towersList: document.getElementById('towersList'),
+
+        unitSearch: document.getElementById('unitSearch'),
+        unitTowerFilter: document.getElementById('unitTowerFilter'),
+        unitStatusFilter: document.getElementById('unitStatusFilter'),
+
+        unitForm: document.getElementById('unitForm'),
+        unitId: document.getElementById('unitId'),
+        unitNumber: document.getElementById('unitNumber'),
+        unitTowerId: document.getElementById('unitTowerId'),
+        unitFloor: document.getElementById('unitFloor'),
+        unitFractionIdeal: document.getElementById('unitFractionIdeal'),
+        unitStatus: document.getElementById('unitStatus'),
+        unitClearBtn: document.getElementById('unitClearBtn'),
+        unitPrevBtn: document.getElementById('unitPrevBtn'),
+        unitNextBtn: document.getElementById('unitNextBtn'),
+        unitMsg: document.getElementById('unitMsg'),
+        unitsList: document.getElementById('unitsList'),
+
+        parkingForm: document.getElementById('parkingForm'),
+        parkingId: document.getElementById('parkingId'),
+        parkingLabel: document.getElementById('parkingLabel'),
+        parkingType: document.getElementById('parkingType'),
+        parkingStatus: document.getElementById('parkingStatus'),
+        parkingUnitId: document.getElementById('parkingUnitId'),
+        parkingUnitLabel: document.getElementById('parkingUnitLabel'),
+        parkingClearBtn: document.getElementById('parkingClearBtn'),
+        parkingMsg: document.getElementById('parkingMsg'),
+        parkingList: document.getElementById('parkingList'),
+
+        depositForm: document.getElementById('depositForm'),
+        depositId: document.getElementById('depositId'),
+        depositLabel: document.getElementById('depositLabel'),
+        depositStatus: document.getElementById('depositStatus'),
+        depositUnitId: document.getElementById('depositUnitId'),
+        depositUnitLabel: document.getElementById('depositUnitLabel'),
+        depositClearBtn: document.getElementById('depositClearBtn'),
+        depositMsg: document.getElementById('depositMsg'),
+        depositsList: document.getElementById('depositsList'),
+      };
+
+      function cleanString(v) {
+        return String(v || '').trim();
+      }
+
+      function cleanNumber(v) {
+        const s = cleanString(v).replace(',', '.');
+        if (!s) return null;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      function setMsg(el, text, isErr) {
+        if (!el) return;
+        el.textContent = text || '';
+        el.classList.toggle('error', !!isErr);
+      }
+
+      function setStatus(text) {
+        if (els.status) els.status.textContent = text || '';
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function renderTowersSelects() {
+        const items = state.towers.slice();
+        const options = ['<option value="">(sem torre)</option>'].concat(
+          items.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name || t.id)}</option>`)
+        );
+
+        if (els.unitTowerId) els.unitTowerId.innerHTML = options.join('');
+
+        const filterOptions = ['<option value="">(todas)</option>'].concat(
+          items.map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name || t.id)}</option>`)
+        );
+        if (els.unitTowerFilter) els.unitTowerFilter.innerHTML = filterOptions.join('');
+      }
+
+      function renderTowersList() {
+        if (!els.towersList) return;
+        if (!state.towers.length) {
+          els.towersList.innerHTML = '<div class="muted">Nenhuma torre cadastrada.</div>';
+          return;
+        }
+
+        els.towersList.innerHTML = state.towers
+          .map((t) => {
+            const meta = t.order != null ? `ordem: ${escapeHtml(t.order)}` : '';
+            return `
+              <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                <div>
+                  <div style="font-weight:900;">${escapeHtml(t.name || t.id)}</div>
+                  <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn--ghost" type="button" data-action="edit-tower" data-id="${escapeHtml(t.id)}">Editar</button>
+                  <button class="btn btn--ghost" type="button" data-action="del-tower" data-id="${escapeHtml(t.id)}">Excluir</button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      function applyUnitFilters(units) {
+        const search = cleanString(els.unitSearch && els.unitSearch.value).toLowerCase();
+        const towerId = cleanString(els.unitTowerFilter && els.unitTowerFilter.value);
+        const status = cleanString(els.unitStatusFilter && els.unitStatusFilter.value);
+
+        return (units || []).filter((u) => {
+          if (towerId && cleanString(u.towerId) !== towerId) return false;
+          if (status && cleanString(u.status) !== status) return false;
+          if (search && !cleanString(u.number).toLowerCase().includes(search)) return false;
+          return true;
+        });
+      }
+
+      function renderUnitsList() {
+        if (!els.unitsList) return;
+
+        const filtered = applyUnitFilters(state.unitsRaw);
+
+        if (!filtered.length) {
+          els.unitsList.innerHTML = '<div class="muted">Nenhuma unidade nesta página.</div>';
+          return;
+        }
+
+        els.unitsList.innerHTML = filtered
+          .map((u) => {
+            const title = `Unidade ${u.number || u.id}`;
+            const meta = [u.towerId ? `torre: ${u.towerId}` : null, u.status ? `status: ${u.status}` : null]
+              .filter(Boolean)
+              .join(' • ');
+
+            return `
+              <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                <div>
+                  <div style="font-weight:900;">${escapeHtml(title)}</div>
+                  <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn--ghost" type="button" data-action="edit-unit" data-id="${escapeHtml(u.id)}">Editar</button>
+                  <button class="btn btn--ghost" type="button" data-action="del-unit" data-id="${escapeHtml(u.id)}">Excluir</button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      function renderSimpleList(container, items, opts) {
+        opts = opts || {};
+        const emptyText = opts.emptyText || 'Nenhum item.';
+        const titleField = opts.titleField || 'label';
+        const metaBuilder = typeof opts.metaBuilder === 'function' ? opts.metaBuilder : () => '';
+        const editAction = opts.editAction || '';
+        const delAction = opts.delAction || '';
+
+        if (!container) return;
+        if (!items || items.length === 0) {
+          container.innerHTML = `<div class="muted">${escapeHtml(emptyText)}</div>`;
+          return;
+        }
+
+        container.innerHTML = items
+          .map((x) => {
+            const title = cleanString(x[titleField]) || x.id;
+            const meta = metaBuilder(x);
+            return `
+              <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                <div>
+                  <div style="font-weight:900;">${escapeHtml(title)}</div>
+                  <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn--ghost" type="button" data-action="${escapeHtml(editAction)}" data-id="${escapeHtml(x.id)}">Editar</button>
+                  <button class="btn btn--ghost" type="button" data-action="${escapeHtml(delAction)}" data-id="${escapeHtml(x.id)}">Excluir</button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      async function loadContextName(db, condoId) {
+        const snap = await getDoc(doc(db, 'condos', condoId));
+        if (!snap.exists()) return { id: condoId, name: condoId };
+        const d = snap.data() || {};
+        return { id: snap.id, name: d.name || snap.id, data: d };
+      }
+
+      async function refreshAll(env) {
+        const { db } = env;
+        const ctx = getActiveContext();
+        state.condoId = cleanString(ctx.condoId);
+        state.orgId = cleanString(ctx.orgId);
+
+        if (!state.condoId) {
+          if (els.ctxCondoName) els.ctxCondoName.textContent = '—';
+          setStatus('Selecione um condomínio para continuar.');
+          return;
+        }
+
+        const c = await loadContextName(db, state.condoId);
+        if (els.ctxCondoName) els.ctxCondoName.textContent = c.name;
+        if (els.ctxHint) els.ctxHint.textContent = state.orgId ? `orgId: ${state.orgId}` : '';
+
+        // condo form
+        if (c.data) {
+          els.condoName.value = cleanString(c.data.name);
+          els.condoCnpj.value = cleanString(c.data.cnpj);
+          els.condoStatus.value = cleanString(c.data.status) || 'active';
+          els.condoFractionsTotal.value = c.data.fractionsTotal != null ? String(c.data.fractionsTotal) : '';
+          els.condoConventionUrl.value = cleanString(c.data.conventionUrl);
+          els.condoBylawsUrl.value = cleanString(c.data.bylawsUrl);
+        }
+
+        // towers
+        const twQs = await getDocs(query(collection(db, 'condos', state.condoId, 'towers'), orderBy('order', 'asc')));
+        state.towers = twQs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        renderTowersSelects();
+        renderTowersList();
+
+        // units (primeira página)
+        state.unitCursor = null;
+        state.unitCursorStack = [];
+        await loadUnitsPage(env, { reset: true });
+
+        // parking
+        const pQs = await getDocs(query(collection(db, 'condos', state.condoId, 'parking'), orderBy('label', 'asc')));
+        const parkingItems = pQs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        renderSimpleList(els.parkingList, parkingItems, {
+          emptyText: 'Nenhuma vaga cadastrada.',
+          titleField: 'label',
+          metaBuilder: (x) => [x.type ? `tipo: ${x.type}` : null, x.status ? `status: ${x.status}` : null, x.unitLabel ? `unidade: ${x.unitLabel}` : null].filter(Boolean).join(' • '),
+          editAction: 'edit-parking',
+          delAction: 'del-parking',
+        });
+
+        // deposits
+        const dQs = await getDocs(query(collection(db, 'condos', state.condoId, 'deposits'), orderBy('label', 'asc')));
+        const depositItems = dQs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        renderSimpleList(els.depositsList, depositItems, {
+          emptyText: 'Nenhum depósito cadastrado.',
+          titleField: 'label',
+          metaBuilder: (x) => [x.status ? `status: ${x.status}` : null, x.unitLabel ? `unidade: ${x.unitLabel}` : null].filter(Boolean).join(' • '),
+          editAction: 'edit-deposit',
+          delAction: 'del-deposit',
+        });
+
+        setStatus('Pronto.');
+      }
+
+      async function loadUnitsPage(env, opts) {
+        opts = opts || {};
+        const { db } = env;
+        if (!state.condoId) return;
+
+        const col = collection(db, 'condos', state.condoId, 'units');
+
+        let qy = query(col, orderBy('number', 'asc'), limit(state.unitPageSize));
+        if (!opts.reset && state.unitCursor) {
+          qy = query(col, orderBy('number', 'asc'), startAfter(state.unitCursor), limit(state.unitPageSize));
+        }
+
+        const qs = await getDocs(qy);
+        const docs = qs.docs;
+        state.unitsRaw = docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        state.unitCursor = docs.length ? docs[docs.length - 1] : state.unitCursor;
+        renderUnitsList();
+      }
+
+      function clearTowerForm() {
+        els.towerId.value = '';
+        els.towerName.value = '';
+        els.towerOrder.value = '';
+        setMsg(els.towerMsg, '');
+      }
+
+      function clearUnitForm() {
+        els.unitId.value = '';
+        els.unitNumber.value = '';
+        els.unitTowerId.value = '';
+        els.unitFloor.value = '';
+        els.unitFractionIdeal.value = '';
+        els.unitStatus.value = 'active';
+        setMsg(els.unitMsg, '');
+      }
+
+      function clearParkingForm() {
+        els.parkingId.value = '';
+        els.parkingLabel.value = '';
+        els.parkingType.value = 'car';
+        els.parkingStatus.value = 'active';
+        els.parkingUnitId.value = '';
+        els.parkingUnitLabel.value = '';
+        setMsg(els.parkingMsg, '');
+      }
+
+      function clearDepositForm() {
+        els.depositId.value = '';
+        els.depositLabel.value = '';
+        els.depositStatus.value = 'active';
+        els.depositUnitId.value = '';
+        els.depositUnitLabel.value = '';
+        setMsg(els.depositMsg, '');
+      }
+
+      let env = null;
+
+      async function boot() {
+        env = await setupAdminPage({
+          permsAny: ['condo.manage', 'portfolio.manage'],
+          rolesAny: ['ADMINISTRADORA', 'GESTOR', 'SINDICO'],
+          condoRequired: true,
+          userBadgeId: 'userBadge',
+          logoutBtnId: 'logoutBtn',
+        });
+
+        if (!env || !env.ok) return;
+
+        if (els.pickCtxBtn) els.pickCtxBtn.addEventListener('click', () => openSelector());
+        if (els.refreshBtn) els.refreshBtn.addEventListener('click', () => refreshAll(env));
+
+        if (els.condoForm) {
+          els.condoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(els.condoMsg, 'Salvando...');
+            try {
+              const name = cleanString(els.condoName.value);
+              if (!name) throw new Error('Nome é obrigatório.');
+
+              const patch = {
+                name,
+                cnpj: cleanString(els.condoCnpj.value) || null,
+                status: cleanString(els.condoStatus.value) || 'active',
+                fractionsTotal: cleanNumber(els.condoFractionsTotal.value),
+                conventionUrl: cleanString(els.condoConventionUrl.value) || null,
+                bylawsUrl: cleanString(els.condoBylawsUrl.value) || null,
+                updatedAt: serverTimestamp(),
+              };
+
+              await updateDoc(doc(env.db, 'condos', state.condoId), patch);
+              setMsg(els.condoMsg, 'Salvo.', false);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar o condomínio.');
+              setMsg(els.condoMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (els.towerClearBtn) els.towerClearBtn.addEventListener('click', clearTowerForm);
+
+        if (els.towerForm) {
+          els.towerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(els.towerMsg, 'Salvando...');
+            try {
+              const id = cleanString(els.towerId.value);
+              const name = cleanString(els.towerName.value);
+              if (!name) throw new Error('Nome é obrigatório.');
+              const order = cleanNumber(els.towerOrder.value);
+
+              const ref = id
+                ? doc(env.db, 'condos', state.condoId, 'towers', id)
+                : doc(collection(env.db, 'condos', state.condoId, 'towers'));
+
+              const payload = {
+                name,
+                order: order != null ? order : null,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              };
+
+              await setDoc(ref, payload, { merge: true });
+              clearTowerForm();
+              await refreshAll(env);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar a torre.');
+              setMsg(els.towerMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (els.unitClearBtn) els.unitClearBtn.addEventListener('click', clearUnitForm);
+
+        if (els.unitForm) {
+          els.unitForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(els.unitMsg, 'Salvando...');
+            try {
+              const id = cleanString(els.unitId.value);
+              const number = cleanString(els.unitNumber.value);
+              if (!number) throw new Error('Número é obrigatório.');
+
+              const floor = cleanNumber(els.unitFloor.value);
+              const fractionIdeal = cleanNumber(els.unitFractionIdeal.value);
+
+              const ref = id
+                ? doc(env.db, 'condos', state.condoId, 'units', id)
+                : doc(collection(env.db, 'condos', state.condoId, 'units'));
+
+              const payload = {
+                number,
+                towerId: cleanString(els.unitTowerId.value) || null,
+                floor: floor != null ? floor : null,
+                fractionIdeal: fractionIdeal != null ? fractionIdeal : null,
+                status: cleanString(els.unitStatus.value) || 'active',
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              };
+
+              await setDoc(ref, payload, { merge: true });
+              clearUnitForm();
+              await refreshAll(env);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar a unidade.');
+              setMsg(els.unitMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (els.unitNextBtn) {
+          els.unitNextBtn.addEventListener('click', async () => {
+            try {
+              state.unitCursorStack.push(state.unitCursor);
+              await loadUnitsPage(env, { reset: false });
+            } catch (err) {
+              showError(err, 'Falha ao paginar.');
+            }
+          });
+        }
+
+        if (els.unitPrevBtn) {
+          els.unitPrevBtn.addEventListener('click', async () => {
+            // MVP: paginação anterior é best-effort (recarrega do início)
+            try {
+              state.unitCursor = null;
+              state.unitCursorStack = [];
+              await loadUnitsPage(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Falha ao voltar página.');
+            }
+          });
+        }
+
+        // filtros locais
+        ['input', 'change'].forEach((evName) => {
+          if (els.unitSearch) els.unitSearch.addEventListener(evName, renderUnitsList);
+          if (els.unitTowerFilter) els.unitTowerFilter.addEventListener(evName, renderUnitsList);
+          if (els.unitStatusFilter) els.unitStatusFilter.addEventListener(evName, renderUnitsList);
+        });
+
+        if (els.parkingClearBtn) els.parkingClearBtn.addEventListener('click', clearParkingForm);
+
+        if (els.parkingForm) {
+          els.parkingForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(els.parkingMsg, 'Salvando...');
+            try {
+              const id = cleanString(els.parkingId.value);
+              const label = cleanString(els.parkingLabel.value);
+              if (!label) throw new Error('Label é obrigatória.');
+
+              const ref = id
+                ? doc(env.db, 'condos', state.condoId, 'parking', id)
+                : doc(collection(env.db, 'condos', state.condoId, 'parking'));
+
+              await setDoc(ref, {
+                label,
+                type: cleanString(els.parkingType.value) || 'car',
+                status: cleanString(els.parkingStatus.value) || 'active',
+                unitId: cleanString(els.parkingUnitId.value) || null,
+                unitLabel: cleanString(els.parkingUnitLabel.value) || null,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              }, { merge: true });
+
+              clearParkingForm();
+              await refreshAll(env);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar a vaga.');
+              setMsg(els.parkingMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (els.depositClearBtn) els.depositClearBtn.addEventListener('click', clearDepositForm);
+
+        if (els.depositForm) {
+          els.depositForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(els.depositMsg, 'Salvando...');
+            try {
+              const id = cleanString(els.depositId.value);
+              const label = cleanString(els.depositLabel.value);
+              if (!label) throw new Error('Label é obrigatória.');
+
+              const ref = id
+                ? doc(env.db, 'condos', state.condoId, 'deposits', id)
+                : doc(collection(env.db, 'condos', state.condoId, 'deposits'));
+
+              await setDoc(ref, {
+                label,
+                status: cleanString(els.depositStatus.value) || 'active',
+                unitId: cleanString(els.depositUnitId.value) || null,
+                unitLabel: cleanString(els.depositUnitLabel.value) || null,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              }, { merge: true });
+
+              clearDepositForm();
+              await refreshAll(env);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar o depósito.');
+              setMsg(els.depositMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        // ações das listas
+        document.addEventListener('click', async (ev) => {
+          const el = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
+          if (!el) return;
+
+          const action = cleanString(el.getAttribute('data-action'));
+          const id = cleanString(el.getAttribute('data-id'));
+          if (!action || !id) return;
+
+          try {
+            if (action === 'edit-tower') {
+              const t = state.towers.find((x) => x.id === id);
+              if (!t) return;
+              els.towerId.value = t.id;
+              els.towerName.value = cleanString(t.name);
+              els.towerOrder.value = t.order != null ? String(t.order) : '';
+              return;
+            }
+
+            if (action === 'del-tower') {
+              const ok = await confirmDialog('Excluir esta torre?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'towers', id));
+              await refreshAll(env);
+              return;
+            }
+
+            if (action === 'edit-unit') {
+              const u = state.unitsRaw.find((x) => x.id === id);
+              if (!u) return;
+              els.unitId.value = u.id;
+              els.unitNumber.value = cleanString(u.number);
+              els.unitTowerId.value = cleanString(u.towerId);
+              els.unitFloor.value = u.floor != null ? String(u.floor) : '';
+              els.unitFractionIdeal.value = u.fractionIdeal != null ? String(u.fractionIdeal) : '';
+              els.unitStatus.value = cleanString(u.status) || 'active';
+              return;
+            }
+
+            if (action === 'del-unit') {
+              const ok = await confirmDialog('Excluir esta unidade?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'units', id));
+              await refreshAll(env);
+              return;
+            }
+
+            if (action === 'edit-parking') {
+              const snap = await getDoc(doc(env.db, 'condos', state.condoId, 'parking', id));
+              if (!snap.exists()) return;
+              const x = snap.data() || {};
+              els.parkingId.value = snap.id;
+              els.parkingLabel.value = cleanString(x.label);
+              els.parkingType.value = cleanString(x.type) || 'car';
+              els.parkingStatus.value = cleanString(x.status) || 'active';
+              els.parkingUnitId.value = cleanString(x.unitId);
+              els.parkingUnitLabel.value = cleanString(x.unitLabel);
+              return;
+            }
+
+            if (action === 'del-parking') {
+              const ok = await confirmDialog('Excluir esta vaga?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'parking', id));
+              await refreshAll(env);
+              return;
+            }
+
+            if (action === 'edit-deposit') {
+              const snap = await getDoc(doc(env.db, 'condos', state.condoId, 'deposits', id));
+              if (!snap.exists()) return;
+              const x = snap.data() || {};
+              els.depositId.value = snap.id;
+              els.depositLabel.value = cleanString(x.label);
+              els.depositStatus.value = cleanString(x.status) || 'active';
+              els.depositUnitId.value = cleanString(x.unitId);
+              els.depositUnitLabel.value = cleanString(x.unitLabel);
+              return;
+            }
+
+            if (action === 'del-deposit') {
+              const ok = await confirmDialog('Excluir este depósito?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'deposits', id));
+              await refreshAll(env);
+              return;
+            }
+          } catch (err) {
+            showError(err, 'Falha ao executar ação.');
+          }
+        });
+
+        await refreshAll(env);
+
+        // mantém nome do contexto atualizado em troca de condo
+        watchAuthAndContext(async (detail) => {
+          if (!env || !env.ok) return;
+          const ctx = detail && detail.context ? detail.context : getActiveContext();
+          if (cleanString(ctx.condoId) !== state.condoId) {
+            await refreshAll(env);
+          }
+        });
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

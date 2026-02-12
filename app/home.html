@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
 
     <script>
       // Evita flash de tema ao carregar
@@ -119,7 +120,7 @@
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
 
-      await protect(['/app/'], ['MORADOR']);
+      await protect(['/app/']);
 
       const btn = document.getElementById('logoutBtn');
       if (btn) {

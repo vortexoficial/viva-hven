@@ -18,8 +18,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -111,8 +113,75 @@ function normalizeWarningStatus(value) {
 
 function normalizeFineStatus(value) {
   const v = cleanString(value).toLowerCase();
+  // Compat legado: aberta/paga/cancelada
   if (['aberta', 'paga', 'cancelada'].includes(v)) return v;
-  return 'aberta';
+  // Fluxo atual do morador: em_recurso/confirmada
+  if (['em_recurso', 'confirmada'].includes(v)) return v;
+  return 'confirmada';
+}
+
+function normalizeAreaId(value) {
+  const v = cleanString(value);
+  if (!v) return '';
+  return v.length > 80 ? v.slice(0, 80) : v;
+}
+
+function asAttachmentUrl(value, fallbackName) {
+  const v = cleanString(value);
+  if (!v) return null;
+  try {
+    const u = new URL(v);
+    return { url: u.href, name: cleanString(fallbackName) || 'link', source: 'url' };
+  } catch (e) {
+    return { url: v, name: cleanString(fallbackName) || 'link', source: 'url' };
+  }
+}
+
+// ===== Áreas comuns (catálogo) =====
+export async function listCommonAreas(condoId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  const qs = await getDocs(query(collection(db, 'condos', cId, 'commonAreas'), orderBy('name', 'asc')));
+  return qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+}
+
+export async function getCommonArea(condoId, areaId) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  const aId = normalizeAreaId(areaId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!aId) throw new Error('areaId inválido.');
+  const snap = await getDoc(doc(db, 'condos', cId, 'commonAreas', aId));
+  return snap.exists() ? ({ id: snap.id, ...(snap.data() || {}) }) : null;
+}
+
+// ===== Calendário (espelho público) =====
+export async function listReservationCalendar(condoId, opts) {
+  const { db } = await requireAuth();
+  const cId = cleanString(condoId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+
+  opts = opts || {};
+  const areaId = normalizeAreaId(opts.areaId);
+  const day = toDateOnly(opts.day);
+  if (!areaId) throw new Error('Área é obrigatória.');
+  if (!day) throw new Error('Dia inválido.');
+
+  const start = new Date(day);
+  const end = new Date(day);
+  end.setDate(end.getDate() + 1);
+
+  const qs = await getDocs(query(
+    collection(db, 'condos', cId, 'reservationCalendar'),
+    where('areaId', '==', areaId),
+    where('startAt', '>=', start),
+    where('startAt', '<', end),
+    orderBy('startAt', 'asc')
+  ));
+
+  return qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
 }
 
 // ===== Residents =====
@@ -462,27 +531,61 @@ export async function createReservation(condoId, data) {
   if (!cId) throw new Error('Selecione um condomínio.');
 
   data = data || {};
-  const area = cleanString(data.area);
+  const areaId = normalizeAreaId(data.areaId);
+  const areaText = cleanString(data.area);
   const title = cleanString(data.title);
   const startAt = toDateTimeLocal(data.startAt);
   const endAt = toDateTimeLocal(data.endAt);
-  if (!area) throw new Error('Área é obrigatória.');
+  if (!areaId && !areaText) throw new Error('Área é obrigatória.');
   if (!title) throw new Error('Título é obrigatório.');
   if (!startAt) throw new Error('Início inválido.');
   if (!endAt) throw new Error('Fim inválido.');
+  if (endAt.getTime() <= startAt.getTime()) throw new Error('Fim deve ser após o início.');
 
   const orgId = await getOrgIdForCondo(db, cId);
   if (!orgId) throw new Error('Condomínio sem orgId.');
 
+  let areaName = areaText;
+  let rules = null;
+  if (areaId) {
+    const areaSnap = await getDoc(doc(db, 'condos', cId, 'commonAreas', areaId));
+    if (!areaSnap.exists()) throw new Error('Área não encontrada.');
+    const areaDoc = areaSnap.data() || {};
+    areaName = cleanString(areaDoc.name) || areaId;
+    rules = {
+      capacity: areaDoc.capacity != null ? Number(areaDoc.capacity) : null,
+      openHour: areaDoc.openHour != null ? Number(areaDoc.openHour) : null,
+      closeHour: areaDoc.closeHour != null ? Number(areaDoc.closeHour) : null,
+      feeCents: areaDoc.feeCents != null ? Number(areaDoc.feeCents) : 0,
+      requiresApproval: !!areaDoc.requiresApproval,
+      cancelHoursBefore: areaDoc.cancelHoursBefore != null ? Number(areaDoc.cancelHoursBefore) : 0,
+    };
+
+    // Validações simples client-side (regras finas devem ficar no administrativo)
+    if (Number.isFinite(rules.openHour) && Number.isFinite(rules.closeHour)) {
+      const sh = startAt.getHours() + startAt.getMinutes() / 60;
+      const eh = endAt.getHours() + endAt.getMinutes() / 60;
+      if (sh < rules.openHour || eh > rules.closeHour) {
+        throw new Error('Horário fora do permitido para a área.');
+      }
+    }
+  }
+
+  const requiresApproval = rules ? !!rules.requiresApproval : true;
+  const initialStatus = requiresApproval ? 'solicitado' : 'aprovado';
+
   const docData = {
     orgId,
     condoId: cId,
-    area,
+    areaId: areaId || null,
+    area: areaName,
     title,
     note: cleanString(data.note) || null,
     startAt,
     endAt,
-    status: 'solicitado',
+    status: initialStatus,
+    requiresApproval,
+    feeCents: rules && Number.isFinite(rules.feeCents) ? Math.max(0, Math.trunc(rules.feeCents)) : 0,
     decisionNote: null,
     decisionBy: null,
     decisionAt: null,
@@ -493,16 +596,95 @@ export async function createReservation(condoId, data) {
 
   const ref = await addDoc(collection(db, 'condos', cId, 'reservations'), docData);
 
+  // Espelho para o calendário (consulta de disponibilidade)
+  try {
+    await setDoc(doc(db, 'condos', cId, 'reservationCalendar', ref.id), {
+      orgId,
+      condoId: cId,
+      reservationId: ref.id,
+      areaId: areaId || null,
+      area: areaName,
+      title,
+      startAt,
+      endAt,
+      status: initialStatus,
+      createdBy: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (e) {
+    // Se falhar, a reserva ainda existe; calendário pode ficar incompleto.
+  }
+
   await writeAuditLog(db, {
     orgId,
     condoId: cId,
     actorUid: user.uid,
     action: 'reservation.create',
     targetPath: `condos/${cId}/reservations/${ref.id}`,
-    metadata: { area, startAt: startAt.toISOString() },
+    metadata: { area: areaName, areaId: areaId || null, startAt: startAt.toISOString(), requiresApproval },
   });
 
   return { id: ref.id, ...docData };
+}
+
+export async function cancelReservationAsResident(condoId, reservationId) {
+  const { db, user } = await requireAuth();
+  const cId = cleanString(condoId);
+  const rId = cleanString(reservationId);
+  if (!cId) throw new Error('Selecione um condomínio.');
+  if (!rId) throw new Error('reservationId inválido.');
+
+  const snap = await getDoc(doc(db, 'condos', cId, 'reservations', rId));
+  if (!snap.exists()) throw new Error('Reserva não encontrada.');
+  const res = snap.data() || {};
+  if (cleanString(res.createdBy) !== user.uid) throw new Error('Você não pode cancelar esta reserva.');
+
+  // Regra de cancelamento (se houver): cancelHoursBefore na área
+  let cancelHoursBefore = 0;
+  const areaId = normalizeAreaId(res.areaId);
+  if (areaId) {
+    try {
+      const aSnap = await getDoc(doc(db, 'condos', cId, 'commonAreas', areaId));
+      if (aSnap.exists()) {
+        const a = aSnap.data() || {};
+        cancelHoursBefore = a.cancelHoursBefore != null ? Number(a.cancelHoursBefore) : 0;
+        if (!Number.isFinite(cancelHoursBefore) || cancelHoursBefore < 0) cancelHoursBefore = 0;
+      }
+    } catch (e) {}
+  }
+
+  const startAt = res.startAt && typeof res.startAt.toDate === 'function' ? res.startAt.toDate() : (res.startAt instanceof Date ? res.startAt : null);
+  if (startAt && cancelHoursBefore > 0) {
+    const limit = new Date(startAt.getTime() - cancelHoursBefore * 60 * 60 * 1000);
+    if (new Date().getTime() > limit.getTime()) {
+      throw new Error('Cancelamento fora do prazo para esta área.');
+    }
+  }
+
+  await updateDoc(doc(db, 'condos', cId, 'reservations', rId), {
+    status: 'cancelado',
+    updatedAt: serverTimestamp(),
+  });
+
+  try {
+    await updateDoc(doc(db, 'condos', cId, 'reservationCalendar', rId), {
+      status: 'cancelado',
+      updatedAt: serverTimestamp(),
+    });
+  } catch (e) {}
+
+  const orgId = await getOrgIdForCondo(db, cId);
+  await writeAuditLog(db, {
+    orgId: orgId || 'unknown',
+    condoId: cId,
+    actorUid: user.uid,
+    action: 'reservation.cancel.resident',
+    targetPath: `condos/${cId}/reservations/${rId}`,
+    metadata: { cancelHoursBefore },
+  });
+
+  return { ok: true };
 }
 
 export async function updateReservationAsAdmin(condoId, reservationId, data) {
@@ -531,6 +713,13 @@ export async function updateReservationAsAdmin(condoId, reservationId, data) {
 
   await updateDoc(doc(db, 'condos', cId, 'reservations', rId), patch);
 
+  // Mantém espelho do calendário sincronizado (best-effort)
+  try {
+    const calPatch = { updatedAt: serverTimestamp() };
+    if (patch.status) calPatch.status = patch.status;
+    await updateDoc(doc(db, 'condos', cId, 'reservationCalendar', rId), calPatch);
+  } catch (e) {}
+
   const orgId = await getOrgIdForCondo(db, cId);
   await writeAuditLog(db, {
     orgId: orgId || 'unknown',
@@ -551,6 +740,10 @@ export async function deleteReservation(condoId, reservationId) {
 
   const orgId = await getOrgIdForCondo(db, cId);
   await deleteDoc(doc(db, 'condos', cId, 'reservations', rId));
+
+  try {
+    await deleteDoc(doc(db, 'condos', cId, 'reservationCalendar', rId));
+  } catch (e) {}
 
   await writeAuditLog(db, {
     orgId: orgId || 'unknown',
@@ -729,16 +922,25 @@ export async function createFine(condoId, data) {
 
   const dueAt = data.dueDate ? toDateOnly(data.dueDate) : null;
 
+  const rawEvidence = Array.isArray(data.evidenceUrls) ? data.evidenceUrls : (Array.isArray(data.provasURL) ? data.provasURL : []);
+  const evidence = [];
+  for (let i = 0; i < rawEvidence.length; i++) {
+    const att = asAttachmentUrl(rawEvidence[i], 'prova');
+    if (att) evidence.push(att);
+  }
+
   const docData = {
     orgId,
     condoId: cId,
     targetUid,
     unitLabel: cleanString(data.unitLabel) || null,
+    unitId: cleanString(data.unitId) || null,
     title,
     description,
     amountCents,
     dueAt,
-    status: normalizeFineStatus(data.status || 'aberta'),
+    status: normalizeFineStatus(data.status || 'confirmada'),
+    evidence,
     issuedAt: serverTimestamp(),
     paidAt: null,
     createdBy: user.uid,

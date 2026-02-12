@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Logs | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="h1">Logs (Auditoria)</h1>
+      </div>
+      <div class="topbar__right">
+        <span data-vh-context-anchor="1"></span>
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2 class="h2">Contexto</h2>
+        <div class="grid grid--2">
+          <label class="field">
+            <span>Condomínio ativo</span>
+            <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
+          </label>
+          <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+        <p id="ctxHint" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Filtros</h2>
+        <div class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Ação (ex.: ticket.create)</span>
+            <input id="actionFilter" class="input" placeholder="Deixe em branco para todas" />
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button id="applyBtn" class="btn" type="button">Aplicar</button>
+          <button id="clearBtn" class="btn btn--ghost" type="button">Limpar</button>
+          <span id="msg" class="muted"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Resultados</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button id="prevBtn" class="btn btn--ghost" type="button">◀ Anterior</button>
+          <button id="nextBtn" class="btn btn--ghost" type="button">Próxima ▶</button>
+        </div>
+        <div class="divider"></div>
+        <div id="list" class="list"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { setupAdminPage } from '/js/admin-access.js';
+      import { showError } from '/js/ui.js';
+      import { getActiveContext, openSelector, watchAuthAndContext } from '/js/active-context.js';
+
+      import {
+        collection,
+        getDocs,
+        limit,
+        orderBy,
+        query,
+        startAfter,
+        where,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+      const state = {
+        condoId: '',
+        cursor: null,
+        pageSize: 30,
+        raw: [],
+      };
+
+      const el = {
+        ctxCondoName: document.getElementById('ctxCondoName'),
+        ctxHint: document.getElementById('ctxHint'),
+        pickCtxBtn: document.getElementById('pickCtxBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+
+        actionFilter: document.getElementById('actionFilter'),
+        applyBtn: document.getElementById('applyBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        msg: document.getElementById('msg'),
+
+        prevBtn: document.getElementById('prevBtn'),
+        nextBtn: document.getElementById('nextBtn'),
+        list: document.getElementById('list'),
+      };
+
+      function cleanString(v) {
+        return String(v || '').trim();
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function setMsg(text, isErr) {
+        if (!el.msg) return;
+        el.msg.textContent = text || '';
+        el.msg.classList.toggle('error', !!isErr);
+      }
+
+      function fmtTs(ts) {
+        try {
+          if (ts && typeof ts.toDate === 'function') return ts.toDate().toLocaleString('pt-BR');
+          if (ts instanceof Date) return ts.toLocaleString('pt-BR');
+        } catch (e) {}
+        return '';
+      }
+
+      function render() {
+        if (!el.list) return;
+        if (!state.raw.length) {
+          el.list.innerHTML = '<div class="muted">Nenhum log nesta página.</div>';
+          return;
+        }
+
+        el.list.innerHTML = state.raw.map((x) => {
+          const title = cleanString(x.action) || '(sem action)';
+          const meta = [
+            x.createdAt ? fmtTs(x.createdAt) : null,
+            x.actorUid ? `uid: ${x.actorUid}` : null,
+            x.entityType ? `tipo: ${x.entityType}` : null,
+            x.entityId ? `id: ${x.entityId}` : null,
+          ].filter(Boolean).join(' • ');
+
+          const target = cleanString(x.targetPath) || '';
+
+          return `
+            <div class="item">
+              <div style="font-weight:900;">${escapeHtml(title)}</div>
+              <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+              ${target ? `<div class="muted" style="font-size:12px;margin-top:6px;">${escapeHtml(target)}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      async function refresh(env, opts) {
+        opts = opts || {};
+        const ctx = getActiveContext();
+        state.condoId = cleanString(ctx.condoId);
+
+        if (el.ctxCondoName) el.ctxCondoName.textContent = state.condoId || '—';
+        if (el.ctxHint) el.ctxHint.textContent = ctx.orgId ? `orgId: ${ctx.orgId}` : '';
+
+        if (!state.condoId) {
+          state.raw = [];
+          render();
+          setMsg('Selecione um condomínio.', true);
+          return;
+        }
+
+        const action = cleanString(el.actionFilter.value);
+
+        const col = collection(env.db, 'condos', state.condoId, 'auditLogs');
+
+        let qy = query(col, orderBy('createdAt', 'desc'), limit(state.pageSize));
+        if (action) {
+          qy = query(col, where('action', '==', action), orderBy('createdAt', 'desc'), limit(state.pageSize));
+        }
+
+        if (!opts.reset && state.cursor) {
+          if (action) {
+            qy = query(col, where('action', '==', action), orderBy('createdAt', 'desc'), startAfter(state.cursor), limit(state.pageSize));
+          } else {
+            qy = query(col, orderBy('createdAt', 'desc'), startAfter(state.cursor), limit(state.pageSize));
+          }
+        }
+
+        const qs = await getDocs(qy);
+        state.raw = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        state.cursor = qs.docs.length ? qs.docs[qs.docs.length - 1] : state.cursor;
+
+        setMsg(`Itens nesta página: ${state.raw.length}`);
+        render();
+      }
+
+      let env = null;
+
+      async function boot() {
+        env = await setupAdminPage({
+          permsAny: ['audit.read', 'condo.manage', 'portfolio.manage'],
+          rolesAny: ['ADMINISTRADORA', 'GESTOR', 'SINDICO'],
+          condoRequired: true,
+          userBadgeId: 'userBadge',
+          logoutBtnId: 'logoutBtn',
+        });
+
+        if (!env || !env.ok) return;
+
+        if (el.pickCtxBtn) el.pickCtxBtn.addEventListener('click', () => openSelector());
+        if (el.refreshBtn) el.refreshBtn.addEventListener('click', () => refresh(env, { reset: true }));
+
+        if (el.applyBtn) el.applyBtn.addEventListener('click', () => {
+          state.cursor = null;
+          refresh(env, { reset: true });
+        });
+
+        if (el.clearBtn) el.clearBtn.addEventListener('click', () => {
+          el.actionFilter.value = '';
+          state.cursor = null;
+          refresh(env, { reset: true });
+        });
+
+        if (el.nextBtn) el.nextBtn.addEventListener('click', () => refresh(env, { reset: false }));
+        if (el.prevBtn) el.prevBtn.addEventListener('click', () => {
+          state.cursor = null;
+          refresh(env, { reset: true });
+        });
+
+        await refresh(env, { reset: true });
+
+        watchAuthAndContext(async (detail) => {
+          const ctx = detail && detail.context ? detail.context : getActiveContext();
+          const cId = cleanString(ctx.condoId);
+          if (cId !== state.condoId) {
+            state.cursor = null;
+            await refresh(env, { reset: true });
+          }
+        });
+      }
+
+      boot().catch((e) => showError(e, 'Falha ao carregar logs.'));
+    </script>
+  </body>
+</html>

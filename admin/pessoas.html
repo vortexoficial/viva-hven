@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Pessoas | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="h1">Pessoas</h1>
+      </div>
+      <div class="topbar__right">
+        <span data-vh-context-anchor="1"></span>
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2 class="h2">Contexto</h2>
+        <div class="grid grid--2">
+          <label class="field">
+            <span>Condomínio ativo</span>
+            <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
+          </label>
+          <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+        <p id="ctxHint" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Cadastrar / editar pessoa</h2>
+        <form id="personForm" class="grid grid--3">
+          <input type="hidden" id="personId" />
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Nome *</span>
+            <input id="personName" class="input" required />
+          </label>
+
+          <label class="field">
+            <span>E-mail</span>
+            <input id="personEmail" class="input" type="email" placeholder="nome@exemplo.com" />
+          </label>
+
+          <label class="field">
+            <span>Telefone</span>
+            <input id="personPhone" class="input" placeholder="(11) 99999-9999" />
+          </label>
+
+          <label class="field">
+            <span>Tipo</span>
+            <select id="personKind" class="input">
+              <option value="morador">morador</option>
+              <option value="porteiro">porteiro</option>
+              <option value="conselho">conselho</option>
+              <option value="subsindico">subsindico</option>
+              <option value="sindico">sindico</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>UID (opcional)</span>
+            <input id="personUid" class="input" placeholder="uid do Firebase Auth" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="personStatus" class="input">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Unit ID (opcional)</span>
+            <input id="personUnitId" class="input" placeholder="unitId" />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Unit label (opcional)</span>
+            <input id="personUnitLabel" class="input" placeholder="Ex.: Torre A • 101" />
+          </label>
+
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="btn" type="submit">Salvar</button>
+            <button id="personClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+            <span id="personMsg" class="muted"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Lista</h2>
+        <div class="grid grid--3">
+          <label class="field">
+            <span>Busca (nome/e-mail)</span>
+            <input id="search" class="input" placeholder="Digite para filtrar" />
+          </label>
+          <label class="field">
+            <span>Tipo</span>
+            <select id="kindFilter" class="input">
+              <option value="">(todos)</option>
+              <option value="morador">morador</option>
+              <option value="porteiro">porteiro</option>
+              <option value="conselho">conselho</option>
+              <option value="subsindico">subsindico</option>
+              <option value="sindico">sindico</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select id="statusFilter" class="input">
+              <option value="">(todos)</option>
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <button id="prevBtn" class="btn btn--ghost" type="button">◀ Anterior</button>
+          <button id="nextBtn" class="btn btn--ghost" type="button">Próxima ▶</button>
+          <span id="listMsg" class="muted"></span>
+        </div>
+
+        <div class="divider"></div>
+        <div id="list" class="list"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { setupAdminPage } from '/js/admin-access.js';
+      import { showError, confirmDialog } from '/js/ui.js';
+      import { getActiveContext, openSelector, watchAuthAndContext } from '/js/active-context.js';
+
+      import {
+        addDoc,
+        collection,
+        deleteDoc,
+        doc,
+        getDoc,
+        getDocs,
+        limit,
+        orderBy,
+        query,
+        serverTimestamp,
+        setDoc,
+        startAfter,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+      const state = {
+        condoId: '',
+        cursor: null,
+        pageSize: 25,
+        raw: [],
+      };
+
+      const el = {
+        ctxCondoName: document.getElementById('ctxCondoName'),
+        ctxHint: document.getElementById('ctxHint'),
+        pickCtxBtn: document.getElementById('pickCtxBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+
+        personForm: document.getElementById('personForm'),
+        personId: document.getElementById('personId'),
+        personName: document.getElementById('personName'),
+        personEmail: document.getElementById('personEmail'),
+        personPhone: document.getElementById('personPhone'),
+        personKind: document.getElementById('personKind'),
+        personUid: document.getElementById('personUid'),
+        personStatus: document.getElementById('personStatus'),
+        personUnitId: document.getElementById('personUnitId'),
+        personUnitLabel: document.getElementById('personUnitLabel'),
+        personClearBtn: document.getElementById('personClearBtn'),
+        personMsg: document.getElementById('personMsg'),
+
+        search: document.getElementById('search'),
+        kindFilter: document.getElementById('kindFilter'),
+        statusFilter: document.getElementById('statusFilter'),
+        prevBtn: document.getElementById('prevBtn'),
+        nextBtn: document.getElementById('nextBtn'),
+        listMsg: document.getElementById('listMsg'),
+        list: document.getElementById('list'),
+      };
+
+      function cleanString(v) {
+        return String(v || '').trim();
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function setMsg(target, text, isErr) {
+        if (!target) return;
+        target.textContent = text || '';
+        target.classList.toggle('error', !!isErr);
+      }
+
+      function applyFilters(items) {
+        const s = cleanString(el.search.value).toLowerCase();
+        const k = cleanString(el.kindFilter.value);
+        const st = cleanString(el.statusFilter.value);
+
+        return (items || []).filter((p) => {
+          if (k && cleanString(p.kind) !== k) return false;
+          if (st && cleanString(p.status) !== st) return false;
+          if (s) {
+            const hay = `${cleanString(p.name)} ${cleanString(p.email)}`.toLowerCase();
+            if (!hay.includes(s)) return false;
+          }
+          return true;
+        });
+      }
+
+      function renderList() {
+        if (!el.list) return;
+
+        const filtered = applyFilters(state.raw);
+        if (!filtered.length) {
+          el.list.innerHTML = '<div class="muted">Nenhum item nesta página.</div>';
+          return;
+        }
+
+        el.list.innerHTML = filtered.map((p) => {
+          const meta = [p.kind ? `tipo: ${p.kind}` : null, p.status ? `status: ${p.status}` : null, p.unitLabel ? `unidade: ${p.unitLabel}` : null].filter(Boolean).join(' • ');
+          return `
+            <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <div>
+                <div style="font-weight:900;">${escapeHtml(p.name || p.id)}</div>
+                <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn--ghost" type="button" data-action="edit" data-id="${escapeHtml(p.id)}">Editar</button>
+                <button class="btn btn--ghost" type="button" data-action="del" data-id="${escapeHtml(p.id)}">Excluir</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function clearForm() {
+        el.personId.value = '';
+        el.personName.value = '';
+        el.personEmail.value = '';
+        el.personPhone.value = '';
+        el.personKind.value = 'morador';
+        el.personUid.value = '';
+        el.personStatus.value = 'active';
+        el.personUnitId.value = '';
+        el.personUnitLabel.value = '';
+        setMsg(el.personMsg, '');
+      }
+
+      async function refreshPage(env, opts) {
+        opts = opts || {};
+        const ctx = getActiveContext();
+        state.condoId = cleanString(ctx.condoId);
+
+        if (!state.condoId) {
+          if (el.ctxCondoName) el.ctxCondoName.textContent = '—';
+          setMsg(el.listMsg, 'Selecione um condomínio.', true);
+          state.raw = [];
+          renderList();
+          return;
+        }
+
+        if (el.ctxCondoName) el.ctxCondoName.textContent = state.condoId;
+        if (el.ctxHint) el.ctxHint.textContent = ctx.orgId ? `orgId: ${ctx.orgId}` : '';
+
+        const col = collection(env.db, 'condos', state.condoId, 'people');
+        let qy = query(col, orderBy('name', 'asc'), limit(state.pageSize));
+        if (!opts.reset && state.cursor) {
+          qy = query(col, orderBy('name', 'asc'), startAfter(state.cursor), limit(state.pageSize));
+        }
+
+        const qs = await getDocs(qy);
+        state.raw = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        state.cursor = qs.docs.length ? qs.docs[qs.docs.length - 1] : state.cursor;
+
+        setMsg(el.listMsg, `Itens nesta página: ${state.raw.length}`);
+        renderList();
+      }
+
+      let env = null;
+
+      async function boot() {
+        env = await setupAdminPage({
+          permsAny: ['people.manage', 'condo.manage', 'portfolio.manage'],
+          rolesAny: ['ADMINISTRADORA', 'GESTOR', 'SINDICO'],
+          condoRequired: true,
+          userBadgeId: 'userBadge',
+          logoutBtnId: 'logoutBtn',
+        });
+
+        if (!env || !env.ok) return;
+
+        if (el.pickCtxBtn) el.pickCtxBtn.addEventListener('click', () => openSelector());
+        if (el.refreshBtn) el.refreshBtn.addEventListener('click', () => refreshPage(env, { reset: true }));
+
+        if (el.personClearBtn) el.personClearBtn.addEventListener('click', clearForm);
+
+        if (el.personForm) {
+          el.personForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(el.personMsg, 'Salvando...');
+            try {
+              const name = cleanString(el.personName.value);
+              if (!name) throw new Error('Nome é obrigatório.');
+
+              const id = cleanString(el.personId.value);
+              const ref = id
+                ? doc(env.db, 'condos', state.condoId, 'people', id)
+                : doc(collection(env.db, 'condos', state.condoId, 'people'));
+
+              const payload = {
+                name,
+                email: cleanString(el.personEmail.value) || null,
+                phone: cleanString(el.personPhone.value) || null,
+                kind: cleanString(el.personKind.value) || 'morador',
+                uid: cleanString(el.personUid.value) || null,
+                status: cleanString(el.personStatus.value) || 'active',
+                unitId: cleanString(el.personUnitId.value) || null,
+                unitLabel: cleanString(el.personUnitLabel.value) || null,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+              };
+
+              await setDoc(ref, payload, { merge: true });
+              clearForm();
+              await refreshPage(env, { reset: true });
+              setMsg(el.personMsg, 'Salvo.', false);
+            } catch (err) {
+              showError(err, 'Não foi possível salvar a pessoa.');
+              setMsg(el.personMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        ['input', 'change'].forEach((evName) => {
+          if (el.search) el.search.addEventListener(evName, renderList);
+          if (el.kindFilter) el.kindFilter.addEventListener(evName, renderList);
+          if (el.statusFilter) el.statusFilter.addEventListener(evName, renderList);
+        });
+
+        if (el.nextBtn) {
+          el.nextBtn.addEventListener('click', async () => {
+            try {
+              await refreshPage(env, { reset: false });
+            } catch (err) {
+              showError(err, 'Falha ao paginar.');
+            }
+          });
+        }
+
+        if (el.prevBtn) {
+          el.prevBtn.addEventListener('click', async () => {
+            try {
+              state.cursor = null;
+              await refreshPage(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Falha ao voltar página.');
+            }
+          });
+        }
+
+        document.addEventListener('click', async (ev) => {
+          const btn = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
+          if (!btn) return;
+          const action = cleanString(btn.getAttribute('data-action'));
+          const id = cleanString(btn.getAttribute('data-id'));
+          if (!action || !id) return;
+
+          try {
+            if (action === 'edit') {
+              const snap = await getDoc(doc(env.db, 'condos', state.condoId, 'people', id));
+              if (!snap.exists()) return;
+              const p = snap.data() || {};
+              el.personId.value = snap.id;
+              el.personName.value = cleanString(p.name);
+              el.personEmail.value = cleanString(p.email);
+              el.personPhone.value = cleanString(p.phone);
+              el.personKind.value = cleanString(p.kind) || 'morador';
+              el.personUid.value = cleanString(p.uid);
+              el.personStatus.value = cleanString(p.status) || 'active';
+              el.personUnitId.value = cleanString(p.unitId);
+              el.personUnitLabel.value = cleanString(p.unitLabel);
+              return;
+            }
+
+            if (action === 'del') {
+              const ok = await confirmDialog('Excluir esta pessoa?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'people', id));
+              await refreshPage(env, { reset: true });
+              return;
+            }
+          } catch (err) {
+            showError(err, 'Falha ao executar ação.');
+          }
+        });
+
+        await refreshPage(env, { reset: true });
+
+        watchAuthAndContext(async (detail) => {
+          const ctx = detail && detail.context ? detail.context : getActiveContext();
+          if (cleanString(ctx.condoId) !== state.condoId) {
+            state.cursor = null;
+            await refreshPage(env, { reset: true });
+          }
+        });
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

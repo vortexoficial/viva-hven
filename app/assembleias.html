@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
 
     <script>
       (function () {
@@ -33,6 +34,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/app/home.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +44,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -84,6 +85,10 @@
 
           <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
             <h3 style="margin:0 0 8px;font-size:13px;">Ata</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+              <button class="btn btn--ghost" type="button" id="signMinutesBtn">Assinar ata</button>
+              <span id="signatureHint" style="font-size:12px;color:var(--muted);"></span>
+            </div>
             <pre id="minutes" style="white-space:pre-wrap;margin:0;font-size:12px;color:var(--text);"></pre>
           </div>
         </article>
@@ -95,7 +100,7 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import {
         listAssembliesForCondo,
         confirmAttendance,
@@ -103,13 +108,19 @@
         getAttendanceForUser,
         getVoteForUser,
         getLatestMinutes,
+        signLatestMinutes,
+        getMySignature,
       } from '/js/modules/assemblies.js';
 
-      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+      await protect(['/app/']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -128,7 +139,27 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
+      }
+
+      function renderNoContext(container) {
+        if (!container) return;
+        container.innerHTML =
+          '<div class="card" style="padding:12px;">' +
+          '  <div style="font-weight:900;">Selecione um condomínio</div>' +
+          '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">As assembleias dependem do contexto ativo.</div>' +
+          '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
+          '    <button id="pickCtxInline" class="btn" type="button">Escolher condomínio</button>' +
+          '  </div>' +
+          '</div>';
+
+        const btn = container.querySelector('#pickCtxInline');
+        if (btn) btn.addEventListener('click', () => openSelector());
       }
 
       function fmtDateMaybe(v) {
@@ -188,27 +219,12 @@
         });
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
-      }
-
-      async function refresh() {
-        const condos = await listCondos();
-        fillCondoSelect(condos);
-        await refreshAssemblies();
-      }
-
       async function refreshAssemblies() {
         const cId = currentCondoId();
         const listEl = $('assemblyList');
         if (!cId) {
-          renderList(listEl, [], () => {});
+          renderNoContext(listEl);
+          setStatus('Selecione um condomínio para ver assembleias.');
           return;
         }
 
@@ -230,8 +246,15 @@
           const minutes = await getLatestMinutes(it.id);
           $('minutes').textContent = minutes && minutes.text ? String(minutes.text) : 'Sem ata publicada.';
 
-          const att = await getAttendanceForUser(it.id);
-          const vote = await getVoteForUser(it.id);
+          const att = await getAttendanceForUser(it.id, cId);
+          const vote = await getVoteForUser(it.id, cId);
+
+          const sig = await getMySignature(it.id).catch(() => null);
+          const sigHint = $('signatureHint');
+          if (sigHint) {
+            if (sig && sig.minutesHash) sigHint.textContent = 'Ata assinada.';
+            else sigHint.textContent = minutes && minutes.text ? 'Ata não assinada.' : '';
+          }
 
           // Preenche seleção com voto já registrado (se existir)
           if (voteChoice) voteChoice.value = vote && vote.choice ? String(vote.choice) : '';
@@ -260,23 +283,22 @@
 
       $('refreshBtn').addEventListener('click', async () => {
         await withBusy($('refreshBtn'), async () => {
-          await refresh();
+          await refreshAssemblies();
           setStatus('Atualizado.');
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        $('assemblyId').value = '';
-        $('minutes').textContent = '';
-        $('voteHint').textContent = '';
-        await withBusy(null, refreshAssemblies);
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       $('confirmAttendanceBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
         if (!cId || !aId) {
           setStatus('Selecione uma assembleia.');
+          if (!cId) {
+            try { openSelector(); } catch (e) {}
+          }
           return;
         }
         await withBusy($('confirmAttendanceBtn'), async () => {
@@ -292,6 +314,9 @@
         const choice = $('voteChoice').value;
         if (!cId || !aId) {
           setStatus('Selecione uma assembleia.');
+          if (!cId) {
+            try { openSelector(); } catch (e) {}
+          }
           return;
         }
         await withBusy($('voteBtn'), async () => {
@@ -301,7 +326,53 @@
         });
       });
 
-      await withBusy(null, refresh);
+      $('signMinutesBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) {
+          setStatus('Selecione uma assembleia.');
+          if (!cId) {
+            try { openSelector(); } catch (e) {}
+          }
+          return;
+        }
+
+        await withBusy($('signMinutesBtn'), async () => {
+          await signLatestMinutes(aId, cId);
+          const sig = await getMySignature(aId).catch(() => null);
+          const sigHint = $('signatureHint');
+          if (sigHint) sigHint.textContent = sig && sig.minutesHash ? 'Ata assinada.' : 'Assinatura registrada.';
+          setStatus('Assinatura registrada.');
+        });
+      });
+
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        // limpa detalhe quando muda condomínio
+        try {
+          $('assemblyId').value = '';
+          $('minutes').textContent = '';
+          $('voteHint').textContent = '';
+          $('signatureHint').textContent = '';
+        } catch (e) {}
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        withBusy(null, refreshAssemblies).catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || '';
+      setActiveCondoName(state.condoId || '—');
+      await withBusy(null, refreshAssemblies);
     </script>
 
     <script>

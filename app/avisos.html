@@ -6,6 +6,7 @@
   <title>Morador • Avisos</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/core-init.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -14,6 +15,7 @@
       <h1 class="h1">Avisos</h1>
     </div>
     <div class="topbar__right">
+      <span data-vh-context-anchor="1"></span>
       <span id="userBadge" class="badge"></span>
       <button id="logoutBtn" class="btn btn--ghost">Sair</button>
     </div>
@@ -21,13 +23,14 @@
 
   <main class="container">
     <section class="card">
-      <h2 class="h2">Contexto</h2>
+      <h2 class="h2">Condomínio ativo</h2>
       <div class="grid grid--3">
-        <label class="field" style="grid-column:1/-1;">
+        <div class="field" style="grid-column:1/-1;">
           <span>Condomínio</span>
-          <select id="condoSelect" class="input"></select>
-        </label>
-        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;">
+          <div id="ctxCondoName" class="input" style="min-height:42px;display:flex;align-items:center;">—</div>
+        </div>
+        <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
           <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
           <span id="msg" class="muted"></span>
         </div>
@@ -48,27 +51,33 @@
   <script type="module">
     import { initFirebase } from '/js/firebase-init.js';
     import { protect } from '/js/route-guard.js';
-    import { listCondos } from '/js/modules/governance.js';
+    import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
     import {
       listAnnouncements,
       listPolls,
       getMyVote,
       castVote,
+      listPollVotes,
       listMyReadReceipts,
       confirmRead,
     } from '/js/modules/comms.js';
 
-    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+    await protect(['/app/']);
 
     const $ = (id) => document.getElementById(id);
 
     const state = {
       condoId: null,
-      condos: [],
       user: null,
       receipts: new Map(),
       votes: new Map(),
     };
+
+    function setActiveCondoName(text) {
+      const el = $('ctxCondoName');
+      if (!el) return;
+      el.textContent = text ? String(text) : '—';
+    }
 
     function setMsg(msg, isErr) {
       const el = $('msg');
@@ -103,32 +112,7 @@
       return `${kind}:${targetId}`;
     }
 
-    async function loadContext() {
-      state.condos = await listCondos();
-      const select = $('condoSelect');
-      select.innerHTML = '';
-
-      if (!state.condos.length) {
-        select.innerHTML = '<option value="">(sem condomínios)</option>';
-        state.condoId = null;
-        return;
-      }
-
-      for (const c of state.condos) {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        select.appendChild(opt);
-      }
-
-      state.condoId = state.condos[0].id;
-      select.value = state.condoId;
-
-      select.addEventListener('change', async () => {
-        state.condoId = select.value || null;
-        await refreshAll();
-      });
-    }
+    // Contexto vem do active-context.js
 
     async function loadReceipts() {
       state.receipts.clear();
@@ -226,11 +210,21 @@
             `
             : '';
 
+          const canSeeResults = status !== 'aberta' || !!myVote;
+          const resultsControls = canSeeResults
+            ? `
+              <div style="margin-top:8px;display:grid;gap:8px;">
+                <button class="btn btn--ghost" type="button" data-poll-results="${p.id}">Ver resultados</button>
+                <div class="muted" data-poll-results-box="${p.id}"></div>
+              </div>
+            `
+            : '';
+
           return `
             <div class="list__item" style="align-items: flex-start;">
               <div class="list__main">
                 <div class="list__title">${p.title || '(sem título)'}</div>
-                <div class="list__sub">${subtitle || ''}${voteControls}</div>
+                <div class="list__sub">${subtitle || ''}${voteControls}${resultsControls}</div>
               </div>
               <div class="list__meta">${right}</div>
             </div>
@@ -265,10 +259,59 @@
           }
         });
       });
+
+      root.querySelectorAll('button[data-poll-results]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const pollId = btn.getAttribute('data-poll-results');
+          if (!pollId) return;
+          const box = root.querySelector(`div[data-poll-results-box="${pollId}"]`);
+          btn.disabled = true;
+          setMsg('Carregando resultados...');
+          try {
+            const poll = polls.find((x) => x && x.id === pollId);
+            if (!poll) throw new Error('Enquete não encontrada.');
+
+            const votes = await listPollVotes(state.condoId, pollId);
+            const options = Array.isArray(poll.options) ? poll.options : [];
+            const counts = new Map();
+            votes.forEach((v) => {
+              const c = String(v.choiceId || '');
+              if (!c) return;
+              counts.set(c, (counts.get(c) || 0) + 1);
+            });
+
+            const total = votes.length;
+            const lines = options.map((o) => {
+              const id = String(o.id || '');
+              const label = String(o.label || id);
+              const n = counts.get(id) || 0;
+              const pct = total ? Math.round((n / total) * 100) : 0;
+              return `<div>${label}: <strong>${n}</strong> (${pct}%)</div>`;
+            });
+
+            if (box) {
+              box.innerHTML = `<div style="margin-top:6px;">${lines.join('')}${options.length ? '' : '<div>(sem opções)</div>'}<div style="margin-top:6px;">Total: ${total}</div></div>`;
+            }
+            setMsg('Resultados carregados.');
+          } catch (e) {
+            if (box) box.textContent = e && e.message ? e.message : String(e);
+            setMsg(e && e.message ? e.message : String(e), true);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     async function refreshAll() {
-      if (!state.condoId) return;
+      if (!state.condoId) {
+        const rootA = $('annList');
+        const rootP = $('pollList');
+        if (rootA) rootA.innerHTML = '<p class="muted">Selecione um condomínio para ver avisos.</p>';
+        if (rootP) rootP.innerHTML = '<p class="muted">Selecione um condomínio para ver enquetes.</p>';
+        setMsg('Sem condomínio ativo.', true);
+        return;
+      }
       setMsg('Carregando...');
       try {
         await loadReceipts();
@@ -290,14 +333,32 @@
 
       $('refreshBtn').addEventListener('click', refreshAll);
 
-      auth.onAuthStateChanged(async (user) => {
-        state.user = user || null;
-        if (!user) return;
-        $('userBadge').textContent = user.email || user.uid;
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
-        await loadContext();
-        await refreshAll();
+      watchAuthAndContext((ev) => {
+        const user = ev && ev.user ? ev.user : null;
+        state.user = user || null;
+        if (user) $('userBadge').textContent = user.email || user.uid;
+
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        refreshAll().catch(() => {});
       });
+
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || null;
+      setActiveCondoName(state.condoId || '—');
+      await refreshAll();
     }
 
     bootstrap();

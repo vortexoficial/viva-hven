@@ -6,6 +6,7 @@
   <title>Morador • Minhas Multas</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/core-init.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -14,6 +15,7 @@
       <h1 class="h1">Minhas Multas</h1>
     </div>
     <div class="topbar__right">
+      <span data-vh-context-anchor="1"></span>
       <span id="userBadge" class="badge"></span>
       <button id="logoutBtn" class="btn btn--ghost">Sair</button>
     </div>
@@ -23,20 +25,23 @@
     <section class="card">
       <h2 class="h2">Filtros</h2>
       <div class="grid grid--3">
-        <label class="field">
-          <span>Condomínio</span>
-          <select id="condoSelect" class="input"></select>
-        </label>
+        <div class="field" style="grid-column:1/-1;">
+          <span>Condomínio ativo</span>
+          <div id="ctxCondoName" class="input" style="min-height:42px;display:flex;align-items:center;">—</div>
+        </div>
         <label class="field">
           <span>Status</span>
           <select id="status" class="input">
             <option value="">(todos)</option>
             <option value="aberta">aberta</option>
+            <option value="em_recurso">em_recurso</option>
+            <option value="confirmada">confirmada</option>
             <option value="paga">paga</option>
             <option value="cancelada">cancelada</option>
           </select>
         </label>
         <div class="field" style="display:flex; gap:8px; align-items:flex-end;">
+          <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
           <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
         </div>
       </div>
@@ -47,23 +52,36 @@
       <h2 class="h2">Lista</h2>
       <div id="list" class="list"></div>
     </section>
+
+    <section class="card">
+      <h2 class="h2">Detalhe</h2>
+      <input type="hidden" id="fineId" />
+      <div id="detail" class="muted"></div>
+      <div id="evidence" style="margin-top:10px;display:grid;gap:10px;"></div>
+    </section>
   </main>
 
   <script type="module">
     import { initFirebase } from '/js/firebase-init.js';
     import { protect } from '/js/route-guard.js';
-    import { listCondos } from '/js/modules/governance.js';
+    import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
     import { listFines } from '/js/modules/residents.js';
 
-    await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+    await protect(['/app/']);
 
     const $ = (id) => document.getElementById(id);
 
     const state = {
       condoId: null,
-      condos: [],
       user: null,
+      selected: null,
     };
+
+    function setActiveCondoName(text) {
+      const el = $('ctxCondoName');
+      if (!el) return;
+      el.textContent = text ? String(text) : '—';
+    }
 
     function setMsg(msg, isErr) {
       $('msg').textContent = msg || '';
@@ -96,13 +114,53 @@
       `;
     }
 
-    async function loadCondos() {
-      const condos = await listCondos();
-      return Array.isArray(condos) ? condos : [];
+    function renderEvidence(items) {
+      const root = $('evidence');
+      if (!root) return;
+      root.innerHTML = '';
+      const ev = Array.isArray(items) ? items : [];
+      if (!ev.length) {
+        root.innerHTML = '<p class="muted">Sem evidências.</p>';
+        return;
+      }
+      ev.forEach((it) => {
+        const url = it && it.url ? String(it.url) : '';
+        const name = it && it.name ? String(it.name) : 'prova';
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.padding = '12px';
+        card.innerHTML =
+          '<div style="font-weight:800;margin-bottom:8px;">' + name + '</div>' +
+          (url ? ('<a class="btn" target="_blank" href="' + url + '">Abrir</a>') : '<div class="muted">Sem URL</div>');
+        root.appendChild(card);
+      });
+    }
+
+    function renderDetail(f) {
+      $('fineId').value = f && f.id ? String(f.id) : '';
+      if (!f) {
+        $('detail').textContent = 'Selecione uma multa.';
+        renderEvidence([]);
+        return;
+      }
+      $('detail').innerHTML =
+        '<div><strong>Título:</strong> ' + (f.title || '') + '</div>' +
+        '<div><strong>Valor:</strong> ' + formatMoney(f.amountCents) + '</div>' +
+        (f.status ? '<div><strong>Status:</strong> ' + f.status + '</div>' : '') +
+        (f.issuedAt ? '<div><strong>Emitida:</strong> ' + formatTs(f.issuedAt) + '</div>' : '') +
+        (f.dueAt ? '<div><strong>Vencimento:</strong> ' + formatTs(f.dueAt) + '</div>' : '') +
+        (f.paidAt ? '<div><strong>Paga:</strong> ' + formatTs(f.paidAt) + '</div>' : '') +
+        (f.description ? '<div style="margin-top:8px;"><strong>Descrição:</strong><div style="margin-top:6px;white-space:pre-wrap;">' + String(f.description) + '</div></div>' : '');
+      renderEvidence(f.evidence);
     }
 
     async function render() {
-      if (!state.condoId) return;
+      if (!state.condoId) {
+        $('list').innerHTML = '<p class="muted">Selecione um condomínio para ver suas multas.</p>';
+        setMsg('Sem condomínio ativo.', true);
+        renderDetail(null);
+        return;
+      }
       setMsg('Carregando...');
       try {
         const status = $('status').value;
@@ -111,10 +169,31 @@
           ? items.map((f) => {
               const right = `Status: <span class="badge">${f.status || 'aberta'}</span>`;
               const subtitle = `Valor: ${formatMoney(f.amountCents)}${f.dueAt ? ` • Venc: ${formatTs(f.dueAt)}` : ''}${f.paidAt ? ` • Pago: ${formatTs(f.paidAt)}` : ''}`;
-              return asItemRow(f.title, subtitle, right);
+              return `
+                <div class="list__item" data-pick="${f.id}" style="cursor:pointer;">
+                  <div class="list__main">
+                    <div class="list__title">${f.title}</div>
+                    <div class="list__sub">${subtitle || ''}</div>
+                  </div>
+                  <div class="list__meta">${right || ''}</div>
+                </div>
+              `;
             }).join('')
           : '<p class="muted">Nenhuma multa encontrada.</p>';
         setMsg(`Total: ${items.length}`);
+
+        const curId = String($('fineId').value || '');
+        const picked = curId ? items.find((x) => x && x.id === curId) : null;
+        if (picked) renderDetail(picked);
+        else renderDetail(null);
+
+        $('list').querySelectorAll('[data-pick]').forEach((el) => {
+          el.addEventListener('click', () => {
+            const id = el.getAttribute('data-pick');
+            const f = items.find((x) => x && x.id === id) || null;
+            renderDetail(f);
+          });
+        });
       } catch (err) {
         setMsg(err.message || String(err), true);
       }
@@ -131,37 +210,32 @@
       $('refreshBtn').addEventListener('click', render);
       $('status').addEventListener('change', render);
 
-      auth.onAuthStateChanged(async (user) => {
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
+
+      watchAuthAndContext((ev) => {
+        const user = ev && ev.user ? ev.user : null;
         state.user = user || null;
-        if (!user) return;
-        $('userBadge').textContent = user.email || user.uid;
+        if (user) $('userBadge').textContent = user.email || user.uid;
 
-        state.condos = await loadCondos();
-        const select = $('condoSelect');
-        select.innerHTML = '';
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
 
-        if (!state.condos.length) {
-          select.innerHTML = '<option value="">(sem condomínios)</option>';
-          setMsg('Você não tem memberships para nenhum condomínio.', true);
-          return;
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
         }
 
-        for (const c of state.condos) {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name;
-          select.appendChild(opt);
-        }
-
-        state.condoId = state.condos[0].id;
-        select.value = state.condoId;
-        select.addEventListener('change', async () => {
-          state.condoId = select.value || null;
-          await render();
-        });
-
-        await render();
+        render().catch(() => {});
       });
+
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || null;
+      setActiveCondoName(state.condoId || '—');
+      await render();
     }
 
     bootstrap();

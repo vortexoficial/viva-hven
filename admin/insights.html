@@ -6,6 +6,8 @@
   <title>Admin • Insights</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="stylesheet" href="/css/styles.css" />
+  <script type="module" src="/js/core-init.js"></script>
+  <script type="module" src="/js/admin-shell.js"></script>
 
   <style>
     .kpi { font-size: 22px; font-weight: 800; margin: 0; }
@@ -32,6 +34,7 @@
       <h1 class="h1">Insights</h1>
     </div>
     <div class="topbar__right">
+      <span data-vh-context-anchor="1"></span>
       <span id="userBadge" class="badge"></span>
       <button id="logoutBtn" class="btn btn--ghost">Sair</button>
     </div>
@@ -43,9 +46,10 @@
       <div class="grid grid--3">
         <label class="field" style="grid-column:1/-1;">
           <span>Condomínio</span>
-          <select id="condoSelect" class="input"></select>
+          <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
         </label>
         <div class="field" style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
           <button id="refreshBtn" class="btn btn--ghost" type="button">Atualizar</button>
           <span id="ctxHint" class="muted"></span>
         </div>
@@ -97,11 +101,10 @@
   </main>
 
   <script type="module">
-    import { initFirebase } from '/js/firebase-init.js';
     import { protect } from '/js/route-guard.js';
     import { logoutUser } from '/js/auth.js';
 
-    import { listCondos } from '/js/modules/governance.js';
+    import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
     import { getCondoInsights } from '/js/modules/insights.js';
 
     await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA']);
@@ -114,6 +117,12 @@
       condoId: null,
       loading: false,
     };
+
+    function setActiveCondoName(text) {
+      const el = $('ctxCondoName');
+      if (!el) return;
+      el.textContent = text ? String(text) : '—';
+    }
 
     function setHint(msg, isErr) {
       const el = $('ctxHint');
@@ -288,8 +297,6 @@
     }
 
     async function bootstrap() {
-      const { auth } = await initFirebase();
-
       $('logoutBtn').addEventListener('click', async () => {
         try {
           await logoutUser();
@@ -298,42 +305,42 @@
         }
       });
 
-      auth.onAuthStateChanged(async (user) => {
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
+
+      $('refreshBtn').addEventListener('click', async () => {
+        await renderAll();
+      });
+
+      watchAuthAndContext((ev) => {
+        const user = ev && ev.user ? ev.user : null;
         state.user = user || null;
-        if (!user) return;
-        $('userBadge').textContent = user.email || user.uid;
+        if (user) $('userBadge').textContent = user.email || user.uid;
 
-        state.condos = await listCondos();
-        const select = $('condoSelect');
-        select.innerHTML = '';
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : null;
 
-        if (!state.condos.length) {
-          select.innerHTML = '<option value="">(sem condomínios)</option>';
-          setHint('Você não tem memberships para nenhum condomínio.', true);
+        try {
+          state.condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = (state.condos || []).find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        if (!state.condoId) {
+          setHint('Selecione um condomínio.', true);
           return;
         }
 
-        for (const c of state.condos) {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name;
-          select.appendChild(opt);
-        }
-
-        state.condoId = state.condos[0].id;
-        select.value = state.condoId;
-
-        select.addEventListener('change', async () => {
-          state.condoId = select.value || null;
-          await renderAll();
-        });
-
-        $('refreshBtn').addEventListener('click', async () => {
-          await renderAll();
-        });
-
-        await renderAll();
+        renderAll().catch(() => {});
       });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : null;
+      setActiveCondoName(state.condoId || '—');
+      if (!state.condoId) setHint('Selecione um condomínio.', true);
+      await renderAll();
     }
 
     bootstrap();

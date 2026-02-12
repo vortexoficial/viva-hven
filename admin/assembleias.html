@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -28,11 +30,12 @@
         <div>
           <h1 class="section__title" style="margin-bottom: 6px;">Assembleias (Admin)</h1>
           <p class="section__subtitle" style="margin-left:0;margin-right:0;max-width:900px;">
-            Criar, convocar, abrir/fechar votação e gerar ata.
+            Criar, convocar, abrir/fechar votação, gerar ata, procurações e assinaturas.
           </p>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +45,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -57,6 +59,11 @@
       <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
         <article class="card">
           <h2 class="card__title" style="margin-bottom: 10px;">Lista</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+            <input id="searchKeyword" class="input" placeholder="Buscar por palavra (ex.: orçamento)" style="min-width:260px;flex:1;" />
+            <button class="btn btn--ghost" type="button" id="searchBtn">Buscar</button>
+            <button class="btn btn--ghost" type="button" id="clearSearchBtn">Limpar</button>
+          </div>
           <div id="assemblyList" style="display:grid;gap:10px;"></div>
         </article>
 
@@ -86,6 +93,25 @@
               <textarea id="assemblyNotice" class="input" rows="3" placeholder="Opcional"></textarea>
             </div>
 
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Pauta</label>
+              <textarea id="assemblyAgenda" class="input" rows="3" placeholder="Opcional"></textarea>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Modo de voto</label>
+                <select id="voteMode" class="input">
+                  <option value="unit">Por unidade (1 unidade = 1 voto)</option>
+                  <option value="user">Por usuário</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Quórum</label>
+                <div id="quorumBox" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
+              </div>
+            </div>
+
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn" type="submit" id="assemblySaveBtn">Salvar</button>
               <button class="btn btn--ghost" type="button" id="assemblyClearBtn">Limpar</button>
@@ -108,6 +134,47 @@
           </div>
           <textarea id="minutesText" class="input" rows="10" placeholder="A ata será gerada aqui (ou você pode editar manualmente)."></textarea>
           <p style="margin:8px 0 0;font-size:12px;color:var(--muted);">A ata é salva em <code>assemblies/{assemblyId}/minutes/latest</code>.</p>
+
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Histórico de versões</h3>
+            <div id="minutesHistory" style="display:grid;gap:8px;"></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Procurações</h2>
+          <div id="proxiesList" style="display:grid;gap:8px;margin-bottom:10px;"></div>
+
+          <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">UnitId</label>
+              <input id="proxyUnitId" class="input" placeholder="Ex: unit_123" />
+            </div>
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Delegate UID</label>
+              <input id="proxyDelegateUid" class="input" placeholder="UID do procurador" />
+            </div>
+          </div>
+
+          <div>
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">URL do documento</label>
+            <input id="proxyDocUrl" class="input" placeholder="https://..." />
+          </div>
+
+          <div>
+            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observação</label>
+            <input id="proxyNote" class="input" placeholder="Opcional" />
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn" type="button" id="saveProxyBtn">Salvar procuração</button>
+            <button class="btn btn--ghost" type="button" id="deleteProxyBtn">Excluir procuração</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Assinaturas</h2>
+          <div id="signaturesList" style="display:grid;gap:8px;"></div>
         </article>
       </section>
     </main>
@@ -117,9 +184,10 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import {
         listAssembliesForCondo,
+        searchAssembliesForCondo,
         createAssembly,
         updateAssembly,
         deleteAssembly,
@@ -129,13 +197,23 @@
         generateMinutesText,
         saveMinutes,
         getLatestMinutes,
+        listMinutesHistory,
+        getQuorumSummary,
+        upsertProxy,
+        deleteProxy,
+        listProxies,
+        listSignatures,
       } from '/js/modules/assemblies.js';
 
       await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -154,7 +232,12 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
       }
 
       function fmtDateMaybe(v) {
@@ -214,13 +297,22 @@
         });
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
+      function renderTinyList(container, items, emptyText) {
+        if (!container) return;
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">' + (emptyText || 'Nenhum registro.') + '</p>';
+          return;
+        }
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '10px';
+          const title = it.title || it.id || '—';
+          const subtitle = it.subtitle || '';
+          row.innerHTML = '<div style="font-weight:800;">' + title + '</div>' +
+                          (subtitle ? ('<div style="font-size:12px;color:var(--muted);margin-top:4px;">' + subtitle + '</div>') : '');
+          container.appendChild(row);
         });
       }
 
@@ -230,35 +322,147 @@
         $('assemblyDate').value = '';
         $('assemblyLocation').value = '';
         $('assemblyNotice').value = '';
+        $('assemblyAgenda').value = '';
+        $('voteMode').value = 'unit';
+        $('quorumBox').textContent = '—';
         $('minutesText').value = '';
+        $('minutesHistory').innerHTML = '';
+        $('proxiesList').innerHTML = '';
+        $('signaturesList').innerHTML = '';
       }
 
       async function refresh() {
-        const condos = await listCondos();
-        fillCondoSelect(condos);
-        await refreshAssemblies();
+        await refreshAssemblies({ preferSearch: true });
       }
 
-      async function refreshAssemblies() {
+      async function refreshAssemblies(opts) {
         const cId = currentCondoId();
         const listEl = $('assemblyList');
         if (!cId) {
           renderList(listEl, [], () => {});
           return;
         }
-        const items = await listAssembliesForCondo(cId);
+
+        opts = opts || {};
+        const kw = $('searchKeyword') ? String($('searchKeyword').value || '').trim() : '';
+        const shouldSearch = !!kw && opts.preferSearch !== false;
+
+        const items = shouldSearch ? await searchAssembliesForCondo(cId, kw) : await listAssembliesForCondo(cId);
         renderList(listEl, items, async (it) => {
           $('assemblyId').value = it.id;
           $('assemblyTitle').value = it.title || '';
           $('assemblyDate').value = fmtDateMaybe(it.date);
           $('assemblyLocation').value = it.location || '';
           $('assemblyNotice').value = it.noticeText || '';
+          $('assemblyAgenda').value = it.agendaText || '';
+          $('voteMode').value = it.voteMode === 'user' ? 'user' : 'unit';
 
           const min = await getLatestMinutes(it.id);
           $('minutesText').value = min && min.text ? String(min.text) : '';
 
+          try {
+            const q = await getQuorumSummary(cId, it.id);
+            $('quorumBox').textContent = `${q.presentUnits}/${q.totalUnits} unidades presentes (${q.presencePct}%) • ${q.votedUnits} votos`;
+          } catch (e) {
+            $('quorumBox').textContent = '—';
+          }
+
+          try {
+            const hist = await listMinutesHistory(it.id);
+            renderTinyList(
+              $('minutesHistory'),
+              hist.slice(0, 8).map((h) => ({
+                id: h.id,
+                title: `v${typeof h.version === 'number' ? h.version : '—'} • ${h.id}`,
+                subtitle: h.hash ? ('hash: ' + String(h.hash).slice(0, 12) + '…') : '',
+              })),
+              'Sem versões no histórico.'
+            );
+          } catch (e) {
+            renderTinyList($('minutesHistory'), [], 'Sem acesso ao histórico.');
+          }
+
+          try {
+            const proxies = await listProxies(it.id);
+            renderTinyList(
+              $('proxiesList'),
+              proxies.map((p) => ({
+                id: p.id,
+                title: `${p.unitId || p.id} → ${p.delegateUid || '—'}`,
+                subtitle: p.docUrl ? String(p.docUrl) : (p.note ? String(p.note) : ''),
+              })),
+              'Nenhuma procuração.'
+            );
+          } catch (e) {
+            renderTinyList($('proxiesList'), [], 'Sem acesso às procurações.');
+          }
+
+          try {
+            const sigs = await listSignatures(it.id);
+            renderTinyList(
+              $('signaturesList'),
+              sigs.slice(0, 20).map((s) => ({
+                id: s.id,
+                title: s.uid || s.id,
+                subtitle: s.minutesHash ? ('hash: ' + String(s.minutesHash).slice(0, 12) + '…') : '',
+              })),
+              'Nenhuma assinatura.'
+            );
+          } catch (e) {
+            renderTinyList($('signaturesList'), [], 'Sem acesso às assinaturas.');
+          }
+
           setStatus('Assembleia selecionada: ' + it.id);
         });
+      }
+
+      async function refreshSelectedDetails() {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value ? String($('assemblyId').value) : '';
+        if (!cId || !aId) return;
+        try {
+          const q = await getQuorumSummary(cId, aId);
+          $('quorumBox').textContent = `${q.presentUnits}/${q.totalUnits} unidades presentes (${q.presencePct}%) • ${q.votedUnits} votos`;
+        } catch (e) {}
+
+        try {
+          const hist = await listMinutesHistory(aId);
+          renderTinyList(
+            $('minutesHistory'),
+            hist.slice(0, 8).map((h) => ({
+              id: h.id,
+              title: `v${typeof h.version === 'number' ? h.version : '—'} • ${h.id}`,
+              subtitle: h.hash ? ('hash: ' + String(h.hash).slice(0, 12) + '…') : '',
+            })),
+            'Sem versões no histórico.'
+          );
+        } catch (e) {}
+
+        try {
+          const proxies = await listProxies(aId);
+          renderTinyList(
+            $('proxiesList'),
+            proxies.map((p) => ({
+              id: p.id,
+              title: `${p.unitId || p.id} → ${p.delegateUid || '—'}`,
+              subtitle: p.docUrl ? String(p.docUrl) : (p.note ? String(p.note) : ''),
+            })),
+            'Nenhuma procuração.'
+          );
+        } catch (e) {}
+
+        try {
+          const sigs = await listSignatures(aId);
+          renderTinyList(
+            $('signaturesList'),
+            sigs.slice(0, 20).map((s) => ({
+              id: s.id,
+              title: s.uid || s.id,
+              subtitle: s.minutesHash ? ('hash: ' + String(s.minutesHash).slice(0, 12) + '…') : '',
+            })),
+            'Nenhuma assinatura.'
+          );
+        } catch (e) {}
       }
 
       // Logout
@@ -277,10 +481,27 @@
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        clearForm();
-        await withBusy(null, refreshAssemblies);
-      });
+      if ($('searchBtn')) {
+        $('searchBtn').addEventListener('click', async () => {
+          await withBusy($('searchBtn'), async () => {
+            await refreshAssemblies({ preferSearch: true });
+            setStatus('Busca atualizada.');
+          });
+        });
+      }
+
+      if ($('clearSearchBtn')) {
+        $('clearSearchBtn').addEventListener('click', async () => {
+          if ($('searchKeyword')) $('searchKeyword').value = '';
+          await withBusy($('clearSearchBtn'), async () => {
+            await refreshAssemblies({ preferSearch: false });
+            setStatus('Lista atualizada.');
+          });
+        });
+      }
+
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       $('assemblyClearBtn').addEventListener('click', () => {
         clearForm();
@@ -290,12 +511,15 @@
       $('assemblyDeleteBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         if (!confirm('Excluir esta assembleia?')) return;
         await withBusy($('assemblyDeleteBtn'), async () => {
           await deleteAssembly(cId, aId);
           clearForm();
-          await refreshAssemblies();
+          await refreshAssemblies({ preferSearch: true });
           setStatus('Assembleia excluída.');
         });
       });
@@ -308,18 +532,25 @@
         const title = $('assemblyTitle').value;
         const date = $('assemblyDate').value;
         const location = $('assemblyLocation').value;
+        const noticeText = $('assemblyNotice').value;
+        const agendaText = $('assemblyAgenda').value;
+        const voteMode = $('voteMode').value;
 
         await withBusy($('assemblySaveBtn'), async () => {
-          if (!cId) throw new Error('Selecione um condomínio.');
+          if (!cId) {
+            openSelector();
+            throw new Error('Selecione um condomínio.');
+          }
           if (aId) {
-            await updateAssembly(cId, aId, { title, date, location });
+            await updateAssembly(cId, aId, { title, date, location, noticeText, agendaText, voteMode });
             setStatus('Assembleia atualizada.');
           } else {
-            const created = await createAssembly(cId, { title, date, location });
+            const created = await createAssembly(cId, { title, date, location, noticeText, agendaText, voteMode });
             $('assemblyId').value = created.id;
             setStatus('Assembleia criada: ' + created.id);
           }
-          await refreshAssemblies();
+          await refreshAssemblies({ preferSearch: true });
+          await refreshSelectedDetails();
         });
       });
 
@@ -327,10 +558,13 @@
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
         const noticeText = $('assemblyNotice').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         await withBusy($('callBtn'), async () => {
           await callAssembly(cId, aId, noticeText);
-          await refreshAssemblies();
+          await refreshAssemblies({ preferSearch: true });
           setStatus('Convocação registrada.');
         });
       });
@@ -338,10 +572,13 @@
       $('openVoteBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         await withBusy($('openVoteBtn'), async () => {
           await openVoting(cId, aId);
-          await refreshAssemblies();
+          await refreshAssemblies({ preferSearch: true });
           setStatus('Votação aberta.');
         });
       });
@@ -349,10 +586,13 @@
       $('closeVoteBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         await withBusy($('closeVoteBtn'), async () => {
           await closeVoting(cId, aId);
-          await refreshAssemblies();
+          await refreshAssemblies({ preferSearch: true });
           setStatus('Votação fechada.');
         });
       });
@@ -360,7 +600,10 @@
       $('genMinutesBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         await withBusy($('genMinutesBtn'), async () => {
           const text = await generateMinutesText(cId, aId);
           $('minutesText').value = text;
@@ -372,13 +615,71 @@
         const cId = currentCondoId();
         const aId = $('assemblyId').value;
         const text = $('minutesText').value;
-        if (!cId || !aId) return;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
         await withBusy($('saveMinutesBtn'), async () => {
           await saveMinutes(aId, cId, text);
           setStatus('Ata salva.');
+          await refreshSelectedDetails();
         });
       });
 
+      $('saveProxyBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
+        await withBusy($('saveProxyBtn'), async () => {
+          await upsertProxy(aId, cId, {
+            unitId: $('proxyUnitId').value,
+            delegateUid: $('proxyDelegateUid').value,
+            docUrl: $('proxyDocUrl').value,
+            note: $('proxyNote').value,
+          });
+          setStatus('Procuração salva.');
+          await refreshSelectedDetails();
+        });
+      });
+
+      $('deleteProxyBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const aId = $('assemblyId').value;
+        const uId = $('proxyUnitId').value;
+        if (!cId || !aId) {
+          if (!cId) openSelector();
+          return;
+        }
+        await withBusy($('deleteProxyBtn'), async () => {
+          await deleteProxy(aId, cId, uId);
+          setStatus('Procuração excluída.');
+          await refreshSelectedDetails();
+        });
+      });
+
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        clearForm();
+        refresh().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
       await withBusy(null, refresh);
     </script>
 

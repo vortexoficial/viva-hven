@@ -73,6 +73,12 @@
     var title = typeof opts.title === 'string' ? opts.title : '';
     var rightActionsHtml = typeof opts.rightActionsHtml === 'string' ? opts.rightActionsHtml : '';
 
+    // Âncora para o seletor de contexto ativo (injetado por /js/active-context.js)
+    // Mantém compatibilidade: páginas que não conhecem o contexto continuam funcionando.
+    if (rightActionsHtml.indexOf('data-vh-context-anchor') === -1) {
+      rightActionsHtml = '<span data-vh-context-anchor="1"></span>' + rightActionsHtml;
+    }
+
     if (!title && !rightActionsHtml) return '';
 
     return (

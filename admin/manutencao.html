@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -33,6 +35,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +45,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -69,8 +71,19 @@
                 <input id="assetName" class="input" placeholder="Ex: Elevador Social" required />
               </div>
               <div>
-                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Categoria</label>
-                <input id="assetCategory" class="input" placeholder="Ex: elevador" />
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Tipo</label>
+                <input id="assetType" class="input" placeholder="Ex: elevador" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fabricante</label>
+                <input id="assetManufacturer" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Modelo</label>
+                <input id="assetModel" class="input" placeholder="Opcional" />
               </div>
             </div>
 
@@ -82,6 +95,17 @@
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Serial</label>
                 <input id="assetSerial" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Garantia até</label>
+                <input id="assetWarrantyUntil" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contrato (contractId)</label>
+                <input id="assetContractId" class="input" placeholder="Opcional" />
               </div>
             </div>
 
@@ -122,11 +146,22 @@
 
             <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
               <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ano</label>
+                <input id="planYear" class="input" type="number" min="2000" placeholder="Ex: 2026" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Tipo do ativo (opcional)</label>
+                <input id="planAssetType" class="input" placeholder="Ex: elevador" />
+              </div>
+              <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ativo</label>
                 <select id="planAssetId" class="input">
                   <option value="">(Opcional)</option>
                 </select>
               </div>
+            </div>
+
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Frequência (dias)</label>
                 <input id="planFreq" class="input" type="number" min="1" placeholder="Ex: 30" required />
@@ -135,6 +170,15 @@
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Próxima data</label>
                 <input id="planNext" class="input" type="date" required />
               </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Alertar (dias antes)</label>
+                <input id="planAlertDays" class="input" type="number" min="0" placeholder="Ex: 7" />
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Checklist (uma linha por item)</label>
+              <textarea id="planChecklist" class="input" rows="3" placeholder="Ex:\n- Verificar cabos\n- Testar alarme\n- Lubrificar trilhos"></textarea>
             </div>
 
             <div>
@@ -156,10 +200,63 @@
               <button id="planDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
             </div>
           </form>
+
+          <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Agenda / execuções</h3>
+            <div id="planExecList" style="display:grid;gap:10px;"></div>
+            <div style="display:grid;gap:10px;margin-top:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Executado em</label>
+                <input id="planExecAt" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Próxima data (opcional)</label>
+                <input id="planExecNext" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Notas (opcional)</label>
+                <input id="planExecNotes" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+              <button id="planCompleteBtn" class="btn btn--ghost" type="button">Registrar execução</button>
+            </div>
+          </div>
         </article>
 
         <article class="card">
           <h2 class="card__title" style="margin-bottom: 10px;">Chamados</h2>
+
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+              <select id="ticketFilterStatus" class="input">
+                <option value="">(todos)</option>
+                <option value="aberto">aberto</option>
+                <option value="em_andamento">em_andamento</option>
+                <option value="resolvido">resolvido</option>
+                <option value="fechado">fechado</option>
+              </select>
+            </div>
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+              <select id="ticketFilterPriority" class="input">
+                <option value="">(todas)</option>
+                <option value="baixa">baixa</option>
+                <option value="media">media</option>
+                <option value="alta">alta</option>
+                <option value="urgente">urgente</option>
+              </select>
+            </div>
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Vencimento (SLA)</label>
+              <select id="ticketFilterDue" class="input">
+                <option value="">(todos)</option>
+                <option value="overdue">vencidos</option>
+                <option value="dueSoon">vencendo hoje</option>
+              </select>
+            </div>
+          </div>
 
           <div id="ticketList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
 
@@ -214,7 +311,7 @@
               </div>
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Adicionar foto</label>
-                <input id="ticketPhoto" class="input" type="file" />
+                <input id="ticketPhotoUrl" class="input" type="url" placeholder="https://..." />
               </div>
             </div>
 
@@ -222,11 +319,173 @@
               <button id="ticketSaveBtn" class="btn" type="submit">Salvar</button>
               <button id="ticketClearBtn" class="btn btn--ghost" type="button">Limpar</button>
               <button id="ticketDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              <button id="convertToWoBtn" class="btn btn--ghost" type="button">Converter em OS</button>
             </div>
 
             <div id="ticketPhotos" style="display:grid;gap:10px;"></div>
           </form>
         </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Ordens de serviço (corretiva)</h2>
+
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+              <div style="min-width:220px;">
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                <select id="woFilterStatus" class="input">
+                  <option value="">(todos)</option>
+                  <option value="aberto">aberto</option>
+                  <option value="triagem">triagem</option>
+                  <option value="aprovado">aprovado</option>
+                  <option value="em_andamento">em_andamento</option>
+                  <option value="aguardando_fornecedor">aguardando_fornecedor</option>
+                  <option value="resolvido">resolvido</option>
+                  <option value="fechado">fechado</option>
+                  <option value="cancelado">cancelado</option>
+                </select>
+              </div>
+              <div style="min-width:220px;">
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+                <select id="woFilterPriority" class="input">
+                  <option value="">(todas)</option>
+                  <option value="baixa">baixa</option>
+                  <option value="media">media</option>
+                  <option value="alta">alta</option>
+                  <option value="urgente">urgente</option>
+                </select>
+              </div>
+              <div style="min-width:220px;">
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Vencimento (SLA)</label>
+                <select id="woFilterDue" class="input">
+                  <option value="">(todos)</option>
+                  <option value="overdue">vencidos</option>
+                  <option value="dueSoon">vencendo hoje</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="woList" style="display:grid;gap:10px;margin-bottom:12px;"></div>
+
+            <form id="woForm" style="display:grid;gap:10px;">
+              <input type="hidden" id="woId" />
+
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Título</label>
+                <input id="woTitle" class="input" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
+                <textarea id="woDesc" class="input" rows="3" required></textarea>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Ativo</label>
+                  <select id="woAssetId" class="input">
+                    <option value="">(Opcional)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Unidade (unitId)</label>
+                  <input id="woUnitId" class="input" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Local</label>
+                  <input id="woLocation" class="input" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(4, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+                  <select id="woPriority" class="input">
+                    <option value="baixa">Baixa</option>
+                    <option value="media" selected>Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">SLA (horas)</label>
+                  <input id="woSla" class="input" type="number" min="1" placeholder="Ex: 24" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+                  <select id="woStatus" class="input">
+                    <option value="aberto">aberto</option>
+                    <option value="triagem">triagem</option>
+                    <option value="aprovado">aprovado</option>
+                    <option value="em_andamento">em_andamento</option>
+                    <option value="aguardando_fornecedor">aguardando_fornecedor</option>
+                    <option value="resolvido">resolvido</option>
+                    <option value="fechado">fechado</option>
+                    <option value="cancelado">cancelado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Responsável (uid)</label>
+                  <input id="woAssigned" class="input" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fornecedor (supplierId)</label>
+                  <input id="woSupplierId" class="input" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Contrato (contractId)</label>
+                  <input id="woContractId" class="input" placeholder="Opcional" />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Custo (R$)</label>
+                  <input id="woCost" class="input" placeholder="Opcional (ex: 123,45)" />
+                </div>
+              </div>
+
+              <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Foto (antes) URL</label>
+                  <input id="woPhotoBeforeUrl" class="input" type="url" placeholder="https://..." />
+                </div>
+                <div>
+                  <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Foto (depois) URL</label>
+                  <input id="woPhotoAfterUrl" class="input" type="url" placeholder="https://..." />
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button id="woSaveBtn" class="btn" type="submit">Salvar</button>
+                <button id="woClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+                <button id="woDeleteBtn" class="btn btn--ghost" type="button">Excluir</button>
+              </div>
+
+              <div style="display:grid;gap:10px;">
+                <div id="woPhotosBefore" style="display:grid;gap:10px;"></div>
+                <div id="woPhotosAfter" style="display:grid;gap:10px;"></div>
+              </div>
+            </form>
+          </article>
+
+          <article class="card">
+            <h2 class="card__title" style="margin-bottom: 10px;">Histórico</h2>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+              <div style="min-width:260px;flex:1;">
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Por ativo</label>
+                <select id="histAssetId" class="input">
+                  <option value="">(selecione)</option>
+                </select>
+              </div>
+              <div style="min-width:240px;">
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Por unidade (unitId)</label>
+                <input id="histUnitId" class="input" placeholder="Opcional" />
+              </div>
+              <div>
+                <button id="histRefreshBtn" class="btn btn--ghost" type="button">Buscar</button>
+              </div>
+            </div>
+            <div id="historyList" style="display:grid;gap:10px;"></div>
+          </article>
       </section>
     </main>
 
@@ -235,7 +494,7 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import {
         listAssets,
         createAsset,
@@ -245,18 +504,31 @@
         createMaintenancePlan,
         updateMaintenancePlan,
         deleteMaintenancePlan,
+        listMaintenanceExecutions,
+        completeMaintenancePlan,
         listTickets,
         createTicket,
         updateTicket,
         deleteTicket,
         addTicketPhoto,
+        computeDueInfo,
+        listWorkOrders,
+        createWorkOrder,
+        updateWorkOrder,
+        deleteWorkOrder,
+        convertTicketToWorkOrder,
+        listAssetHistory,
       } from '/js/modules/maintenance.js';
 
       await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -275,7 +547,12 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
       }
 
       function fmtDateMaybe(v) {
@@ -334,16 +611,6 @@
         });
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
-      }
-
       function fillAssetSelect(selectEl, assets, includeEmpty) {
         if (!selectEl) return;
         selectEl.innerHTML = includeEmpty ? '<option value="">(Opcional)</option>' : '';
@@ -358,9 +625,13 @@
       function clearAssetForm() {
         $('assetId').value = '';
         $('assetName').value = '';
-        $('assetCategory').value = '';
+        $('assetType').value = '';
+        $('assetManufacturer').value = '';
+        $('assetModel').value = '';
         $('assetLocation').value = '';
         $('assetSerial').value = '';
+        $('assetWarrantyUntil').value = '';
+        $('assetContractId').value = '';
         $('assetStatus').value = 'ativo';
         $('assetNotes').value = '';
       }
@@ -368,11 +639,19 @@
       function clearPlanForm() {
         $('planId').value = '';
         $('planTitle').value = '';
+        $('planYear').value = '';
+        $('planAssetType').value = '';
         $('planAssetId').value = '';
         $('planFreq').value = '';
         $('planNext').value = '';
+        $('planAlertDays').value = '';
+        $('planChecklist').value = '';
         $('planStatus').value = 'ativo';
         $('planNotes').value = '';
+        $('planExecList').innerHTML = '';
+        $('planExecAt').value = '';
+        $('planExecNext').value = '';
+        $('planExecNotes').value = '';
       }
 
       function clearTicketForm() {
@@ -384,8 +663,28 @@
         $('ticketSla').value = '';
         $('ticketStatus').value = 'aberto';
         $('ticketAssigned').value = '';
-        $('ticketPhoto').value = '';
+        $('ticketPhotoUrl').value = '';
         $('ticketPhotos').innerHTML = '';
+      }
+
+      function clearWorkOrderForm() {
+        $('woId').value = '';
+        $('woTitle').value = '';
+        $('woDesc').value = '';
+        $('woAssetId').value = '';
+        $('woUnitId').value = '';
+        $('woLocation').value = '';
+        $('woPriority').value = 'media';
+        $('woSla').value = '';
+        $('woStatus').value = 'aberto';
+        $('woAssigned').value = '';
+        $('woSupplierId').value = '';
+        $('woContractId').value = '';
+        $('woCost').value = '';
+        $('woPhotoBeforeUrl').value = '';
+        $('woPhotoAfterUrl').value = '';
+        $('woPhotosBefore').innerHTML = '';
+        $('woPhotosAfter').innerHTML = '';
       }
 
       function renderPhotos(container, photos) {
@@ -411,12 +710,16 @@
           renderList($('assetList'), [], () => {}, 'Selecione um condomínio.');
           renderList($('planList'), [], () => {}, 'Selecione um condomínio.');
           renderList($('ticketList'), [], () => {}, 'Selecione um condomínio.');
+          renderList($('woList'), [], () => {}, 'Selecione um condomínio.');
+          renderList($('historyList'), [], () => {}, 'Selecione um condomínio.');
           return;
         }
 
         const assets = await listAssets(cId);
         fillAssetSelect($('planAssetId'), assets, true);
         fillAssetSelect($('ticketAssetId'), assets, true);
+        fillAssetSelect($('woAssetId'), assets, true);
+        fillAssetSelect($('histAssetId'), assets, true);
 
         const assetsDecorated = assets.map((a) => {
           const sub = [a.category ? ('cat: ' + a.category) : null, a.status ? ('status: ' + a.status) : null].filter(Boolean).join(' • ');
@@ -431,9 +734,13 @@
         renderList($('assetList'), assetsDecorated, (it) => {
           $('assetId').value = it.id;
           $('assetName').value = it.name || '';
-          $('assetCategory').value = it.category || '';
+          $('assetType').value = it.type || it.category || '';
+          $('assetManufacturer').value = it.manufacturer || '';
+          $('assetModel').value = it.model || '';
           $('assetLocation').value = it.location || '';
           $('assetSerial').value = it.serial || '';
+          $('assetWarrantyUntil').value = it.warrantyUntil ? fmtDateMaybe(it.warrantyUntil) : '';
+          $('assetContractId').value = it.contractId || '';
           $('assetStatus').value = it.status || 'ativo';
           $('assetNotes').value = it.notes || '';
           setStatus('Ativo selecionado.');
@@ -456,23 +763,66 @@
         renderList($('planList'), plansDecorated, (it) => {
           $('planId').value = it.id;
           $('planTitle').value = it.title || '';
+          $('planYear').value = it.year != null ? String(it.year) : '';
+          $('planAssetType').value = it.assetType || '';
           $('planAssetId').value = it.assetId || '';
           $('planFreq').value = it.frequencyDays != null ? String(it.frequencyDays) : '';
           $('planNext').value = it.nextDueAt ? fmtDateMaybe(it.nextDueAt) : '';
+          $('planAlertDays').value = it.alertDaysBefore != null ? String(it.alertDaysBefore) : '';
+          $('planChecklist').value = Array.isArray(it.checklist) ? it.checklist.join('\n') : '';
           $('planStatus').value = it.status || 'ativo';
           $('planNotes').value = it.notes || '';
+
+          // Execuções (histórico do plano)
+          $('planExecAt').value = new Date().toISOString().slice(0, 10);
+          $('planExecNext').value = '';
+          $('planExecNotes').value = '';
+          withBusy(null, async () => {
+            const execs = await listMaintenanceExecutions(cId, { planId: it.id });
+            const decorated = (execs || []).map((e) => {
+              const when = e.executedAt ? fmtDateMaybe(e.executedAt) : '';
+              return {
+                ...e,
+                __html:
+                  '<div style="font-weight:800;">' + (when || 'execução') + '</div>' +
+                  '<div style="font-size:12px;color:var(--muted);">' +
+                  [e.executedBy ? ('por: ' + e.executedBy) : null, e.notes ? ('nota: ' + String(e.notes).slice(0, 120)) : null].filter(Boolean).join(' • ') +
+                  '</div>',
+              };
+            });
+            renderList($('planExecList'), decorated, () => {}, 'Sem execuções ainda.');
+          }).catch(() => {
+            renderList($('planExecList'), [], () => {}, 'Sem acesso ou sem execuções.');
+          });
+
           setStatus('Plano selecionado.');
         });
 
-        const tickets = await listTickets(cId);
-        const ticketsDecorated = tickets.map((t) => {
+        const ticketStatus = $('ticketFilterStatus') ? String($('ticketFilterStatus').value || '').trim() : '';
+        const tickets = await listTickets(cId, ticketStatus ? { status: ticketStatus } : {});
+        const ticketPriority = $('ticketFilterPriority') ? String($('ticketFilterPriority').value || '').trim() : '';
+        const ticketDue = $('ticketFilterDue') ? String($('ticketFilterDue').value || '').trim() : '';
+
+        let filteredTickets = tickets;
+        if (ticketPriority) filteredTickets = filteredTickets.filter((t) => String(t.priority || '') === String(ticketPriority));
+        if (ticketDue) {
+          filteredTickets = filteredTickets.filter((t) => {
+            const due = computeDueInfo(t.slaDueAt, 0);
+            if (ticketDue === 'overdue') return !!due.overdue;
+            if (ticketDue === 'dueSoon') return !!due.dueSoon;
+            return true;
+          });
+        }
+
+        const ticketsDecorated = filteredTickets.map((t) => {
           const sub = [t.status ? ('status: ' + t.status) : null, t.priority ? ('prio: ' + t.priority) : null, t.slaHours ? ('sla: ' + t.slaHours + 'h') : null].filter(Boolean).join(' • ');
           return {
             ...t,
             __html:
               '<div style="font-weight:800;">' + (t.title || t.id) + '</div>' +
               '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
-              (t.createdBy ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">criado por: ' + t.createdBy + '</div>') : ''),
+              (t.createdBy ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">criado por: ' + t.createdBy + '</div>') : '') +
+              (t.convertedToWorkOrderId ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">OS: ' + t.convertedToWorkOrderId + '</div>') : ''),
           };
         });
 
@@ -485,9 +835,58 @@
           $('ticketSla').value = it.slaHours != null ? String(it.slaHours) : '';
           $('ticketStatus').value = it.status || 'aberto';
           $('ticketAssigned').value = it.assignedTo || '';
-          $('ticketPhoto').value = '';
+          $('ticketPhotoUrl').value = '';
           renderPhotos($('ticketPhotos'), Array.isArray(it.photos) ? it.photos : []);
           setStatus('Chamado selecionado.');
+        });
+
+        // Work orders
+        const woStatus = $('woFilterStatus') ? String($('woFilterStatus').value || '').trim() : '';
+        const woPriority = $('woFilterPriority') ? String($('woFilterPriority').value || '').trim() : '';
+        const woDue = $('woFilterDue') ? String($('woFilterDue').value || '').trim() : '';
+        const workOrders = await listWorkOrders(cId, woStatus ? { status: woStatus } : {});
+
+        let filteredWos = workOrders;
+        if (woPriority) filteredWos = filteredWos.filter((w) => String(w.priority || '') === String(woPriority));
+        if (woDue) {
+          filteredWos = filteredWos.filter((w) => {
+            const due = computeDueInfo(w.slaDueAt, 0);
+            if (woDue === 'overdue') return !!due.overdue;
+            if (woDue === 'dueSoon') return !!due.dueSoon;
+            return true;
+          });
+        }
+
+        const woDecorated = (filteredWos || []).map((w) => {
+          const sub = [w.status ? ('status: ' + w.status) : null, w.priority ? ('prio: ' + w.priority) : null, w.unitId ? ('unit: ' + w.unitId) : null, w.assetId ? ('asset: ' + w.assetId) : null].filter(Boolean).join(' • ');
+          return {
+            ...w,
+            __html:
+              '<div style="font-weight:800;">' + (w.title || w.id) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+              (w.ticketId ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">ticket: ' + w.ticketId + '</div>') : ''),
+          };
+        });
+
+        renderList($('woList'), woDecorated, (it) => {
+          $('woId').value = it.id;
+          $('woTitle').value = it.title || '';
+          $('woDesc').value = it.description || '';
+          $('woAssetId').value = it.assetId || '';
+          $('woUnitId').value = it.unitId || '';
+          $('woLocation').value = it.location || '';
+          $('woPriority').value = it.priority || 'media';
+          $('woSla').value = it.slaHours != null ? String(it.slaHours) : '';
+          $('woStatus').value = it.status || 'aberto';
+          $('woAssigned').value = it.assignedTo || '';
+          $('woSupplierId').value = it.supplierId || '';
+          $('woContractId').value = it.contractId || '';
+          $('woCost').value = it.costCents != null ? String((Number(it.costCents) / 100).toFixed(2)).replace('.', ',') : '';
+          $('woPhotoBeforeUrl').value = '';
+          $('woPhotoAfterUrl').value = '';
+          renderPhotos($('woPhotosBefore'), Array.isArray(it.photosBefore) ? it.photosBefore : []);
+          renderPhotos($('woPhotosAfter'), Array.isArray(it.photosAfter) ? it.photosAfter : []);
+          setStatus('OS selecionada.');
         });
       }
 
@@ -507,12 +906,8 @@
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        clearAssetForm();
-        clearPlanForm();
-        clearTicketForm();
-        await withBusy(null, refreshAll);
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       // Assets
       $('assetClearBtn').addEventListener('click', () => {
@@ -541,9 +936,13 @@
         const aId = $('assetId').value;
         const data = {
           name: $('assetName').value,
-          category: $('assetCategory').value,
+          type: $('assetType').value,
+          manufacturer: $('assetManufacturer').value,
+          model: $('assetModel').value,
           location: $('assetLocation').value,
           serial: $('assetSerial').value,
+          warrantyUntil: $('assetWarrantyUntil').value,
+          contractId: $('assetContractId').value,
           status: $('assetStatus').value,
           notes: $('assetNotes').value,
         };
@@ -588,9 +987,13 @@
         const pId = $('planId').value;
         const data = {
           title: $('planTitle').value,
+          year: $('planYear').value,
+          assetType: $('planAssetType').value,
           assetId: $('planAssetId').value,
           frequencyDays: $('planFreq').value,
           nextDueDate: $('planNext').value,
+          alertDaysBefore: $('planAlertDays').value,
+          checklistText: $('planChecklist').value,
           status: $('planStatus').value,
           notes: $('planNotes').value,
         };
@@ -609,9 +1012,32 @@
       });
 
       // Tickets
+      function wireRefreshFilters() {
+        const ids = ['ticketFilterStatus', 'ticketFilterPriority', 'ticketFilterDue', 'woFilterStatus', 'woFilterPriority', 'woFilterDue'];
+        ids.forEach((id) => {
+          const el = $(id);
+          if (!el) return;
+          el.addEventListener('change', () => {
+            refreshAll().catch(() => {});
+          });
+        });
+      }
+
       $('ticketClearBtn').addEventListener('click', () => {
         clearTicketForm();
         setStatus('');
+      });
+
+      $('convertToWoBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        if (!cId || !tId) return;
+        if (!confirm('Converter este chamado em uma Ordem de Serviço?')) return;
+        await withBusy($('convertToWoBtn'), async () => {
+          const wo = await convertTicketToWorkOrder(cId, tId, {});
+          setStatus('Convertido para OS: ' + wo.id);
+          await refreshAll();
+        });
       });
 
       $('ticketDeleteBtn').addEventListener('click', async () => {
@@ -633,7 +1059,7 @@
         if (!cId) return;
 
         const tId = $('ticketId').value;
-        const photo = $('ticketPhoto').files && $('ticketPhoto').files[0] ? $('ticketPhoto').files[0] : null;
+        const photoUrl = $('ticketPhotoUrl').value;
 
         const data = {
           title: $('ticketTitle').value,
@@ -648,22 +1074,174 @@
         await withBusy($('ticketSaveBtn'), async () => {
           if (tId) {
             await updateTicket(cId, tId, data);
-            if (photo) await addTicketPhoto(cId, tId, photo);
+            if (photoUrl) await addTicketPhoto(cId, tId, photoUrl);
             setStatus('Chamado atualizado.');
           } else {
-            const created = await createTicket(cId, { ...data, photos: photo ? [photo] : [] });
+            const created = await createTicket(cId, { ...data, photos: photoUrl ? [photoUrl] : [] });
             $('ticketId').value = created.id;
             setStatus('Chamado criado.');
           }
 
-          $('ticketPhoto').value = '';
+          $('ticketPhotoUrl').value = '';
           await refreshAll();
         });
       });
 
-      // Init
-      const condos = await listCondos();
-      fillCondoSelect(condos);
+      // Plan complete
+      $('planCompleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const pId = $('planId').value;
+        if (!cId || !pId) return;
+        await withBusy($('planCompleteBtn'), async () => {
+          await completeMaintenancePlan(cId, pId, {
+            executedAt: $('planExecAt').value,
+            nextDueDate: $('planExecNext').value,
+            notes: $('planExecNotes').value,
+          });
+          setStatus('Execução registrada.');
+          await refreshAll();
+        });
+      });
+
+      // Work orders
+      $('woClearBtn').addEventListener('click', () => {
+        clearWorkOrderForm();
+        setStatus('');
+      });
+
+      $('woDeleteBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const wId = $('woId').value;
+        if (!cId || !wId) return;
+        if (!confirm('Excluir esta OS?')) return;
+        await withBusy($('woDeleteBtn'), async () => {
+          await deleteWorkOrder(cId, wId);
+          clearWorkOrderForm();
+          await refreshAll();
+          setStatus('OS excluída.');
+        });
+      });
+
+      $('woForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) return;
+
+        const wId = $('woId').value;
+        const beforeUrl = $('woPhotoBeforeUrl').value;
+        const afterUrl = $('woPhotoAfterUrl').value;
+
+        const data = {
+          title: $('woTitle').value,
+          description: $('woDesc').value,
+          assetId: $('woAssetId').value,
+          unitId: $('woUnitId').value,
+          location: $('woLocation').value,
+          priority: $('woPriority').value,
+          slaHours: $('woSla').value,
+          status: $('woStatus').value,
+          assignedTo: $('woAssigned').value,
+          supplierId: $('woSupplierId').value,
+          contractId: $('woContractId').value,
+          cost: $('woCost').value,
+        };
+
+        await withBusy($('woSaveBtn'), async () => {
+          if (wId) {
+            const patch = { ...data };
+            if (beforeUrl) patch.photosBefore = [beforeUrl];
+            if (afterUrl) patch.photosAfter = [afterUrl];
+            await updateWorkOrder(cId, wId, patch);
+            setStatus('OS atualizada.');
+          } else {
+            const created = await createWorkOrder(cId, {
+              ...data,
+              photosBefore: beforeUrl ? [beforeUrl] : [],
+              photosAfter: afterUrl ? [afterUrl] : [],
+            });
+            $('woId').value = created.id;
+            setStatus('OS criada.');
+          }
+
+          $('woPhotoBeforeUrl').value = '';
+          $('woPhotoAfterUrl').value = '';
+          await refreshAll();
+        });
+      });
+
+      // Histórico
+      $('histRefreshBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const assetId = $('histAssetId').value;
+        const unitId = $('histUnitId').value;
+
+        await withBusy($('histRefreshBtn'), async () => {
+          if (assetId) {
+            const hist = await listAssetHistory(cId, assetId);
+            const decorated = (hist.items || []).map((it) => {
+              return {
+                ...it,
+                __html:
+                  '<div style="font-weight:800;">' + (it.kind === 'workOrder' ? 'OS' : 'Preventiva') + ': ' + (it.title || '') + '</div>' +
+                  '<div style="font-size:12px;color:var(--muted);">' +
+                  (it.kind === 'workOrder'
+                    ? [it.ref.status ? ('status: ' + it.ref.status) : null, it.ref.priority ? ('prio: ' + it.ref.priority) : null].filter(Boolean).join(' • ')
+                    : [it.ref.executedAt ? ('exec: ' + fmtDateMaybe(it.ref.executedAt)) : null].filter(Boolean).join(' • ')
+                  ) +
+                  '</div>',
+              };
+            });
+            renderList($('historyList'), decorated, () => {}, 'Sem histórico.');
+            setStatus('Histórico do ativo carregado.');
+            return;
+          }
+
+          if (unitId) {
+            const wos = await listWorkOrders(cId, { unitId });
+            const decorated = (wos || []).map((w) => {
+              return {
+                ...w,
+                __html:
+                  '<div style="font-weight:800;">OS: ' + (w.title || w.id) + '</div>' +
+                  '<div style="font-size:12px;color:var(--muted);">' +
+                  [w.status ? ('status: ' + w.status) : null, w.priority ? ('prio: ' + w.priority) : null].filter(Boolean).join(' • ') +
+                  '</div>',
+              };
+            });
+            renderList($('historyList'), decorated, () => {}, 'Sem histórico.');
+            setStatus('Histórico da unidade carregado.');
+            return;
+          }
+
+          renderList($('historyList'), [], () => {}, 'Informe um ativo ou unidade.');
+        });
+      });
+
+      // Contexto vem do active-context.js
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        clearAssetForm();
+        clearPlanForm();
+        clearTicketForm();
+        clearWorkOrderForm();
+        refreshAll().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
+      wireRefreshFilters();
       await withBusy(null, refreshAll);
     </script>
 

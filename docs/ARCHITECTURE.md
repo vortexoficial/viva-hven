@@ -51,12 +51,15 @@ Estrutura sugerida para manter simples e escalável:
 ├─ js/
 │  ├─ app.js                  # (existente) lógica do site
 │  ├─ icons-sprite.js          # (existente)
-│  └─ core/                   # (novo, futuro) base comum
-│     ├─ firebase.js          # init Firebase (Auth/Firestore/Storage)
-│     ├─ auth.js              # guard de rota + helpers
-│     ├─ roles.js             # mapa de roles e permissões
-│     ├─ api.js               # camada de acesso aos dados (Firestore)
-│     └─ theme.js             # preserva condoflow-theme
+│  ├─ core-init.js            # (novo) init global (erros/UX) para todas as páginas
+│  ├─ firebase.js             # (novo) core Firebase (Auth + Firestore, sem Storage)
+│  ├─ firebase-init.js        # (compat) wrapper para não quebrar imports antigos
+│  ├─ auth-guard.js           # (novo) proteção de rotas (multi-page)
+│  ├─ route-guard.js          # (compat) wrapper para proteção de rotas
+│  ├─ rbac.js                 # (novo) helpers de RBAC (memberships determinísticos)
+│  ├─ ui.js                   # (novo) toast/loading/handlers globais
+│  ├─ forms.js                # (novo) normalização/validação simples
+│  └─ router-links.js         # (novo) helpers opcionais de navegação declarativa
 │
 ├─ icons/                     # (opcional) favicons, PWA icons
 ├─ docs/                      # documentação
@@ -119,7 +122,7 @@ Sugestão RBAC (mínimo viável):
 - Modelar permissões por **módulo** (ex.: `financeiro:read`, `financeiro:write`, `chamados:triage`).
 - Cada usuário tem `role` principal e uma lista de `permissions` (para exceções pontuais).
 
-## 4) Estratégia Firebase (Auth + Firestore + Storage + Hosting)
+## 4) Estratégia Firebase (Auth + Firestore + Hosting)
 
 ### 4.1 Firebase Auth
 Uso:
@@ -130,41 +133,43 @@ Como usar no app estático:
 - `signInWithEmailAndPassword` no `login.html` (etapa futura)
 - Persistência de sessão via SDK do Firebase.
 
-Controle de acesso (roles):
-- Usar **Custom Claims** (ex.: `role: "MORADOR"`, `condos: ["condoId1"]`).
-- Atribuição de claims via Admin SDK (Cloud Functions) **(não implementar nesta etapa)**.
+Controle de acesso (RBAC):
+- **Não usar `users/{uid}.role` como privilégio**.
+- Privilégios vêm de `memberships` (IDs determinísticos) + `permissions[]`.
+- `memberships` não é editável pelo client (anti-escalonamento); provisionar via Admin SDK/Console.
 
 ### 4.2 Firestore
 Uso:
 - Banco principal do sistema: unidades, moradores, chamados, reservas, comunicados, cobranças.
 - Consultas por condomínio e por unidade.
 
-Estratégia de modelagem (mínimo e escalável):
-- Multi-tenant por condomínio (um `condoId` por documento) ou coleção raiz por condomínio.
+Estratégia de modelagem:
+- Multi-tenant por `condos/{condoId}` com subcoleções para entidades do condomínio.
+- Organizações em `orgs/{orgId}` (administradoras/gestoras).
+- Auditoria imutável em `auditLogs/{logId}` (create-only).
 
 Sugestão de collections (rascunho):
+- `orgs/{orgId}`
 - `condos/{condoId}`
-- `condos/{condoId}/units/{unitId}`
-- `condos/{condoId}/residents/{residentId}`
-- `condos/{condoId}/tickets/{ticketId}`
-- `condos/{condoId}/reservations/{reservationId}`
-- `condos/{condoId}/notices/{noticeId}`
-- `condos/{condoId}/billing/{billingId}`
+- `condos/{condoId}/blocks|towers` / `units` / `parking`
+- `condos/{condoId}/assets` / `maintenancePlans` / `workOrders`
+- `condos/{condoId}/tickets` / `reservations` / `occurrences`
+- `condos/{condoId}/notices` / `polls` / `assemblies` (+ `minutes`)
+- `condos/{condoId}/billing` / `charges` / `payments` / `budget` / `ledger`
+- `users/{uid}` / `memberships/{membershipId}` / `auditLogs/{logId}`
 
 Indexação:
 - Criar índices compostos só quando as queries reais surgirem (evitar over-design).
 
 Regras de segurança (Firestore Rules):
-- Baseadas em `request.auth` + custom claims + `condoId`.
-- Ex.: morador só lê docs da própria unidade/condomínio.
+- Baseadas em `request.auth` + `memberships` (scope condo/org) + permissões.
+- Leituras/escritas sempre escopadas por `condoId`/`orgId`.
+- Proteção contra escalonamento: client não pode alterar `memberships`.
 
-### 4.3 Storage
-Uso:
-- Upload de anexos de chamados (fotos), documentos (atas, comunicados), imagens de perfil.
-
-Boas práticas:
-- Pastas por condomínio: `condos/{condoId}/...`
-- Regras de acesso alinhadas às roles.
+### 4.3 Storage (não usado no MVP)
+Diretriz do projeto:
+- **Não usar Firebase Storage** no MVP.
+- Qualquer "upload" deve virar **campo de URL** salvo no Firestore (ex.: `tickets.photos[]`, `attachments[]`, `payments.receipt`, `expenses.attachment`).
 
 ### 4.4 Hosting
 Uso:
@@ -174,8 +179,8 @@ Estratégia simples (sem SPA router):
 - Manter páginas por arquivo (`/app/perfil.html`, `/admin/index.html`).
 - Criar `firebase.json` com `public` apontando para a pasta do site.
 
-Se no futuro virar “SPA-like”:
-- Usar rewrites para servir um `app/index.html` e fazer roteamento client-side.
+Observação:
+- O projeto **não** usa rewrites de SPA; as rotas são por URL/arquivo com `cleanUrls`.
 
 ## 5) Preservação do tema (obrigatório)
 

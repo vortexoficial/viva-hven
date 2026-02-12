@@ -10,6 +10,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
   <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="/js/core-init.js"></script>
   <script src="https://unpkg.com/feather-icons"></script>
   <style>
     /* App Mobile Layout - Modern Upgrade */
@@ -567,6 +568,34 @@
           </a>
         </div>
 
+        <section class="card" id="solicitar-acesso" style="margin-top: 18px;">
+          <h2 class="h2" style="margin-top:0;">Solicitar acesso ao condomínio</h2>
+          <p class="muted" style="margin-top:6px;">Informe o ID do condomínio (ou código que você recebeu) para enviarmos seu pedido para análise.</p>
+
+          <form id="accessRequestForm" class="grid grid--3" style="margin-top: 12px;">
+            <label class="field" style="grid-column:1/-1;">
+              <span>ID do condomínio *</span>
+              <input id="accessCondoId" class="input" required placeholder="Ex.: condo_123" />
+            </label>
+            <label class="field">
+              <span>Bloco</span>
+              <input id="accessBlock" class="input" placeholder="Ex.: A" />
+            </label>
+            <label class="field">
+              <span>Unidade</span>
+              <input id="accessUnit" class="input" placeholder="Ex.: 301" />
+            </label>
+            <label class="field" style="grid-column:1/-1;">
+              <span>Mensagem (opcional)</span>
+              <textarea id="accessMsg" class="input" rows="3" placeholder="Ex.: Sou proprietário/inquilino..."></textarea>
+            </label>
+            <div class="field" style="grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <button id="accessSendBtn" class="btn" type="submit">Enviar solicitação</button>
+              <span id="accessRequestMsg" class="muted"></span>
+            </div>
+          </form>
+        </section>
+
         <!-- Settings Menu -->
         <div class="sectionTitle">Meus Dados</div>
         <div class="menuList">
@@ -614,16 +643,12 @@
 
   <script type="module">
     import { protect } from '/js/route-guard.js';
-    await protect(['/perfil.html'], ['MORADOR']);
+    await protect(['/perfil.html']);
   </script>
 
   <script>
     // Monta o conteúdo dentro do App Shell + handlers após o mount.
     window.addEventListener('DOMContentLoaded', function () {
-      if (window.RouteGuard) {
-        window.RouteGuard.protect(['/perfil.html'], ['MORADOR']);
-      }
-
       var tpl = document.getElementById('perfilContent');
       if (!tpl) return;
 
@@ -703,6 +728,69 @@
           await logoutUser();
         } finally {
           window.location.href = '/login.html';
+        }
+      });
+    });
+  </script>
+
+  <script type="module">
+    import { initFirebase } from '/js/firebase.js';
+    import { showError } from '/js/ui.js';
+    import { addDoc, collection, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+    window.addEventListener('DOMContentLoaded', function () {
+      var form = document.getElementById('accessRequestForm');
+      if (!form) return;
+
+      var msgEl = document.getElementById('accessRequestMsg');
+      var btn = document.getElementById('accessSendBtn');
+
+      function setMsg(text, isErr) {
+        if (!msgEl) return;
+        msgEl.textContent = text || '';
+        msgEl.classList.toggle('error', !!isErr);
+      }
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        setMsg('Enviando...');
+
+        try {
+          if (btn) btn.disabled = true;
+          const { auth, db } = await initFirebase();
+          const user = auth.currentUser;
+          if (!user) {
+            setMsg('Você precisa estar logado.', true);
+            return;
+          }
+
+          const condoId = String(document.getElementById('accessCondoId').value || '').trim();
+          const block = String(document.getElementById('accessBlock').value || '').trim();
+          const unit = String(document.getElementById('accessUnit').value || '').trim();
+          const message = String(document.getElementById('accessMsg').value || '').trim();
+          if (!condoId) {
+            setMsg('Informe o ID do condomínio.', true);
+            return;
+          }
+
+          await addDoc(collection(db, 'accessRequests'), {
+            uid: user.uid,
+            email: user.email || null,
+            condoId,
+            block: block || null,
+            unit: unit || null,
+            message: message || null,
+            status: 'open',
+            createdAt: serverTimestamp(),
+          });
+
+          form.reset();
+          setMsg('Solicitação enviada. Você será contatado em breve.');
+        } catch (err) {
+          showError(err, 'Não foi possível enviar sua solicitação.');
+          setMsg((err && err.message) ? err.message : 'Erro ao enviar.', true);
+        } finally {
+          if (btn) btn.disabled = false;
         }
       });
     });

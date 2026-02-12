@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
 
     <script>
       (function () {
@@ -33,6 +35,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/admin/dashboard.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +45,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -70,6 +72,16 @@
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
                 <input id="genAmount" class="input" placeholder="Ex: 350,00" required />
+              </div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Multa (%)</label>
+                <input id="genFine" class="input" placeholder="Opcional (ex: 2)" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Juros (a.m. %)</label>
+                <input id="genInterest" class="input" placeholder="Opcional (ex: 1)" />
               </div>
             </div>
             <div>
@@ -114,7 +126,7 @@
               </div>
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Comprovante</label>
-                <input id="payReceipt" class="input" type="file" />
+                <input id="payReceiptUrl" class="input" type="url" placeholder="https://..." />
               </div>
             </div>
             <div>
@@ -128,42 +140,134 @@
         </article>
 
         <article class="card">
-          <h2 class="card__title" style="margin-bottom: 10px;">Despesas</h2>
-          <form id="expForm" style="display:grid;gap:10px;">
-            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <h2 class="card__title" style="margin-bottom: 10px;">Centros de custo</h2>
+          <form id="ccForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div>
-                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
-                <input id="expDate" class="input" type="date" required />
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Nome</label>
+                <input id="ccName" class="input" placeholder="Ex: Limpeza" required />
               </div>
               <div>
-                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Categoria</label>
-                <input id="expCategory" class="input" placeholder="Ex: limpeza" />
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Código</label>
+                <input id="ccCode" class="input" placeholder="Opcional" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="ccBtn" class="btn" type="submit">Salvar</button>
+            </div>
+          </form>
+          <div style="margin-top:12px;display:grid;gap:10px;" id="ccList"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Orçamento</h2>
+          <form id="budgetForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Mês (ref.)</label>
+                <input id="budgetMonth" class="input" type="month" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Centro de custo</label>
+                <select id="budgetCc" class="input" required>
+                  <option value="">Selecione…</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Orçado (R$)</label>
+                <input id="budgetPlanned" class="input" placeholder="Ex: 1200,00" required />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="budgetBtn" class="btn" type="submit">Salvar orçamento</button>
+            </div>
+          </form>
+          <div style="margin-top:12px;display:grid;gap:10px;" id="budgetList"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Contas a pagar (aprovação em 2 níveis)</h2>
+          <form id="apForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Vencimento</label>
+                <input id="apDue" class="input" type="date" required />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Centro de custo</label>
+                <select id="apCc" class="input">
+                  <option value="">(sem centro de custo)</option>
+                </select>
               </div>
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
-                <input id="expAmount" class="input" placeholder="Ex: 120,00" required />
+                <input id="apAmount" class="input" placeholder="Ex: 120,00" required />
               </div>
             </div>
             <div>
               <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Descrição</label>
-              <input id="expDesc" class="input" placeholder="Ex: Manutenção elevador" required />
+              <input id="apDesc" class="input" placeholder="Ex: Manutenção elevador" required />
             </div>
             <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Fornecedor</label>
-                <input id="expVendor" class="input" placeholder="Opcional" />
+                <input id="apVendor" class="input" placeholder="Opcional" />
               </div>
               <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Anexo</label>
-                <input id="expAttachment" class="input" type="file" />
+                <input id="apAttachmentUrl" class="input" type="url" placeholder="https://..." />
               </div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <button id="expBtn" class="btn" type="submit">Salvar despesa</button>
+              <button id="apBtn" class="btn" type="submit">Criar conta a pagar</button>
             </div>
           </form>
 
-          <div style="margin-top:12px;display:grid;gap:10px;" id="expenseList"></div>
+          <div style="margin-top:12px;display:grid;gap:10px;" id="apList"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Pagar conta a pagar</h2>
+          <form id="apPayForm" style="display:grid;gap:10px;">
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(3, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Conta</label>
+                <select id="apPaySelect" class="input" required>
+                  <option value="">Selecione…</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Data</label>
+                <input id="apPayDate" class="input" type="date" />
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Valor (R$)</label>
+                <input id="apPayAmount" class="input" placeholder="Opcional (usa o valor da conta)" />
+              </div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Método</label>
+                <select id="apPayMethod" class="input">
+                  <option value="manual">Manual</option>
+                  <option value="pix">Pix</option>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="transferencia">Transferência</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Comprovante</label>
+                <input id="apPayReceiptUrl" class="input" type="url" placeholder="https://..." />
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Observação</label>
+              <input id="apPayNote" class="input" placeholder="Opcional" />
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="apPayBtn" class="btn" type="submit">Registrar pagamento</button>
+            </div>
+          </form>
         </article>
 
         <article class="card">
@@ -209,23 +313,36 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
       import {
         generateMonthlyCharges,
         listCharges,
         registerPayment,
         listDelinquents,
-        createExpense,
-        listExpenses,
         getSimpleReports,
+        buildDelinquencyLetterHtml,
+        createCostCenter,
+        listCostCenters,
+        upsertBudgetItem,
+        listBudget,
+        createAccountsPayable,
+        listAccountsPayable,
+        approveAccountsPayableLevel1,
+        approveAccountsPayableLevel2,
+        rejectAccountsPayable,
+        payAccountsPayable,
         Money,
       } from '/js/modules/finance.js';
 
-      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
+      await protect(['/admin/'], ['GESTOR', 'SINDICO', 'CONSELHO', 'ADMINISTRADORA', 'CARTEIRA', 'ADMIN']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -244,7 +361,12 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
+      }
+
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
       }
 
       function fmtDateMaybe(v) {
@@ -267,16 +389,6 @@
         } catch (e) {
           return '';
         }
-      }
-
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
       }
 
       function renderCardList(container, items, mapLine, emptyMsg) {
@@ -341,30 +453,136 @@
             const due = fmtDateMaybe(c.dueAt);
             const unit = c.unitNumber ? ('Unidade ' + c.unitNumber) : (c.unitId || '');
             const sub = [c.referenceMonth ? ('ref: ' + c.referenceMonth) : null, due ? ('venc: ' + due) : null].filter(Boolean).join(' • ');
+            const late = c.late && c.late.daysLate ? c.late : null;
+            const lateLine = late ? ('<div style="margin-top:6px;font-size:12px;color:var(--text-2);">' +
+              'atraso: ' + String(late.daysLate) + ' dia(s) • total est.: ' + (late.total || '') +
+              '</div>') : '';
+            const btn = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">' +
+              '<button class="btn btn--ghost" type="button" data-action="letter" data-unit="' + unit.replace(/"/g, '&quot;') + '" data-charge-id="' + String(c.id || '') + '">Gerar carta</button>' +
+              '</div>';
             return '<div style="font-weight:800;">' + unit + ' — ' + Money.centsToBr(c.amountCents) + '</div>' +
-                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>';
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+                   lateLine +
+                   btn;
           },
           'Nenhuma cobrança vencida em aberto.'
         );
       }
 
-      async function refreshExpenses() {
+      function renderCostCenterOptions(items) {
+        const apCc = $('apCc');
+        const budgetCc = $('budgetCc');
+        if (apCc) apCc.innerHTML = '<option value="">(sem centro de custo)</option>';
+        if (budgetCc) budgetCc.innerHTML = '<option value="">Selecione…</option>';
+
+        (items || []).forEach((cc) => {
+          const label = (cc.code ? (cc.code + ' — ') : '') + (cc.name || cc.id);
+
+          if (apCc) {
+            const opt = document.createElement('option');
+            opt.value = cc.id;
+            opt.textContent = label;
+            apCc.appendChild(opt);
+          }
+
+          if (budgetCc) {
+            const opt2 = document.createElement('option');
+            opt2.value = cc.id;
+            opt2.textContent = label;
+            budgetCc.appendChild(opt2);
+          }
+        });
+      }
+
+      async function refreshCostCenters() {
         const cId = currentCondoId();
         if (!cId) return;
-        const items = await listExpenses(cId);
+        const items = await listCostCenters(cId);
 
         renderCardList(
-          $('expenseList'),
+          $('ccList'),
           items,
-          (e) => {
-            const dt = fmtDateMaybe(e.date);
-            const sub = [dt ? ('data: ' + dt) : null, e.category ? ('cat: ' + e.category) : null, e.vendor ? ('forn: ' + e.vendor) : null].filter(Boolean).join(' • ');
-            const link = e.attachment && e.attachment.url ? ('<a class="btn btn--ghost" style="margin-top:8px;display:inline-flex;" target="_blank" href="' + e.attachment.url + '">Baixar anexo</a>') : '';
-            return '<div style="font-weight:800;">' + (e.description || e.id) + ' — ' + Money.centsToBr(e.amountCents) + '</div>' +
-                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
-                   link;
+          (cc) => {
+            const label = (cc.code ? (cc.code + ' — ') : '') + (cc.name || cc.id);
+            return '<div style="font-weight:800;">' + label + '</div>';
           },
-          'Nenhuma despesa cadastrada.'
+          'Nenhum centro de custo cadastrado.'
+        );
+
+        renderCostCenterOptions(items);
+      }
+
+      async function refreshBudget() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const monthRef = $('budgetMonth').value;
+        const items = await listBudget(cId, { monthRef });
+
+        renderCardList(
+          $('budgetList'),
+          items,
+          (b) => {
+            const sub = [b.monthRef ? ('ref: ' + b.monthRef) : null, b.costCenterId ? ('cc: ' + b.costCenterId) : null].filter(Boolean).join(' • ');
+            return '<div style="font-weight:800;">Orçado — ' + Money.centsToBr(b.plannedOutCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>';
+          },
+          monthRef ? 'Nenhum orçamento para este mês.' : 'Selecione um mês para listar o orçamento.'
+        );
+      }
+
+      function apStatusLabel(s) {
+        const v = String(s || '');
+        if (v === 'pending_manager') return 'aguardando gestão';
+        if (v === 'pending_council') return 'aguardando conselho';
+        if (v === 'approved') return 'aprovado';
+        if (v === 'rejected') return 'reprovado';
+        if (v === 'paid') return 'pago';
+        return v || '—';
+      }
+
+      async function refreshAccountsPayable() {
+        const cId = currentCondoId();
+        if (!cId) return;
+        const items = await listAccountsPayable(cId);
+
+        const apPaySelect = $('apPaySelect');
+        if (apPaySelect) apPaySelect.innerHTML = '<option value="">Selecione…</option>';
+
+        items.forEach((ap) => {
+          if (apPaySelect && String(ap.status) === 'approved') {
+            const opt = document.createElement('option');
+            opt.value = ap.id;
+            opt.textContent = (ap.description || ap.id) + ' — ' + Money.centsToBr(ap.amountCents);
+            apPaySelect.appendChild(opt);
+          }
+        });
+
+        renderCardList(
+          $('apList'),
+          items,
+          (ap) => {
+            const due = fmtDateMaybe(ap.dueAt);
+            const sub = [due ? ('venc: ' + due) : null, ap.vendor ? ('forn: ' + ap.vendor) : null, ap.costCenterId ? ('cc: ' + ap.costCenterId) : null, ap.status ? ('status: ' + apStatusLabel(ap.status)) : null]
+              .filter(Boolean)
+              .join(' • ');
+            const attach = ap.attachment && ap.attachment.url ? ('<a class="btn btn--ghost" style="display:inline-flex;" target="_blank" href="' + ap.attachment.url + '">Anexo</a>') : '';
+
+            let actions = '';
+            if (String(ap.status) === 'pending_manager') {
+              actions = '<button class="btn btn--ghost" type="button" data-action="ap-approve-l1" data-id="' + ap.id + '">Aprovar (gestão)</button>' +
+                        '<button class="btn btn--ghost" type="button" data-action="ap-reject" data-id="' + ap.id + '">Reprovar</button>';
+            } else if (String(ap.status) === 'pending_council') {
+              actions = '<button class="btn btn--ghost" type="button" data-action="ap-approve-l2" data-id="' + ap.id + '">Aprovar (conselho)</button>' +
+                        '<button class="btn btn--ghost" type="button" data-action="ap-reject" data-id="' + ap.id + '">Reprovar</button>';
+            }
+
+            const actionsRow = actions || attach ? ('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">' + actions + attach + '</div>') : '';
+
+            return '<div style="font-weight:800;">' + (ap.description || ap.id) + ' — ' + Money.centsToBr(ap.amountCents) + '</div>' +
+                   '<div style="font-size:12px;color:var(--muted);">' + sub + '</div>' +
+                   actionsRow;
+          },
+          'Nenhuma conta a pagar.'
         );
       }
 
@@ -375,14 +593,23 @@
         const from = $('repFrom').value;
         const to = $('repTo').value;
 
-        const rep = await getSimpleReports(cId, { from, to });
+        const budgetMonthRef = $('budgetMonth') && $('budgetMonth').value ? $('budgetMonth').value : '';
+        const rep = await getSimpleReports(cId, { from, to, budgetMonthRef });
 
         const s = rep.summary || {};
         $('repSummary').innerHTML =
           '<div><strong>Balancete</strong></div>' +
           '<div>Receitas (pagamentos): ' + (s.paymentsIn || '') + '</div>' +
           '<div>Despesas: ' + (s.expensesOut || '') + '</div>' +
-          '<div>Resultado (caixa): ' + (s.netCash || '') + '</div>';
+          '<div>Resultado (caixa): ' + (s.netCash || '') + '</div>' +
+          (rep.budget
+            ? (
+                '<div style="margin-top:10px;"><strong>Orçamento vs Realizado</strong> (ref: ' + (rep.budget.monthRef || '') + ')</div>' +
+                '<div>Orçado (saídas): ' + (rep.budget.plannedOut || '') + '</div>' +
+                '<div>Realizado (saídas): ' + (rep.budget.actualOut || '') + '</div>' +
+                '<div>Variação: ' + (rep.budget.variance || '') + '</div>'
+              )
+            : '');
 
         renderCardList(
           $('repFlow'),
@@ -399,11 +626,24 @@
       }
 
       async function refreshAll() {
-        const condos = await listCondos();
-        fillCondoSelect(condos);
+        const cId = currentCondoId();
+        if (!cId) {
+          const paySelect = $('payCharge');
+          if (paySelect) paySelect.innerHTML = '<option value="">Selecione…</option>';
+          renderCardList($('chargeList'), [], () => '', 'Selecione um condomínio para ver as cobranças.');
+          renderCardList($('delinqList'), [], () => '', 'Selecione um condomínio para ver inadimplentes.');
+          renderCardList($('ccList'), [], () => '', 'Selecione um condomínio para ver centros de custo.');
+          renderCardList($('budgetList'), [], () => '', 'Selecione um condomínio para ver orçamento.');
+          renderCardList($('apList'), [], () => '', 'Selecione um condomínio para ver contas a pagar.');
+          $('repSummary').innerHTML = '<div style="font-size:12px;color:var(--muted);">Selecione um condomínio para ver relatórios.</div>';
+          renderCardList($('repFlow'), [], () => '', 'Sem condomínio selecionado.');
+          return;
+        }
         await refreshCharges();
         await refreshDelinq();
-        await refreshExpenses();
+        await refreshCostCenters();
+        await refreshBudget();
+        await refreshAccountsPayable();
       }
 
       // Logout
@@ -422,27 +662,27 @@
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        setStatus('');
-        await withBusy(null, async () => {
-          await refreshCharges();
-          await refreshDelinq();
-          await refreshExpenses();
-        });
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       $('genForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const cId = currentCondoId();
-        if (!cId) return;
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
 
         const referenceMonth = $('genRefMonth').value;
         const dueDate = $('genDue').value;
         const amount = $('genAmount').value;
         const description = $('genDesc').value;
+        const finePercent = $('genFine').value;
+        const interestMonthlyPercent = $('genInterest').value;
 
         await withBusy($('genBtn'), async () => {
-          const res = await generateMonthlyCharges(cId, { referenceMonth, dueDate, amount, description });
+          const res = await generateMonthlyCharges(cId, { referenceMonth, dueDate, amount, description, finePercent, interestMonthlyPercent });
           await refreshCharges();
           setStatus('Cobranças geradas: ' + res.createdCount + '.');
         });
@@ -451,46 +691,173 @@
       $('payForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const cId = currentCondoId();
-        if (!cId) return;
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
 
         const chargeId = $('payCharge').value;
         const paidDate = $('payDate').value;
         const amount = $('payAmount').value;
         const method = $('payMethod').value;
         const note = $('payNote').value;
-        const receiptFile = $('payReceipt').files && $('payReceipt').files[0] ? $('payReceipt').files[0] : null;
+        const receiptUrl = $('payReceiptUrl').value;
 
         await withBusy($('payBtn'), async () => {
-          await registerPayment(cId, { chargeId, paidDate, amount, method, note, receiptFile });
+          await registerPayment(cId, { chargeId, paidDate, amount, method, note, receiptUrl });
           $('payAmount').value = '';
           $('payNote').value = '';
-          $('payReceipt').value = '';
+          $('payReceiptUrl').value = '';
           await refreshCharges();
           await refreshDelinq();
           setStatus('Pagamento registrado.');
         });
       });
 
-      $('expForm').addEventListener('submit', async (e) => {
+      $('ccForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
+
+        const name = $('ccName').value;
+        const code = $('ccCode').value;
+
+        await withBusy($('ccBtn'), async () => {
+          await createCostCenter(cId, { name, code });
+          $('ccName').value = '';
+          $('ccCode').value = '';
+          await refreshCostCenters();
+          setStatus('Centro de custo salvo.');
+        });
+      });
+
+      $('budgetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
+
+        const monthRef = $('budgetMonth').value;
+        const costCenterId = $('budgetCc').value;
+        const plannedOut = $('budgetPlanned').value;
+
+        await withBusy($('budgetBtn'), async () => {
+          await upsertBudgetItem(cId, { monthRef, costCenterId, plannedOut });
+          $('budgetPlanned').value = '';
+          await refreshBudget();
+          setStatus('Orçamento salvo.');
+        });
+      });
+
+      $('apForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
+
+        const dueDate = $('apDue').value;
+        const costCenterId = $('apCc').value;
+        const amount = $('apAmount').value;
+        const description = $('apDesc').value;
+        const vendor = $('apVendor').value;
+        const attachmentUrl = $('apAttachmentUrl').value;
+
+        await withBusy($('apBtn'), async () => {
+          await createAccountsPayable(cId, { dueDate, costCenterId, amount, description, vendor, attachmentUrl });
+          $('apAmount').value = '';
+          $('apDesc').value = '';
+          $('apVendor').value = '';
+          $('apAttachmentUrl').value = '';
+          await refreshAccountsPayable();
+          setStatus('Conta a pagar criada.');
+        });
+      });
+
+      $('apPayForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cId = currentCondoId();
+        if (!cId) {
+          setStatus('Selecione um condomínio.');
+          openSelector();
+          return;
+        }
+
+        const apId = $('apPaySelect').value;
+        const paidDate = $('apPayDate').value;
+        const amount = $('apPayAmount').value;
+        const method = $('apPayMethod').value;
+        const note = $('apPayNote').value;
+        const receiptUrl = $('apPayReceiptUrl').value;
+
+        await withBusy($('apPayBtn'), async () => {
+          await payAccountsPayable(cId, { apId, paidDate, amount, method, note, receiptUrl });
+          $('apPayAmount').value = '';
+          $('apPayNote').value = '';
+          $('apPayReceiptUrl').value = '';
+          await refreshAccountsPayable();
+          setStatus('Pagamento registrado (conta a pagar).');
+        });
+      });
+
+      // Ações em listas (delegação)
+      $('apList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+        if (!btn) return;
+        const cId = currentCondoId();
+        if (!cId) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (!action || !id) return;
+
+        await withBusy(btn, async () => {
+          if (action === 'ap-approve-l1') await approveAccountsPayableLevel1(cId, id);
+          else if (action === 'ap-approve-l2') await approveAccountsPayableLevel2(cId, id);
+          else if (action === 'ap-reject') await rejectAccountsPayable(cId, id, 'Reprovado');
+          await refreshAccountsPayable();
+          setStatus('Ação aplicada.');
+        });
+      });
+
+      $('delinqList').addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('button[data-action="letter"]') : null;
+        if (!btn) return;
         const cId = currentCondoId();
         if (!cId) return;
 
-        const date = $('expDate').value;
-        const category = $('expCategory').value;
-        const amount = $('expAmount').value;
-        const description = $('expDesc').value;
-        const vendor = $('expVendor').value;
-        const attachmentFile = $('expAttachment').files && $('expAttachment').files[0] ? $('expAttachment').files[0] : null;
+        await withBusy(btn, async () => {
+          const unitLabel = btn.getAttribute('data-unit') || '';
+          const items = await listDelinquents(cId);
+          const targetId = btn.getAttribute('data-charge-id') || '';
+          const charge = items.find((x) => String(x.id) === String(targetId)) || null;
+          if (!charge) throw new Error('Cobrança não encontrada.');
 
-        await withBusy($('expBtn'), async () => {
-          await createExpense(cId, { date, category, amount, description, vendor, attachmentFile });
-          $('expAmount').value = '';
-          $('expDesc').value = '';
-          $('expVendor').value = '';
-          $('expAttachment').value = '';
-          await refreshExpenses();
-          setStatus('Despesa salva.');
+          const html = buildDelinquencyLetterHtml({
+            condoName: String(ctxCondoName && ctxCondoName.textContent ? ctxCondoName.textContent : 'Condomínio'),
+            unitLabel,
+            charge,
+            asOfDate: new Date(),
+          });
+
+          const w = window.open('', '_blank');
+          if (!w) throw new Error('Pop-up bloqueado pelo navegador.');
+          w.document.open();
+          w.document.write(html);
+          w.document.close();
+          try {
+            w.focus();
+          } catch (err) {}
         });
       });
 
@@ -508,6 +875,24 @@
         });
       });
 
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        refreshAll().catch(() => {});
+      });
+
+      const initial = getActiveContext();
+      state.condoId = initial && initial.condoId ? String(initial.condoId) : '';
+      setActiveCondoName(state.condoId || '—');
       await withBusy(null, refreshAll);
     </script>
 

@@ -1,103 +1,109 @@
-# Estrutura e Rotas do Projeto CondoFlow
+# Estrutura e Rotas do Projeto (atual)
 
-Este documento descreve a nova arquitetura proposta para separar as responsabilidades do projeto em: Site Institucional, App do Morador (Mobile-First) e Painel Administrativo (Desktop/Web).
+Este projeto é um **site estático multi-page** hospedado em **Firebase Hosting**, com **Firebase Auth + Firestore** no client (ES Modules).
 
-## 1. Estrutura de Pastas Sugerida
+- Não é SPA.
+- Não usa Firebase Storage no MVP (documentos/anexos ficam como **URLs** no Firestore).
+- O app é multi-tenant (condomínio/organização) via **contexto ativo**.
 
-A estrutura visa organizar o código existente (estático) e preparar para a lógica dinâmica, mantendo a compatibilidade com o layout atual.
+## 1. Estrutura de Pastas (real)
+
+Principais diretórios/arquivos:
 
 ```
 /
-├── public/                 # Site Institucional (Landing Page)
-│   ├── index.html          # (Antigo root/index.html)
-│   └── recover.html        # Recuperação de senha
-│
-├── app/                    # APP do Morador (Mobile View)
-│   ├── index.html          # Dashboard/Home do morador
-│   ├── perfil.html         # (Antigo root/perfil.html)
-│   ├── servicos/           # Módulos: Reservas, Chamados, etc.
-│   └── auth/               # Login específico do App
-│
-├── admin/                  # Painel de Gestão (Web View)
-│   ├── dashboard.html      # Visão geral do síndico
-│   ├── portaria/           # Interface do porteiro
-│   ├── financeiro/         # Gestão de boletos/contas
-│   └── cadastros/          # Unidades, Moradores, Veículos
-│
-├── assets/                 # Imagens, Fontes, Ícones (Compartilhado)
-│   ├── img/
-│   └── icons.svg
-│
-├── css/                    # Estilos (Compartilhado & Específico)
-│   ├── main.css            # Variáveis globais, reset, tipografia
-│   ├── landing.css         # Específico do site
-│   ├── app.css             # Estilos mobile-first (App)
-│   └── admin.css           # Estilos desktop (Painel)
-│
-├── js/                     # Lógica (Compartilhado & Específico)
-│   ├── core/               # Auth, API Client, Utils
-│   ├── app/                # Lógica do App Morador
-│   └── admin/              # Lógica do Painel
-│
-└── login.html              # Gateway de entrada único (Redireciona para App ou Admin)
+├── index.html
+├── login.html
+├── register.html
+├── perfil.html
+├── offline.html
+├── app/
+│   ├── home.html
+│   └── assembleias.html
+├── admin/
+│   ├── dashboard.html
+│   ├── condominio.html
+│   ├── pessoas.html
+│   ├── memberships.html
+│   ├── logs.html
+│   └── (outras páginas MVP)
+├── css/
+│   └── styles.css
+├── js/
+│   ├── firebase-init.js
+│   ├── auth.js
+│   ├── route-guard.js
+│   ├── active-context.js
+│   ├── admin-access.js
+│   ├── admin-shell.js
+│   └── modules/
+└── firestore.rules
 ```
 
 ## 2. Mapa de Rotas
 
-### 🌐 Públicas (Site & Auth)
-| Rota | Descrição | Arquivo |
-|------|-----------|---------|
-| `/` | Landing Page Institucional | `/public/index.html` |
-| `/login` | Tela de Login Unificada | `/login.html` |
-| `/recuperar-senha` | Flow de recuperação | `/public/recover.html` |
+### Públicas
 
-### 📱 App do Morador (Contexto Mobile)
-*Prefixo: `/app`*
+| Rota | Arquivo | Observação |
+|------|---------|------------|
+| `/` | `/index.html` | Landing |
+| `/login.html` | `/login.html` | Login Firebase |
+| `/register.html` | `/register.html` | Cadastro Firebase |
+| `/offline.html` | `/offline.html` | Fallback PWA |
 
-| Rota | Descrição | Funcionalidade |
-|------|-----------|----------------|
-| `/app/home` | Dashboard | Atalhos, Avisos Recentes, QR Code Acesso |
-| `/app/perfil` | Meu Perfil | Dados Pessoais, Configurações (Arquivo atual `perfil.html`) |
-| `/app/financeiro` | Financeiro | 2ª Via de Boletos, Nada Consta |
-| `/app/chamados` | Service Desk | Abrir chamado, Acompanhar status |
-| `/app/reservas` | Áreas Comuns | Agenda, Disponibilidade, Reservar |
-| `/app/portaria` | Autorizações | Liberar visitantes, Encomendas |
-| `/app/chat` | Comunicação | Chat direto com Adm/Portaria |
+### App do Morador
 
-### 💻 Painel Administrativo (Contexto Desktop)
-*Prefixo: `/admin`*
+| Rota | Arquivo | Proteção |
+|------|---------|----------|
+| `/app/home.html` | `/app/home.html` | `route-guard` + contexto (condo) |
+| `/app/boletos.html` | `/app/boletos.html` | `route-guard` + contexto (condo) |
+| `/app/chamados.html` | `/app/chamados.html` | `route-guard` + contexto (condo) |
+| `/app/reformas.html` | `/app/reformas.html` | `route-guard` + contexto (condo) |
+| (módulos) | `/js/modules/*` | Consultas/CRUD por `condoId` |
 
-| Rota | Descrição | Perfis de Acesso |
-|------|-----------|------------------|
-| `/admin/dashboard` | Visão Geral | Síndico, Admin |
-| `/admin/operacional` | Portaria Digital | Porteiro, Zelador |
-| `/admin/moradores` | Gestão de Pessoas | Síndico, Admin |
-| `/admin/financeiro` | Gestão Financeira | Síndico, Contador |
-| `/admin/comunicacao` | Mural & Notificações | Síndico, Admin |
+### Painel Administrativo
 
-## 3. Estratégia de Autenticação
+Perfis alvo: **ADMINISTRADORA / GESTOR / SINDICO** (com permissões).
 
-Para manter a simplicidade inicial sem necessidade de infraestrutura complexa de servidor (SSR), utilizaremos uma abordagem **Client-Side (SPA-like)** com API.
+| Rota | Arquivo | Proteção (UX) |
+|------|---------|---------------|
+| `/admin/dashboard.html` | `/admin/dashboard.html` | `setupAdminPage()` |
+| `/admin/condominio.html` | `/admin/condominio.html` | `setupAdminPage({ permsAny: ['condo.manage', ...] })` |
+| `/admin/pessoas.html` | `/admin/pessoas.html` | `setupAdminPage({ permsAny: ['people.manage', ...] })` |
+| `/admin/memberships.html` | `/admin/memberships.html` | `setupAdminPage({ permsAny: ['people.manage', ...] })` |
+| `/admin/logs.html` | `/admin/logs.html` | `setupAdminPage({ permsAny: ['audit.read', ...] })` |
+| `/admin/financeiro.html` | `/admin/financeiro.html` | `route-guard` (roles) + `finance.*` nas Rules |
+| `/admin/manutencao.html` | `/admin/manutencao.html` | `route-guard` (roles) + `maintenance.*`/`tickets.*` nas Rules |
+| `/admin/obras.html` | `/admin/obras.html` | `route-guard` (roles) + `maintenance.manage` nas Rules |
+| `/admin/seguranca.html` | `/admin/seguranca.html` | `route-guard` (roles) + `security.*`/`occurrences.manage` nas Rules |
 
-### Fluxo
-1.  **Login:** Usuário insere credenciais em `/login.html`.
-2.  **API Request:** `POST /api/auth/login`.
-3.  **Resposta:** Retorna Token JWT + `role` (user_type: 'resident' | 'admin' | 'doorman').
-4.  **Armazenamento:**
-    *   **Token Main:** `localStorage.setItem('condoflow_token', token)`
-    *   **User Info:** `localStorage.setItem('condoflow_user', JSON.stringify(user))`
-    *   **Theme:** `localStorage.getItem('condoflow-theme')` (Já existente)
-5.  **Redirecionamento:**
-    *   Se `role === 'resident'` -> `window.location.href = '/app/home'`
-    *   Se `role === 'admin'` -> `window.location.href = '/admin/dashboard'`
+Observação: a **segurança real** é aplicada pelas **Firestorm Rules**; o guard no client é para UX.
 
-### Segurança (Etapas Futuras)
-*   Implementar *Refresh Token* via HttpOnly Cookie para evitar XSS.
-*   Adicionar *Route Guard* em JS: Verificar validade do token antes de carregar o conteúdo de qualquer página dentro de `/app` ou `/admin`.
+## 3. Autenticação, Contexto e RBAC
 
-## 4. Próximos Passos (Sugestão de Execução)
+### Autenticação
 
-1.  Mover `index.html` atual para `/public` (ajustando referências de assets).
-2.  Mover `perfil.html` ajustado para `/app/perfil.html`.
-3.  Criar estrutura base de `/admin`.
-4.  Refatorar CSS para separar o que é "Site" do que é "App".
+- Firebase Auth (email/senha).
+- As páginas protegidas usam `route-guard`/`admin-access` para aguardar sessão.
+
+### Contexto ativo (condo/org)
+
+- O usuário escolhe um condomínio/organização e isso vira o **contexto ativo**.
+- O contexto é propagado via `localStorage` e evento `vh:context`.
+- Coleções seguem o padrão: `condos/{activeCondoId}/...`.
+
+### RBAC por memberships (Firestore)
+
+- Membership de condomínio (determinístico): `memberships/{uid}_{condoId}`
+- Espelho (para listagem no admin): `condos/{condoId}/memberships/{uid}`
+- Campos típicos: `role`, `permissions[]`, `status`, `unitId`/`unitLabel`.
+
+Regras importantes:
+
+- `users/{uid}.role` é legado/compat e **não concede privilégio**.
+- Sem escalonamento: escrita de memberships deve ser restrita pelas Rules (e, em produção, idealmente por processo controlado).
+
+## 4. Navegação padrão do Admin
+
+- O menu do admin é injetado por `/js/admin-shell.js` em todas as páginas em `/admin`.
+- O shell inclui links para: Dashboard, Condomínio, Pessoas, Manutenção, Obras, Segurança, Financeiro, Memberships e Logs.

@@ -36,13 +36,12 @@ Este projeto é **estático (HTML/CSS/JS)** e não usa bundler. A integração d
 3. Escolha o modo (para desenvolvimento pode ser “test mode”, mas ajuste as rules depois)
 4. Selecione uma região
 
-## 6) Criar Storage
+## 6) Storage (opcional — não usado no MVP)
 
-1. Firebase Console → **Build** → **Storage**
-2. **Get started**
-3. Selecione a região
+Este projeto (MVP) **não usa Firebase Storage**.
 
-> Observação: alguns projetos/planos podem exigir upgrade para habilitar o Storage. Se você não for usar upload de arquivos no MVP, pode pular esta etapa.
+- Se você não pretende habilitar upload de arquivos, pode **pular** a criação do Storage.
+- No padrão atual, anexos/fotos/comprovantes são salvos como **URL** no Firestore.
 
 ## 7) Instalar Firebase CLI
 
@@ -69,21 +68,17 @@ Na raiz do projeto (onde está `firebase.json`):
 2. Selecione o projeto criado
 3. Responda:
    - **Public directory**: `.`
-   - **Configure as a single-page app**: `Yes` (mantemos rewrite para `/index.html` como fallback)
+   - **Configure as a single-page app**: `No` (o projeto é multi-page, sem rewrites de SPA)
    - **Set up automatic builds and deploys with GitHub**: `No` (vamos usar o workflow já incluído)
 
 Depois, para testar local:
 - `firebase emulators:start --only hosting`
 
-## 8.1) Deploy completo (Hosting + Rules + Indexes + Storage)
+## 8.1) Deploy completo (Hosting + Rules + Indexes)
 
 Na raiz do projeto:
 
-- `firebase deploy --only hosting,firestore:rules,firestore:indexes,storage`
-
-Se você **não** habilitou Storage:
-
-- `firebase deploy --only hosting,firestore:rules,firestore:indexes`
+`firebase deploy --only hosting,firestore:rules,firestore:indexes`
 
 ## 9) Como usar o init do Firebase no site
 
@@ -94,8 +89,8 @@ Exemplo (em qualquer HTML):
 ```html
 <script type="module">
   import { initFirebase } from '/js/firebase-init.js';
-  const { auth, db, storage } = await initFirebase();
-  console.log('Firebase ok', { auth, db, storage });
+   const { auth, db } = await initFirebase();
+   console.log('Firebase ok', { auth, db });
 </script>
 ```
 

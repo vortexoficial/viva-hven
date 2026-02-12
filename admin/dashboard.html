@@ -11,6 +11,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
     <script src="/js/auth-mock.js" defer></script>
 
     <script>
@@ -29,6 +31,7 @@
         <h1 class="h1">Dashboard</h1>
       </div>
       <div class="topbar__right">
+        <span data-vh-context-anchor="1"></span>
         <span id="userBadge" class="badge"></span>
         <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
       </div>
@@ -69,57 +72,27 @@
     <script src="/js/a2hs.js" defer></script>
 
     <script type="module">
-      import { protect } from '/js/route-guard.js';
-      import { logoutUser } from '/js/auth.js';
-      import { initFirebase } from '/js/firebase-init.js';
-
-      const guard = await protect(['/admin/'], ['GESTOR', 'SINDICO', 'ADMINISTRADORA', 'CARTEIRA']);
+      import { setupAdminPage } from '/js/admin-access.js';
 
       const badge = document.getElementById('userBadge');
       const demoHint = document.getElementById('demoHint');
 
-      function isDemo() {
-        try {
-          const host = String(window.location.hostname || '').toLowerCase();
-          const isLocal = host === 'localhost' || host === '127.0.0.1';
-          if (!isLocal) return false;
-          return localStorage.getItem('vh_demo_mode') === '1' && window.AuthMock && window.AuthMock.getSession();
-        } catch (e) {
-          return false;
-        }
-      }
+      const env = await setupAdminPage({
+        permsAny: ['condo.manage', 'portfolio.manage', 'audit.read'],
+        rolesAny: ['ADMINISTRADORA', 'GESTOR', 'SINDICO'],
+        condoRequired: false,
+        userBadgeId: 'userBadge',
+        logoutBtnId: 'logoutBtn',
+      });
 
-      if (isDemo()) {
-        const s = window.AuthMock.getSession();
-        if (badge) badge.textContent = `DEMO • ${s.role || '—'}`;
-        if (demoHint) demoHint.textContent = 'Você está no modo DEMO (sem Firebase).';
+      if (!env || !env.ok) {
+        if (badge) badge.textContent = '';
       } else {
-        try {
-          const { auth } = await initFirebase();
-          auth.onAuthStateChanged((u) => {
-            if (!u) return;
-            if (badge) badge.textContent = u.email || u.uid;
-          });
-        } catch (e) {
-          if (badge) badge.textContent = guard && guard.role ? guard.role : '';
+        if (env.demo) {
+          if (demoHint) demoHint.textContent = 'Você está no modo DEMO (sem Firebase).';
+        } else {
+          if (demoHint) demoHint.textContent = '';
         }
-      }
-
-      const btn = document.getElementById('logoutBtn');
-      if (btn) {
-        btn.addEventListener('click', async () => {
-          try {
-            btn.disabled = true;
-            if (isDemo()) {
-              try { window.AuthMock.logout(); } catch (e) {}
-              try { localStorage.removeItem('vh_demo_mode'); } catch (e) {}
-            } else {
-              await logoutUser();
-            }
-          } finally {
-            window.location.href = '/login.html';
-          }
-        });
       }
     </script>
 

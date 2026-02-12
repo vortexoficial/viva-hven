@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
 
     <script>
       (function () {
@@ -33,6 +34,7 @@
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-vh-context-anchor="1"></span>
           <a class="btn btn--ghost" href="/perfil.html">Voltar</a>
           <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
         </div>
@@ -42,11 +44,10 @@
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
           <div style="flex:1;min-width:240px;">
             <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Condomínio</label>
-            <select id="ctxCondo" class="input" style="width:100%;">
-              <option value="">Selecione um condomínio…</option>
-            </select>
+            <div id="ctxCondoName" class="input" style="width:100%;display:flex;align-items:center;min-height:42px;">—</div>
           </div>
           <div>
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
             <button id="refreshBtn" class="btn" type="button">Atualizar</button>
           </div>
         </div>
@@ -57,7 +58,58 @@
       <section style="margin-top: 14px; display:grid; gap:14px; grid-template-columns: 1fr;">
         <article class="card">
           <h2 class="card__title" style="margin-bottom: 10px;">Meus chamados</h2>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+              <select id="ticketStatus" class="input" style="min-width:220px;">
+                <option value="">(todos)</option>
+                <option value="aberto">aberto</option>
+                <option value="em_andamento">em_andamento</option>
+                <option value="resolvido">resolvido</option>
+                <option value="fechado">fechado</option>
+              </select>
+            </div>
+          </div>
           <div id="ticketList" style="display:grid;gap:10px;"></div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Ordens de serviço (minha unidade)</h2>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Status</label>
+              <select id="woStatus" class="input" style="min-width:220px;">
+                <option value="">(todos)</option>
+                <option value="aberto">aberto</option>
+                <option value="triagem">triagem</option>
+                <option value="aprovado">aprovado</option>
+                <option value="em_andamento">em_andamento</option>
+                <option value="aguardando_fornecedor">aguardando_fornecedor</option>
+                <option value="resolvido">resolvido</option>
+                <option value="fechado">fechado</option>
+                <option value="cancelado">cancelado</option>
+              </select>
+            </div>
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Prioridade</label>
+              <select id="woPriority" class="input" style="min-width:220px;">
+                <option value="">(todas)</option>
+                <option value="baixa">baixa</option>
+                <option value="media">media</option>
+                <option value="alta">alta</option>
+                <option value="urgente">urgente</option>
+              </select>
+            </div>
+            <div style="min-width:220px;">
+              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Vencimento (SLA)</label>
+              <select id="woDue" class="input" style="min-width:220px;">
+                <option value="">(todos)</option>
+                <option value="overdue">vencidos</option>
+                <option value="dueSoon">vencendo hoje</option>
+              </select>
+            </div>
+          </div>
+          <div id="woList" style="display:grid;gap:10px;"></div>
         </article>
 
         <article class="card">
@@ -75,6 +127,18 @@
 
             <div style="display:grid;gap:10px;grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div>
+                <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Categoria</label>
+                <select id="ticketCategory" class="input">
+                  <option value="geral" selected>Geral</option>
+                  <option value="hidraulica">Hidráulica</option>
+                  <option value="eletrica">Elétrica</option>
+                  <option value="estrutura">Estrutura</option>
+                  <option value="limpeza">Limpeza</option>
+                  <option value="seguranca">Segurança</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div>
                 <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Local</label>
                 <input id="ticketLocation" class="input" placeholder="Opcional" />
               </div>
@@ -91,7 +155,8 @@
 
             <div>
               <label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px;">Foto (opcional)</label>
-              <input id="ticketPhoto" class="input" type="file" />
+              <input id="ticketPhotoUrl" class="input" type="url" placeholder="https://..." />
+              <div style="font-size:12px;color:var(--muted);margin-top:6px;">MVP sem upload: informe uma URL pública.</div>
             </div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -104,14 +169,44 @@
           <h2 class="card__title" style="margin-bottom: 10px;">Detalhe</h2>
           <input type="hidden" id="ticketId" />
           <div id="ticketDetail" style="font-size:12px;color:var(--muted);"></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;">
+            <button id="closeTicketBtn" class="btn btn--ghost" type="button" disabled>Encerrar chamado</button>
+          </div>
+
           <div id="ticketPhotos" style="display:grid;gap:10px;margin-top:10px;"></div>
+
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Timeline</h3>
+            <div id="ticketComments" style="display:grid;gap:10px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-top:10px;">
+              <textarea id="commentText" class="input" rows="2" placeholder="Escreva um comentário" style="flex:1;min-width:220px;"></textarea>
+              <button id="commentBtn" class="btn" type="button">Comentar</button>
+            </div>
+          </div>
 
           <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
             <h3 style="margin:0 0 8px;font-size:13px;">Adicionar foto</h3>
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-              <input id="addPhoto" class="input" type="file" style="flex:1;min-width:220px;" />
+              <input id="addPhotoUrl" class="input" type="url" placeholder="https://..." style="flex:1;min-width:220px;" />
               <button id="addPhotoBtn" class="btn" type="button">Enviar</button>
             </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Cole o link da imagem para anexar ao chamado.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card__title" style="margin-bottom: 10px;">Detalhe da OS</h2>
+          <input type="hidden" id="woId" />
+          <div id="woDetail" style="font-size:12px;color:var(--muted);">Selecione uma OS.</div>
+
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Fotos (antes)</h3>
+            <div id="woPhotosBefore" style="display:grid;gap:10px;"></div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+            <h3 style="margin:0 0 8px;font-size:13px;">Fotos (depois)</h3>
+            <div id="woPhotosAfter" style="display:grid;gap:10px;"></div>
           </div>
         </article>
       </section>
@@ -122,14 +217,29 @@
     <script type="module">
       import { protect } from '/js/route-guard.js';
       import { logoutUser } from '/js/auth.js';
-      import { listCondos } from '/js/modules/governance.js';
-      import { listTickets, createTicket, addTicketPhoto } from '/js/modules/maintenance.js';
+      import { watchAuthAndContext, getActiveContext, openSelector } from '/js/active-context.js';
+      import {
+        listTickets,
+        createTicket,
+        addTicketPhoto,
+        listTicketComments,
+        addTicketComment,
+        closeTicketAsResident,
+        listMyUnitWorkOrders,
+        computeDueInfo,
+      } from '/js/modules/maintenance.js';
 
-      await protect(['/app/'], ['MORADOR', 'GESTOR', 'SINDICO', 'ADMIN', 'CARTEIRA', 'ADMINISTRADORA']);
+      await protect(['/app/']);
 
       const $ = (id) => document.getElementById(id);
       const statusEl = $('status');
-      const ctxCondo = $('ctxCondo');
+      const ctxCondoName = $('ctxCondoName');
+
+      const state = {
+        condoId: '',
+        selectedTicket: null,
+        selectedWorkOrder: null,
+      };
 
       function setStatus(msg) {
         statusEl.textContent = msg ? String(msg) : '';
@@ -148,7 +258,7 @@
       }
 
       function currentCondoId() {
-        return ctxCondo && ctxCondo.value ? String(ctxCondo.value) : '';
+        return state.condoId ? String(state.condoId) : '';
       }
 
       function fmtDateTimeMaybe(v) {
@@ -165,20 +275,67 @@
         }
       }
 
-      function fillCondoSelect(condos) {
-        ctxCondo.innerHTML = '<option value="">Selecione um condomínio…</option>';
-        condos.forEach((c) => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = (c.name || c.id) + (c.orgId ? ' — ' + c.orgId : '');
-          ctxCondo.appendChild(opt);
-        });
+      function setActiveCondoName(text) {
+        if (!ctxCondoName) return;
+        ctxCondoName.textContent = text ? String(text) : '—';
+      }
+
+      function renderNoContext(container) {
+        if (!container) return;
+        container.innerHTML =
+          '<div class="card" style="padding:12px;">' +
+          '  <div style="font-weight:900;">Selecione um condomínio</div>' +
+          '  <div style="margin-top:6px;font-size:12px;color:var(--muted);">O app usa o contexto ativo para listar chamados.</div>' +
+          '  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">' +
+          '    <button id="pickCtxInline" class="btn" type="button">Escolher condomínio</button>' +
+          '  </div>' +
+          '</div>';
+
+        const btn = container.querySelector('#pickCtxInline');
+        if (btn) btn.addEventListener('click', () => openSelector());
       }
 
       function renderTicketList(container, items, onPick) {
         container.innerHTML = '';
         if (!items || items.length === 0) {
           container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhum chamado.</p>';
+          return;
+        }
+
+        items.forEach((it) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+
+          const head = document.createElement('div');
+          head.style.display = 'flex';
+          head.style.alignItems = 'center';
+          head.style.justifyContent = 'space-between';
+          head.style.gap = '10px';
+
+          const left = document.createElement('div');
+          const subtitle = [it.status ? ('status: ' + it.status) : null, it.priority ? ('prio: ' + it.priority) : null].filter(Boolean).join(' • ');
+          left.innerHTML =
+            '<div style="font-weight:800;">' + (it.title || it.id) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + subtitle + '</div>';
+
+          const pickBtn = document.createElement('button');
+          pickBtn.type = 'button';
+          pickBtn.className = 'btn btn--ghost';
+          pickBtn.textContent = 'Abrir';
+          pickBtn.addEventListener('click', () => onPick(it));
+
+          head.appendChild(left);
+          head.appendChild(pickBtn);
+          row.appendChild(head);
+          container.appendChild(row);
+        });
+      }
+
+      function renderWorkOrderList(container, items, onPick) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Nenhuma OS.</p>';
           return;
         }
 
@@ -232,33 +389,164 @@
         });
       }
 
+      function renderComments(container, items) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+          container.innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Sem comentários.</p>';
+          return;
+        }
+
+        items.forEach((c) => {
+          const row = document.createElement('div');
+          row.className = 'card';
+          row.style.padding = '12px';
+          const when = c.createdAt ? fmtDateTimeMaybe(c.createdAt) : '';
+          const text = c.text ? String(c.text) : '';
+          row.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+            '  <div style="font-weight:800;">Comentário</div>' +
+            '  <div style="font-size:12px;color:var(--muted);">' + (when || '') + '</div>' +
+            '</div>' +
+            '<div style="margin-top:8px;font-size:12px;color:var(--text-2);white-space:pre-wrap;">' +
+            (text || '<span style="color:var(--muted);">(vazio)</span>') +
+            '</div>';
+          container.appendChild(row);
+        });
+      }
+
+      async function refreshSelectedTicketExtras() {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        if (!cId || !tId) {
+          $('ticketComments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione um chamado.</p>';
+          $('closeTicketBtn').disabled = true;
+          return;
+        }
+
+        try {
+          const comments = await listTicketComments(cId, tId);
+          renderComments($('ticketComments'), comments);
+        } catch (e) {
+          $('ticketComments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Não foi possível carregar comentários.</p>';
+        }
+
+        const it = state.selectedTicket;
+        const st = it && it.status ? String(it.status) : '';
+        $('closeTicketBtn').disabled = !st || st === 'fechado';
+      }
+
       async function refreshTickets() {
         const cId = currentCondoId();
         const listEl = $('ticketList');
 
         $('ticketId').value = '';
+        state.selectedTicket = null;
         $('ticketDetail').textContent = '';
         $('ticketPhotos').innerHTML = '';
+        $('ticketComments').innerHTML = '';
+        $('commentText').value = '';
+        $('closeTicketBtn').disabled = true;
 
         if (!cId) {
-          renderTicketList(listEl, [], () => {});
+          renderNoContext(listEl);
+          setStatus('Selecione um condomínio para ver seus chamados.');
           return;
         }
 
-        const items = await listTickets(cId, { mineOnly: true });
+        const status = $('ticketStatus') ? String($('ticketStatus').value || '') : '';
+        const items = await listTickets(cId, { mineOnly: true, status: status || '' });
         renderTicketList(listEl, items, async (it) => {
           $('ticketId').value = it.id;
+          state.selectedTicket = it;
 
           $('ticketDetail').innerHTML =
             '<div><strong>Status:</strong> ' + (it.status || '') + '</div>' +
+            (it.category ? '<div><strong>Categoria:</strong> ' + it.category + '</div>' : '') +
             '<div><strong>Prioridade:</strong> ' + (it.priority || '') + '</div>' +
             (it.location ? '<div><strong>Local:</strong> ' + it.location + '</div>' : '') +
             (it.slaHours ? '<div><strong>SLA:</strong> ' + it.slaHours + 'h</div>' : '') +
             (it.updatedAt ? '<div><strong>Atualizado:</strong> ' + fmtDateTimeMaybe(it.updatedAt) + '</div>' : '');
 
           renderPhotos($('ticketPhotos'), Array.isArray(it.photos) ? it.photos : []);
+          await refreshSelectedTicketExtras();
           setStatus('Chamado selecionado.');
         });
+
+        // limpa seleção se o item não existe mais
+        const curId = String($('ticketId').value || '');
+        if (curId && !items.some((x) => x && x.id === curId)) {
+          $('ticketId').value = '';
+          state.selectedTicket = null;
+          $('ticketDetail').textContent = '';
+          $('ticketPhotos').innerHTML = '';
+          $('ticketComments').innerHTML = '<p style="margin:0;color:var(--muted);font-size:12px;">Selecione um chamado.</p>';
+          $('closeTicketBtn').disabled = true;
+        }
+      }
+
+      async function refreshWorkOrders() {
+        const cId = currentCondoId();
+        const listEl = $('woList');
+
+        $('woId').value = '';
+        state.selectedWorkOrder = null;
+        $('woDetail').textContent = '';
+        $('woPhotosBefore').innerHTML = '';
+        $('woPhotosAfter').innerHTML = '';
+
+        if (!cId) {
+          renderNoContext(listEl);
+          return;
+        }
+
+        const status = $('woStatus') ? String($('woStatus').value || '') : '';
+        const priority = $('woPriority') ? String($('woPriority').value || '') : '';
+        const due = $('woDue') ? String($('woDue').value || '') : '';
+
+        let items = await listMyUnitWorkOrders(cId, {});
+
+        if (status) items = items.filter((w) => String(w.status || '') === String(status));
+        if (priority) items = items.filter((w) => String(w.priority || '') === String(priority));
+        if (due) {
+          items = items.filter((w) => {
+            const di = computeDueInfo(w.slaDueAt, 0);
+            if (due === 'overdue') return !!di.overdue;
+            if (due === 'dueSoon') return !!di.dueSoon;
+            return true;
+          });
+        }
+
+        renderWorkOrderList(listEl, items, async (it) => {
+          $('woId').value = it.id;
+          state.selectedWorkOrder = it;
+
+          $('woDetail').innerHTML =
+            '<div><strong>Status:</strong> ' + (it.status || '') + '</div>' +
+            '<div><strong>Prioridade:</strong> ' + (it.priority || '') + '</div>' +
+            (it.location ? '<div><strong>Local:</strong> ' + it.location + '</div>' : '') +
+            (it.assetId ? '<div><strong>Ativo:</strong> ' + it.assetId + '</div>' : '') +
+            (it.slaHours ? '<div><strong>SLA:</strong> ' + it.slaHours + 'h</div>' : '') +
+            (it.updatedAt ? '<div><strong>Atualizado:</strong> ' + fmtDateTimeMaybe(it.updatedAt) + '</div>' : '') +
+            (it.ticketId ? '<div><strong>Origem (ticket):</strong> ' + it.ticketId + '</div>' : '');
+
+          renderPhotos($('woPhotosBefore'), Array.isArray(it.photosBefore) ? it.photosBefore : []);
+          renderPhotos($('woPhotosAfter'), Array.isArray(it.photosAfter) ? it.photosAfter : []);
+          setStatus('OS selecionada.');
+        });
+
+        const curId = String($('woId').value || '');
+        if (curId && !items.some((x) => x && x.id === curId)) {
+          $('woId').value = '';
+          state.selectedWorkOrder = null;
+          $('woDetail').textContent = 'Selecione uma OS.';
+          $('woPhotosBefore').innerHTML = '';
+          $('woPhotosAfter').innerHTML = '';
+        }
+      }
+
+      async function refreshAll() {
+        await refreshTickets();
+        await refreshWorkOrders();
       }
 
       // Logout
@@ -272,14 +560,13 @@
 
       $('refreshBtn').addEventListener('click', async () => {
         await withBusy($('refreshBtn'), async () => {
-          await refreshTickets();
+          await refreshAll();
           setStatus('Atualizado.');
         });
       });
 
-      ctxCondo.addEventListener('change', async () => {
-        await withBusy(null, refreshTickets);
-      });
+      const pickBtn = $('pickCtxBtn');
+      if (pickBtn) pickBtn.addEventListener('click', () => openSelector());
 
       // Abrir chamado
       $('ticketForm').addEventListener('submit', async (e) => {
@@ -287,24 +574,81 @@
         const cId = currentCondoId();
         if (!cId) {
           setStatus('Selecione um condomínio.');
+          try { openSelector(); } catch (e) {}
           return;
         }
 
         const title = $('ticketTitle').value;
         const description = $('ticketDesc').value;
+        const category = $('ticketCategory').value;
         const location = $('ticketLocation').value;
         const priority = $('ticketPriority').value;
-        const photo = $('ticketPhoto').files && $('ticketPhoto').files[0] ? $('ticketPhoto').files[0] : null;
+        const photoUrl = $('ticketPhotoUrl').value;
 
         await withBusy($('ticketOpenBtn'), async () => {
-          await createTicket(cId, { title, description, location, priority, photos: photo ? [photo] : [] });
+          await createTicket(cId, { title, description, category, location, priority, photos: photoUrl ? [photoUrl] : [] });
           $('ticketTitle').value = '';
           $('ticketDesc').value = '';
+          $('ticketCategory').value = 'geral';
           $('ticketLocation').value = '';
           $('ticketPriority').value = 'media';
-          $('ticketPhoto').value = '';
+          $('ticketPhotoUrl').value = '';
           await refreshTickets();
           setStatus('Chamado aberto.');
+        });
+      });
+
+      // Filtro status
+      if ($('ticketStatus')) {
+        $('ticketStatus').addEventListener('change', async () => {
+          await withBusy(null, refreshAll);
+        });
+      }
+
+      // Filtros OS
+      ;['woStatus', 'woPriority', 'woDue'].forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        el.addEventListener('change', async () => {
+          await withBusy(null, refreshWorkOrders);
+        });
+      });
+
+      // Encerrar chamado
+      $('closeTicketBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        if (!cId || !tId) {
+          setStatus('Selecione um chamado.');
+          return;
+        }
+        await withBusy($('closeTicketBtn'), async () => {
+          await closeTicketAsResident(cId, tId);
+          await refreshTickets();
+          await refreshSelectedTicketExtras();
+          setStatus('Chamado encerrado.');
+        });
+      });
+
+      // Comentar
+      $('commentBtn').addEventListener('click', async () => {
+        const cId = currentCondoId();
+        const tId = $('ticketId').value;
+        const text = $('commentText').value;
+        if (!cId || !tId) {
+          setStatus('Selecione um chamado.');
+          return;
+        }
+        if (!String(text || '').trim()) {
+          setStatus('Escreva um comentário.');
+          return;
+        }
+
+        await withBusy($('commentBtn'), async () => {
+          await addTicketComment(cId, tId, text);
+          $('commentText').value = '';
+          await refreshSelectedTicketExtras();
+          setStatus('Comentário enviado.');
         });
       });
 
@@ -312,28 +656,49 @@
       $('addPhotoBtn').addEventListener('click', async () => {
         const cId = currentCondoId();
         const tId = $('ticketId').value;
-        const file = $('addPhoto').files && $('addPhoto').files[0] ? $('addPhoto').files[0] : null;
+        const url = $('addPhotoUrl').value;
         if (!cId || !tId) {
           setStatus('Selecione um chamado.');
+          if (!cId) {
+            try { openSelector(); } catch (e) {}
+          }
           return;
         }
-        if (!file) {
-          setStatus('Selecione uma foto.');
+        if (!url) {
+          setStatus('Informe uma URL.');
           return;
         }
 
         await withBusy($('addPhotoBtn'), async () => {
-          await addTicketPhoto(cId, tId, file);
-          $('addPhoto').value = '';
+          await addTicketPhoto(cId, tId, url);
+          $('addPhotoUrl').value = '';
           await refreshTickets();
           setStatus('Foto enviada.');
         });
       });
 
+      // Contexto ativo (global)
+      watchAuthAndContext((ev) => {
+        const ctx = ev && ev.context ? ev.context : getActiveContext();
+        state.condoId = ctx && ctx.condoId ? String(ctx.condoId) : '';
+
+        // label do condomínio ativo
+        try {
+          const condos = ev && Array.isArray(ev.condos) ? ev.condos : [];
+          const picked = condos.find((c) => c && c.id === state.condoId);
+          setActiveCondoName(picked && picked.name ? picked.name : (state.condoId || '—'));
+        } catch (e) {
+          setActiveCondoName(state.condoId || '—');
+        }
+
+        withBusy(null, refreshAll).catch(() => {});
+      });
+
       // Init
-      const condos = await listCondos();
-      fillCondoSelect(condos);
-      await withBusy(null, refreshTickets);
+      const initial = getActiveContext();
+      state.condoId = initial.condoId || '';
+      setActiveCondoName(state.condoId || '—');
+      await withBusy(null, refreshAll);
     </script>
 
     <script>

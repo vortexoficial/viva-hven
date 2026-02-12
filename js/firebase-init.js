@@ -1,36 +1,17 @@
-// Firebase Init (SDK modular via ESM)
+// Firebase Init (compat) — mantido para não quebrar imports existentes.
+// Nota: Storage está desativado neste projeto (MVP). Use apenas Auth + Firestore.
 // Uso:
 //   import { initFirebase } from '/js/firebase-init.js';
-//   const { auth, db, storage } = await initFirebase();
+//   const { auth, db } = await initFirebase();
 
-import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { getStorage } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js';
-
-import { firebaseConfig } from './firebase-config.js';
+import { initFirebase as initCoreFirebase } from './firebase.js';
 
 /**
  * Inicializa Firebase (singleton) e retorna instâncias.
- * @returns {Promise<{app: any, auth: any, db: any, storage: any}>}
+ * Compat: inclui `storage` apenas para não quebrar código legado (sempre `null`).
+ * @returns {Promise<{app: any, auth: any, db: any, storage: null}>}
  */
 export async function initFirebase() {
-  if (!firebaseConfig || typeof firebaseConfig !== 'object') {
-    throw new Error('firebaseConfig ausente. Crie /js/firebase-config.js (veja firebase-config.example.js).');
-  }
-
-  var app = null;
-  if (getApps().length) app = getApps()[0];
-  else app = initializeApp(firebaseConfig);
-
-  var auth = getAuth(app);
-  var db = getFirestore(app);
-  var storage = null;
-  try {
-    storage = getStorage(app);
-  } catch (e) {
-    storage = null;
-  }
-
-  return { app: app, auth: auth, db: db, storage: storage };
+  const { app, auth, db } = await initCoreFirebase();
+  return { app: app, auth: auth, db: db, storage: null };
 }

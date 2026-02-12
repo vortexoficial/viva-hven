@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1120" />
+    <title>Memberships | Admin</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script type="module" src="/js/core-init.js"></script>
+    <script type="module" src="/js/admin-shell.js"></script>
+
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('condoflow-theme');
+          if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__left">
+        <h1 class="h1">Memberships</h1>
+      </div>
+      <div class="topbar__right">
+        <span data-vh-context-anchor="1"></span>
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="btn btn--ghost" type="button">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2 class="h2">Contexto</h2>
+        <div class="grid grid--2">
+          <label class="field">
+            <span>Condomínio ativo</span>
+            <div id="ctxCondoName" class="input" style="display:flex;align-items:center;min-height:42px;">—</div>
+          </label>
+          <div class="field" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+            <button id="pickCtxBtn" class="btn btn--ghost" type="button">Trocar</button>
+            <button id="refreshBtn" class="btn" type="button">Atualizar</button>
+          </div>
+        </div>
+        <p id="ctxHint" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Convidar usuário por e-mail (convite no Firestore)</h2>
+        <form id="inviteForm" class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>E-mail *</span>
+            <input id="inviteEmail" class="input" type="email" required placeholder="nome@exemplo.com" />
+          </label>
+
+          <label class="field">
+            <span>Role</span>
+            <select id="inviteRole" class="input">
+              <option value="MORADOR">MORADOR</option>
+              <option value="PORTEIRO">PORTEIRO</option>
+              <option value="CONSELHO">CONSELHO</option>
+              <option value="SUBSINDICO">SUBSINDICO</option>
+              <option value="SINDICO">SINDICO</option>
+              <option value="GESTOR">GESTOR</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Unit ID (opcional)</span>
+            <input id="inviteUnitId" class="input" placeholder="unitId" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="inviteStatus" class="input">
+              <option value="pending">pending</option>
+              <option value="sent">sent</option>
+            </select>
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Permissões (opcional, separadas por vírgula)</span>
+            <input id="invitePerms" class="input" placeholder="Ex.: finance.read, tickets.manage" />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Mensagem (opcional)</span>
+            <textarea id="inviteNote" class="input" rows="3" placeholder="Instruções para o usuário"></textarea>
+          </label>
+
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button id="inviteBtn" class="btn" type="submit">Criar convite</button>
+            <span id="inviteMsg" class="muted"></span>
+          </div>
+        </form>
+
+        <div class="divider"></div>
+        <h3 class="h3">Instruções para o usuário</h3>
+        <ol class="muted" style="font-size:12px;line-height:1.6;">
+          <li>Crie conta em <strong>/register.html</strong> e faça login em <strong>/login.html</strong>.</li>
+          <li>Envie seu <strong>UID</strong> para a administração (ou e-mail usado no cadastro).</li>
+          <li>A administração ativa o acesso criando o membership do condomínio.</li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Ativar / atualizar membership do condomínio</h2>
+        <form id="membershipForm" class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>UID do usuário *</span>
+            <input id="mUid" class="input" required placeholder="uid do Firebase Auth" />
+          </label>
+
+          <label class="field">
+            <span>Role</span>
+            <select id="mRole" class="input">
+              <option value="morador">morador</option>
+              <option value="porteiro">porteiro</option>
+              <option value="conselho">conselho</option>
+              <option value="subsindico">subsindico</option>
+              <option value="sindico">sindico</option>
+              <option value="gestor">gestor</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="mStatus" class="input">
+              <option value="active">active</option>
+              <option value="disabled">disabled</option>
+              <option value="invited">invited</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Unit ID (opcional)</span>
+            <input id="mUnitId" class="input" placeholder="unitId" />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Unit label (opcional)</span>
+            <input id="mUnitLabel" class="input" placeholder="Ex.: Torre A • 101" />
+          </label>
+
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Permissões extras (opcional, separadas por vírgula)</span>
+            <input id="mPerms" class="input" placeholder="Ex.: finance.write" />
+          </label>
+
+          <div class="field" style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center;flex-wrap:wrap;">
+            <button id="mSaveBtn" class="btn" type="submit">Salvar membership</button>
+            <button id="mClearBtn" class="btn btn--ghost" type="button">Limpar</button>
+            <span id="mMsg" class="muted"></span>
+          </div>
+        </form>
+
+        <div class="divider"></div>
+        <h3 class="h3">Lista (escopo do condomínio)</h3>
+        <div class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Busca (uid)</span>
+            <input id="mSearch" class="input" placeholder="Filtra nesta página" />
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <button id="mPrevBtn" class="btn btn--ghost" type="button">◀ Anterior</button>
+          <button id="mNextBtn" class="btn btn--ghost" type="button">Próxima ▶</button>
+          <span id="mListMsg" class="muted"></span>
+        </div>
+        <div class="divider"></div>
+        <div id="mList" class="list"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Convites</h2>
+        <div class="grid grid--3">
+          <label class="field" style="grid-column: 1 / -1;">
+            <span>Filtrar status</span>
+            <select id="inviteFilter" class="input">
+              <option value="">(todos)</option>
+              <option value="pending">pending</option>
+              <option value="sent">sent</option>
+              <option value="accepted">accepted</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <button id="invPrevBtn" class="btn btn--ghost" type="button">◀ Anterior</button>
+          <button id="invNextBtn" class="btn btn--ghost" type="button">Próxima ▶</button>
+          <span id="invMsg" class="muted"></span>
+        </div>
+        <div class="divider"></div>
+        <div id="invList" class="list"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { setupAdminPage } from '/js/admin-access.js';
+      import { showError, confirmDialog } from '/js/ui.js';
+      import { getActiveContext, openSelector, watchAuthAndContext } from '/js/active-context.js';
+
+      import {
+        addDoc,
+        collection,
+        deleteDoc,
+        doc,
+        getDoc,
+        getDocs,
+        limit,
+        orderBy,
+        query,
+        serverTimestamp,
+        setDoc,
+        startAfter,
+        updateDoc,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+      const state = {
+        condoId: '',
+        orgId: '',
+        mCursor: null,
+        invCursor: null,
+        pageSize: 25,
+        memberships: [],
+        invites: [],
+      };
+
+      const el = {
+        ctxCondoName: document.getElementById('ctxCondoName'),
+        ctxHint: document.getElementById('ctxHint'),
+        pickCtxBtn: document.getElementById('pickCtxBtn'),
+        refreshBtn: document.getElementById('refreshBtn'),
+
+        inviteForm: document.getElementById('inviteForm'),
+        inviteEmail: document.getElementById('inviteEmail'),
+        inviteRole: document.getElementById('inviteRole'),
+        inviteUnitId: document.getElementById('inviteUnitId'),
+        inviteStatus: document.getElementById('inviteStatus'),
+        invitePerms: document.getElementById('invitePerms'),
+        inviteNote: document.getElementById('inviteNote'),
+        inviteBtn: document.getElementById('inviteBtn'),
+        inviteMsg: document.getElementById('inviteMsg'),
+
+        membershipForm: document.getElementById('membershipForm'),
+        mUid: document.getElementById('mUid'),
+        mRole: document.getElementById('mRole'),
+        mStatus: document.getElementById('mStatus'),
+        mUnitId: document.getElementById('mUnitId'),
+        mUnitLabel: document.getElementById('mUnitLabel'),
+        mPerms: document.getElementById('mPerms'),
+        mSaveBtn: document.getElementById('mSaveBtn'),
+        mClearBtn: document.getElementById('mClearBtn'),
+        mMsg: document.getElementById('mMsg'),
+
+        mSearch: document.getElementById('mSearch'),
+        mPrevBtn: document.getElementById('mPrevBtn'),
+        mNextBtn: document.getElementById('mNextBtn'),
+        mListMsg: document.getElementById('mListMsg'),
+        mList: document.getElementById('mList'),
+
+        inviteFilter: document.getElementById('inviteFilter'),
+        invPrevBtn: document.getElementById('invPrevBtn'),
+        invNextBtn: document.getElementById('invNextBtn'),
+        invMsg: document.getElementById('invMsg'),
+        invList: document.getElementById('invList'),
+      };
+
+      function cleanString(v) {
+        return String(v || '').trim();
+      }
+
+      function splitPerms(v) {
+        const raw = cleanString(v);
+        if (!raw) return [];
+        return raw
+          .split(',')
+          .map((x) => cleanString(x))
+          .filter(Boolean)
+          .slice(0, 40);
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function setMsg(target, text, isErr) {
+        if (!target) return;
+        target.textContent = text || '';
+        target.classList.toggle('error', !!isErr);
+      }
+
+      function membershipIdForCondo(uid, condoId) {
+        return `${cleanString(uid)}_${cleanString(condoId)}`;
+      }
+
+      function clearMembershipForm() {
+        el.mUid.value = '';
+        el.mRole.value = 'morador';
+        el.mStatus.value = 'active';
+        el.mUnitId.value = '';
+        el.mUnitLabel.value = '';
+        el.mPerms.value = '';
+        setMsg(el.mMsg, '');
+      }
+
+      function applyMembershipSearch(items) {
+        const s = cleanString(el.mSearch.value).toLowerCase();
+        if (!s) return items;
+        return (items || []).filter((m) => cleanString(m.uid || m.id).toLowerCase().includes(s));
+      }
+
+      function renderMembershipsList() {
+        if (!el.mList) return;
+        const filtered = applyMembershipSearch(state.memberships);
+        if (!filtered.length) {
+          el.mList.innerHTML = '<div class="muted">Nenhum membership nesta página.</div>';
+          return;
+        }
+
+        el.mList.innerHTML = filtered.map((m) => {
+          const meta = [m.role ? `role: ${m.role}` : null, m.status ? `status: ${m.status}` : null, m.unitLabel ? `unidade: ${m.unitLabel}` : null]
+            .filter(Boolean)
+            .join(' • ');
+          const uid = cleanString(m.uid) || m.id;
+
+          return `
+            <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <div>
+                <div style="font-weight:900;">${escapeHtml(uid)}</div>
+                <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn--ghost" type="button" data-action="edit-m" data-id="${escapeHtml(uid)}">Editar</button>
+                <button class="btn btn--ghost" type="button" data-action="del-m" data-id="${escapeHtml(uid)}">Excluir</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderInvitesList() {
+        if (!el.invList) return;
+        if (!state.invites.length) {
+          el.invList.innerHTML = '<div class="muted">Nenhum convite nesta página.</div>';
+          return;
+        }
+
+        el.invList.innerHTML = state.invites.map((inv) => {
+          const meta = [inv.status ? `status: ${inv.status}` : null, inv.role ? `role: ${inv.role}` : null, inv.unitId ? `unitId: ${inv.unitId}` : null]
+            .filter(Boolean)
+            .join(' • ');
+          return `
+            <div class="item" style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <div>
+                <div style="font-weight:900;">${escapeHtml(inv.email || inv.id)}</div>
+                <div class="muted" style="font-size:12px;">${escapeHtml(meta)}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn--ghost" type="button" data-action="del-inv" data-id="${escapeHtml(inv.id)}">Excluir</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      async function refreshAll(env) {
+        const ctx = getActiveContext();
+        state.condoId = cleanString(ctx.condoId);
+        state.orgId = cleanString(ctx.orgId);
+
+        if (el.ctxCondoName) el.ctxCondoName.textContent = state.condoId || '—';
+        if (el.ctxHint) el.ctxHint.textContent = state.orgId ? `orgId: ${state.orgId}` : '';
+
+        state.mCursor = null;
+        state.invCursor = null;
+
+        await refreshMemberships(env, { reset: true });
+        await refreshInvites(env, { reset: true });
+      }
+
+      async function refreshMemberships(env, opts) {
+        opts = opts || {};
+        if (!state.condoId) return;
+
+        const col = collection(env.db, 'condos', state.condoId, 'memberships');
+        let qy = query(col, orderBy('uid', 'asc'), limit(state.pageSize));
+        if (!opts.reset && state.mCursor) {
+          qy = query(col, orderBy('uid', 'asc'), startAfter(state.mCursor), limit(state.pageSize));
+        }
+
+        const qs = await getDocs(qy);
+        state.memberships = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        state.mCursor = qs.docs.length ? qs.docs[qs.docs.length - 1] : state.mCursor;
+        setMsg(el.mListMsg, `Itens nesta página: ${state.memberships.length}`);
+        renderMembershipsList();
+      }
+
+      async function refreshInvites(env, opts) {
+        opts = opts || {};
+        if (!state.condoId) return;
+
+        const filter = cleanString(el.inviteFilter.value);
+        const col = collection(env.db, 'condos', state.condoId, 'invites');
+
+        let qy = query(col, orderBy('createdAt', 'desc'), limit(state.pageSize));
+        // filtro por status fica local (evita índice composto extra)
+        if (!opts.reset && state.invCursor) {
+          qy = query(col, orderBy('createdAt', 'desc'), startAfter(state.invCursor), limit(state.pageSize));
+        }
+
+        const qs = await getDocs(qy);
+        let items = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        if (filter) items = items.filter((x) => cleanString(x.status) === filter);
+
+        state.invites = items;
+        state.invCursor = qs.docs.length ? qs.docs[qs.docs.length - 1] : state.invCursor;
+
+        setMsg(el.invMsg, `Itens nesta página: ${state.invites.length}`);
+        renderInvitesList();
+      }
+
+      let env = null;
+
+      async function boot() {
+        env = await setupAdminPage({
+          permsAny: ['people.manage', 'condo.manage', 'portfolio.manage'],
+          rolesAny: ['ADMINISTRADORA', 'GESTOR', 'SINDICO'],
+          condoRequired: true,
+          userBadgeId: 'userBadge',
+          logoutBtnId: 'logoutBtn',
+        });
+
+        if (!env || !env.ok) return;
+
+        if (el.pickCtxBtn) el.pickCtxBtn.addEventListener('click', () => openSelector());
+        if (el.refreshBtn) el.refreshBtn.addEventListener('click', () => refreshAll(env));
+
+        if (el.inviteForm) {
+          el.inviteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(el.inviteMsg, 'Criando...');
+            try {
+              const email = cleanString(el.inviteEmail.value).toLowerCase();
+              if (!email) throw new Error('E-mail é obrigatório.');
+
+              const inviteDoc = {
+                orgId: state.orgId || null,
+                condoId: state.condoId,
+                email,
+                role: cleanString(el.inviteRole.value) || 'MORADOR',
+                permissions: splitPerms(el.invitePerms.value),
+                unitId: cleanString(el.inviteUnitId.value) || null,
+                status: cleanString(el.inviteStatus.value) || 'pending',
+                note: cleanString(el.inviteNote.value) || null,
+                createdBy: env.user.uid,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              };
+
+              const ref = await addDoc(collection(env.db, 'condos', state.condoId, 'invites'), inviteDoc);
+              el.inviteForm.reset();
+              setMsg(el.inviteMsg, `Convite criado: ${ref.id}`);
+              await refreshInvites(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Não foi possível criar o convite.');
+              setMsg(el.inviteMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (el.mClearBtn) el.mClearBtn.addEventListener('click', clearMembershipForm);
+
+        if (el.membershipForm) {
+          el.membershipForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setMsg(el.mMsg, 'Salvando...');
+            try {
+              const uid = cleanString(el.mUid.value);
+              if (!uid) throw new Error('UID é obrigatório.');
+
+              const role = cleanString(el.mRole.value) || 'morador';
+              const status = cleanString(el.mStatus.value) || 'active';
+              const unitId = cleanString(el.mUnitId.value) || null;
+              const unitLabel = cleanString(el.mUnitLabel.value) || null;
+              const permissions = splitPerms(el.mPerms.value);
+
+              // Root membership (IDs determinísticos) — usado pelas rules
+              const rootId = membershipIdForCondo(uid, state.condoId);
+              await setDoc(doc(env.db, 'memberships', rootId), {
+                uid,
+                orgId: state.orgId || null,
+                condoId: state.condoId,
+                scope: 'condo',
+                role,
+                permissions,
+                unitId,
+                unitLabel,
+                status,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              }, { merge: true });
+
+              // Mirror por condomínio (listável no painel)
+              await setDoc(doc(env.db, 'condos', state.condoId, 'memberships', uid), {
+                uid,
+                condoId: state.condoId,
+                orgId: state.orgId || null,
+                scope: 'condo',
+                role,
+                permissions,
+                unitId,
+                unitLabel,
+                status,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              }, { merge: true });
+
+              setMsg(el.mMsg, 'Membership salvo.');
+              await refreshMemberships(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Não foi possível salvar o membership.');
+              setMsg(el.mMsg, err && err.message ? err.message : 'Erro', true);
+            }
+          });
+        }
+
+        if (el.mSearch) el.mSearch.addEventListener('input', renderMembershipsList);
+
+        if (el.mNextBtn) {
+          el.mNextBtn.addEventListener('click', async () => {
+            try {
+              await refreshMemberships(env, { reset: false });
+            } catch (err) {
+              showError(err, 'Falha ao paginar.');
+            }
+          });
+        }
+
+        if (el.mPrevBtn) {
+          el.mPrevBtn.addEventListener('click', async () => {
+            try {
+              state.mCursor = null;
+              await refreshMemberships(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Falha ao voltar página.');
+            }
+          });
+        }
+
+        if (el.inviteFilter) el.inviteFilter.addEventListener('change', () => refreshInvites(env, { reset: true }));
+
+        if (el.invNextBtn) {
+          el.invNextBtn.addEventListener('click', async () => {
+            try {
+              await refreshInvites(env, { reset: false });
+            } catch (err) {
+              showError(err, 'Falha ao paginar convites.');
+            }
+          });
+        }
+
+        if (el.invPrevBtn) {
+          el.invPrevBtn.addEventListener('click', async () => {
+            try {
+              state.invCursor = null;
+              await refreshInvites(env, { reset: true });
+            } catch (err) {
+              showError(err, 'Falha ao voltar página.');
+            }
+          });
+        }
+
+        document.addEventListener('click', async (ev) => {
+          const btn = ev.target && ev.target.closest ? ev.target.closest('[data-action]') : null;
+          if (!btn) return;
+
+          const action = cleanString(btn.getAttribute('data-action'));
+          const id = cleanString(btn.getAttribute('data-id'));
+          if (!action || !id) return;
+
+          try {
+            if (action === 'edit-m') {
+              const snap = await getDoc(doc(env.db, 'condos', state.condoId, 'memberships', id));
+              if (!snap.exists()) return;
+              const m = snap.data() || {};
+              el.mUid.value = cleanString(m.uid) || id;
+              el.mRole.value = cleanString(m.role) || 'morador';
+              el.mStatus.value = cleanString(m.status) || 'active';
+              el.mUnitId.value = cleanString(m.unitId);
+              el.mUnitLabel.value = cleanString(m.unitLabel);
+              el.mPerms.value = Array.isArray(m.permissions) ? m.permissions.join(', ') : '';
+              return;
+            }
+
+            if (action === 'del-m') {
+              const ok = await confirmDialog('Excluir este membership do condomínio?');
+              if (!ok) return;
+
+              // remove mirror
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'memberships', id));
+
+              // best-effort remove root
+              try {
+                await deleteDoc(doc(env.db, 'memberships', membershipIdForCondo(id, state.condoId)));
+              } catch (e) {}
+
+              await refreshMemberships(env, { reset: true });
+              return;
+            }
+
+            if (action === 'del-inv') {
+              const ok = await confirmDialog('Excluir este convite?');
+              if (!ok) return;
+              await deleteDoc(doc(env.db, 'condos', state.condoId, 'invites', id));
+              await refreshInvites(env, { reset: true });
+              return;
+            }
+          } catch (err) {
+            showError(err, 'Falha ao executar ação.');
+          }
+        });
+
+        await refreshAll(env);
+
+        watchAuthAndContext(async (detail) => {
+          const ctx = detail && detail.context ? detail.context : getActiveContext();
+          const cId = cleanString(ctx.condoId);
+          if (cId !== state.condoId) {
+            state.condoId = cId;
+            state.orgId = cleanString(ctx.orgId);
+            state.mCursor = null;
+            state.invCursor = null;
+            await refreshAll(env);
+          }
+        });
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
